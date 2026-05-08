@@ -1,0 +1,346 @@
+/* Purchase section
+   Visual styles isolated from the rest of the landing to keep the checkout area modular.
+*/
+
+.purchase-section {
+  padding: 24px 0 96px;
+}
+
+.purchase-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.purchase-title {
+  margin-bottom: 18px;
+}
+
+.purchase-lead {
+  font-size: 1.08rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  max-width: 60ch;
+}
+
+.purchase-description {
+  color: var(--text-muted);
+  max-width: 58ch;
+  margin-bottom: 26px;
+}
+
+.purchase-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.purchase-highlight {
+  padding: 20px;
+}
+
+.purchase-highlight-kicker,
+.purchase-panel-tag,
+.purchase-status,
+.purchase-summary-note {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.purchase-highlight-kicker,
+.purchase-panel-tag {
+  color: var(--teal-300);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.purchase-highlight strong,
+.purchase-panel-head h3,
+.purchase-summary h4,
+.purchase-method-copy strong {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.purchase-highlight strong {
+  display: block;
+  font-size: 1.04rem;
+  margin-bottom: 8px;
+}
+
+.purchase-highlight p,
+.purchase-method-copy small,
+.purchase-status,
+.purchase-summary-note,
+.purchase-feedback.is-info {
+  color: var(--text-muted);
+}
+
+.purchase-panel {
+  padding: 28px;
+}
+
+.purchase-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 24px;
+}
+
+.purchase-panel-head h3 {
+  font-size: 1.6rem;
+}
+
+.purchase-status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border-strong);
+  background: var(--theme-toggle-bg);
+  white-space: nowrap;
+}
+
+.purchase-form {
+  display: grid;
+  gap: 22px;
+}
+
+.purchase-field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 16px;
+}
+
+.purchase-field {
+  min-width: 0;
+}
+
+.purchase-quantity {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: center;
+}
+
+.purchase-qty-btn {
+  height: 48px;
+  border-radius: var(--radius);
+  border: 1px solid var(--surface-border-strong);
+  background: var(--theme-toggle-bg);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  transition: var(--transition);
+}
+
+.purchase-qty-btn:hover,
+.purchase-qty-btn:focus-visible {
+  border-color: rgba(93,202,165,0.3);
+  box-shadow: var(--shadow-glow);
+}
+
+.purchase-qty-input {
+  text-align: center;
+}
+
+.purchase-methods {
+  display: grid;
+  gap: 12px;
+  border: 0;
+}
+
+.purchase-method-card {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.purchase-method-card.is-selected,
+.purchase-method-card:has(input:checked) {
+  border-color: rgba(93,202,165,0.32);
+  box-shadow: var(--shadow-glow);
+}
+
+.purchase-method-card input {
+  margin-top: 4px;
+  accent-color: var(--teal-500);
+}
+
+.purchase-method-copy small {
+  display: block;
+  margin-top: 6px;
+  line-height: 1.55;
+}
+
+.purchase-summary {
+  padding: 20px;
+  border-radius: 18px;
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+}
+
+.purchase-summary-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.purchase-summary-list {
+  display: grid;
+  gap: 14px;
+}
+
+.purchase-summary-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.purchase-summary-list dt {
+  color: var(--text-muted);
+}
+
+.purchase-summary-list dd {
+  margin: 0;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.purchase-summary-total-row {
+  padding-top: 14px;
+  border-top: 1px solid var(--surface-border);
+}
+
+.purchase-summary-total-row dt,
+.purchase-summary-total-row dd {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.purchase-consent {
+  margin-top: -4px;
+}
+
+.purchase-feedback {
+  display: none;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 0.92rem;
+}
+
+.purchase-feedback.is-visible {
+  display: block;
+}
+
+.purchase-feedback.is-error {
+  background: rgba(226,75,74,0.1);
+  border-color: rgba(226,75,74,0.24);
+  color: #f7b2b1;
+}
+
+.purchase-feedback.is-success {
+  background: rgba(29,158,117,0.1);
+  border-color: rgba(29,158,117,0.24);
+  color: var(--teal-100);
+}
+
+.purchase-feedback.is-info {
+  background: rgba(29,158,117,0.08);
+  border-color: rgba(93,202,165,0.16);
+}
+
+.purchase-actions {
+  display: flex;
+}
+
+.purchase-submit {
+  width: 100%;
+}
+
+.purchase-sdk-area {
+  display: grid;
+  gap: 16px;
+}
+
+.purchase-sdk-panel {
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+}
+
+.purchase-sdk-panel[hidden] {
+  display: none !important;
+}
+
+.purchase-sdk-panel.is-loading::before {
+  content: 'Preparando checkout...';
+  display: block;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+html[data-theme="light"] .purchase-feedback.is-error {
+  color: #9d302f;
+}
+
+html[data-theme="light"] .purchase-feedback.is-success {
+  color: #0f6e56;
+}
+
+@media (max-width: 980px) {
+  .purchase-layout,
+  .purchase-highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-panel {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .purchase-section {
+    padding: 8px 0 72px;
+  }
+
+  .purchase-field-grid,
+  .purchase-summary-head,
+  .purchase-summary-list div,
+  .purchase-panel-head {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .purchase-field-grid {
+    gap: 14px;
+  }
+
+  .purchase-quantity {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .purchase-panel,
+  .purchase-highlight,
+  .purchase-summary,
+  .purchase-sdk-panel {
+    padding: 18px;
+  }
+
+  .purchase-summary-list dd {
+    text-align: left;
+  }
+}

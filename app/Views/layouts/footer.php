@@ -8,5 +8,10 @@
 </div><!-- /.page-wrapper -->
 
 <script src="<?= base_url('js/aqua.js') ?>"></script>
+<?php if (! empty($extraJs ?? [])): ?>
+  <?php foreach (($extraJs ?? []) as $jsFile): ?>
+    <script src="<?= base_url($jsFile) ?>"></script>
+  <?php endforeach; ?>
+<?php endif; ?>
 </body>
 </html>

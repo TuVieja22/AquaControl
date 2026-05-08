@@ -1,0 +1,158 @@
+/* From Uiverse.io by 20essentials
+   Converted to plain CSS and wrapped in a full-screen overlay for global loading.
+*/
+
+.page-loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 28, 24, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+html.js .page-loader-overlay.is-visible {
+  display: flex;
+}
+
+.loader-shell {
+  position: relative;
+}
+
+.loader {
+  --size: 250px;
+  width: var(--size);
+  height: var(--size);
+  zoom: 0.8;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  position: relative;
+  --current-gray: #444;
+  background-color: var(--current-gray);
+  transform-origin: 50% 100%;
+  animation: rotarBall 1s linear alternate infinite both;
+}
+
+.loader .cap {
+  width: 50%;
+  height: 18%;
+  border-radius: 50%;
+  border: inherit;
+  left: 50%;
+  position: absolute;
+  top: -4%;
+  transform: translateX(-50%);
+  background-color: var(--current-gray);
+}
+
+.loader .shadow-top {
+  position: absolute;
+  width: 55%;
+  height: 25%;
+  border-radius: 50%;
+  background-color: #fff3;
+  left: 50%;
+  top: 19%;
+  transform: translateX(-50%) scale(0.9);
+}
+
+.loader .circle {
+  width: 96%;
+  height: 96%;
+  background-color: #20a5e1;
+  border-radius: inherit;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%);
+  animation: rotarCicle 1.5s linear alternate infinite both;
+}
+
+.loader .circle-top {
+  background-color: #40c9ff;
+  width: 96%;
+  height: 10%;
+  position: absolute;
+  border-radius: 50%;
+  top: 45.5%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: rotarCircleTop 1.5s linear alternate infinite both;
+}
+
+.loader .fish {
+  position: absolute;
+  bottom: 50px;
+  width: 40px;
+  width: 50px;
+  height: 50px;
+  animation: moveFish 2s linear infinite both;
+}
+
+.shadow-bottom {
+  zoom: 0.8;
+  position: absolute;
+  top: calc(50% + 125px);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 275px;
+  height: 40px;
+  z-index: -1;
+  border-radius: 50%;
+  background-color: #000a;
+  filter: blur(20px);
+}
+
+@keyframes moveFish {
+  0% {
+    left: 10%;
+    transform: scaleX(1);
+  }
+  50% {
+    left: calc(90% - 40px);
+    transform: scaleX(1);
+  }
+  51% {
+    left: calc(90% - 40px);
+    transform: scaleX(-1);
+  }
+  100% {
+    left: 10%;
+    transform: scaleX(-1);
+  }
+}
+
+@keyframes rotarBall {
+  0% {
+    transform: rotate(-10deg);
+  }
+  100% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes rotarCircleTop {
+  0% {
+    transform: translateX(-50%) rotate(10deg);
+  }
+  100% {
+    transform: translateX(-50%) rotate(-10deg);
+  }
+}
+
+@keyframes rotarCicle {
+  0% {
+    transform: translate(-50%, -50%) rotate(10deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-10deg);
+  }
+}
+
+html[data-theme="light"] .page-loader-overlay {
+  background: rgba(239, 248, 245, 0.72);
+}

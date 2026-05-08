@@ -207,7 +207,7 @@ class Auth extends BaseController
 
     public function reset(?string $token = null): string|\CodeIgniter\HTTP\RedirectResponse
     {
-        $token = $token ?? $this->request->getGet('token');
+        $token = $token ?? $this->request->getPost('token') ?? $this->request->getGet('token');
 
         if (! $token) {
             session()->setFlashdata('error', 'Token inválido o expirado.');

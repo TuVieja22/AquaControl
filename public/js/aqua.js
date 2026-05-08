@@ -5,6 +5,145 @@
 
 'use strict';
 
+/* Theme toggle */
+const THEME_KEY = 'aquacontrol-theme';
+const pageLoader = document.querySelector('[data-page-loader]');
+let loaderRequests = 0;
+
+function showGlobalLoader() {
+  if (!pageLoader) return;
+  pageLoader.classList.add('is-visible');
+  document.body.classList.add('is-loading');
+}
+
+function hideGlobalLoader(force = false) {
+  if (!pageLoader) return;
+
+  if (force) {
+    loaderRequests = 0;
+  }
+
+  if (loaderRequests > 0) {
+    return;
+  }
+
+  pageLoader.classList.remove('is-visible');
+  document.body.classList.remove('is-loading');
+}
+
+function setLoaderBusy(isBusy) {
+  if (isBusy) {
+    loaderRequests += 1;
+    showGlobalLoader();
+    return;
+  }
+
+  loaderRequests = Math.max(loaderRequests - 1, 0);
+  hideGlobalLoader();
+}
+
+function readStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeStoredTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch (error) {
+    return;
+  }
+}
+
+function updateThemeToggleUi(theme) {
+  const isLight = theme === 'light';
+
+  document.querySelectorAll('[data-theme-toggle]').forEach(toggle => {
+    toggle.checked = isLight;
+    toggle.setAttribute('aria-checked', isLight ? 'true' : 'false');
+    toggle.setAttribute('title', isLight ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+  });
+}
+
+function applyTheme(theme, persist = true) {
+  const nextTheme = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = nextTheme;
+  updateThemeToggleUi(nextTheme);
+
+  if (persist) {
+    writeStoredTheme(nextTheme);
+  }
+
+  window.dispatchEvent(new CustomEvent('themechange', {
+    detail: { theme: nextTheme }
+  }));
+}
+
+applyTheme(readStoredTheme() === 'light' ? 'light' : 'dark', false);
+
+document.querySelectorAll('[data-theme-toggle]').forEach(toggle => {
+  toggle.addEventListener('change', event => {
+    applyTheme(event.target.checked ? 'light' : 'dark');
+  });
+});
+
+showGlobalLoader();
+
+window.addEventListener('load', () => {
+  hideGlobalLoader(true);
+});
+
+window.addEventListener('pageshow', () => {
+  hideGlobalLoader(true);
+});
+
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[href]');
+  if (!link) return;
+  if (link.hasAttribute('download') || link.target === '_blank') return;
+
+  const rawHref = link.getAttribute('href') || '';
+  if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return;
+
+  const targetUrl = new URL(link.href, window.location.href);
+  if (targetUrl.origin !== window.location.origin) return;
+  if (
+    targetUrl.pathname === window.location.pathname &&
+    targetUrl.search === window.location.search &&
+    targetUrl.hash
+  ) {
+    return;
+  }
+
+  showGlobalLoader();
+});
+
+if (typeof window.fetch === 'function') {
+  const nativeFetch = window.fetch.bind(window);
+
+  window.fetch = async function (...args) {
+    try {
+      const options = args[1] || {};
+      const headers = new Headers(options.headers || {});
+      if (headers.get('X-Skip-Loader') === 'true') {
+        return await nativeFetch(...args);
+      }
+    } catch (error) {
+      // Continue with loader when headers are not readable.
+    }
+
+    setLoaderBusy(true);
+    try {
+      return await nativeFetch(...args);
+    } finally {
+      setLoaderBusy(false);
+    }
+  };
+}
+
 /* ── PASSWORD TOGGLE ─────────────────────────────── */
 document.querySelectorAll('.input-toggle').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -203,3 +342,278 @@ if ('IntersectionObserver' in window) {
     observer.observe(el);
   });
 }
+
+/* Dashboard */
+const dashboardDataNode = document.getElementById('dashboard-data');
+if (dashboardDataNode) {
+  const dashboardState = JSON.parse(dashboardDataNode.textContent || '{}');
+  const cardNodes = document.querySelectorAll('[data-card]');
+  const latestTimestamp = document.getElementById('latestTimestamp');
+  const vacationStateLabel = document.getElementById('vacationStateLabel');
+  const alertsList = document.getElementById('alertsList');
+  const feedingsTableBody = document.getElementById('feedingsTableBody');
+  let temperatureChart = null;
+  let phChart = null;
+
+  const statusLabels = {
+    ok: 'OK',
+    warn: 'Advertencia',
+    danger: 'Critico',
+    neutral: 'Info'
+  };
+
+  function buildReferenceSeries(labels, value) {
+    return labels.map(() => value);
+  }
+
+  function getChartColors() {
+    const styles = getComputedStyle(document.documentElement);
+
+    return {
+      label: styles.getPropertyValue('--chart-label').trim() || 'rgba(159,225,203,0.75)',
+      grid: styles.getPropertyValue('--chart-grid').trim() || 'rgba(93,202,165,0.08)'
+    };
+  }
+
+  function chartOptions() {
+    const colors = getChartColors();
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: colors.label } }
+      },
+      scales: {
+        x: {
+          ticks: { color: colors.label },
+          grid: { color: colors.grid }
+        },
+        y: {
+          ticks: { color: colors.label },
+          grid: { color: colors.grid }
+        }
+      }
+    };
+  }
+
+  function syncChartTheme(chart) {
+    if (!chart) return;
+
+    const colors = getChartColors();
+    chart.options.plugins.legend.labels.color = colors.label;
+    chart.options.scales.x.ticks.color = colors.label;
+    chart.options.scales.x.grid.color = colors.grid;
+    chart.options.scales.y.ticks.color = colors.label;
+    chart.options.scales.y.grid.color = colors.grid;
+    chart.update();
+  }
+
+  function renderCharts(payload) {
+    if (typeof Chart === 'undefined') return;
+
+    const labels = payload.charts?.labels || [];
+    const config = payload.config || {};
+
+    if (!temperatureChart) {
+      temperatureChart = new Chart(document.getElementById('temperatureChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Temperatura', data: payload.charts?.temperature || [], borderColor: '#5DCAA5', backgroundColor: 'rgba(93,202,165,0.14)', tension: 0.35, fill: true },
+            { label: 'Temp min', data: buildReferenceSeries(labels, config.temp_min), borderColor: 'rgba(239,159,39,0.9)', borderDash: [6, 6], pointRadius: 0, tension: 0 },
+            { label: 'Temp max', data: buildReferenceSeries(labels, config.temp_max), borderColor: 'rgba(226,75,74,0.9)', borderDash: [6, 6], pointRadius: 0, tension: 0 }
+          ]
+        },
+        options: chartOptions()
+      });
+    } else {
+      temperatureChart.data.labels = labels;
+      temperatureChart.data.datasets[0].data = payload.charts?.temperature || [];
+      temperatureChart.data.datasets[1].data = buildReferenceSeries(labels, config.temp_min);
+      temperatureChart.data.datasets[2].data = buildReferenceSeries(labels, config.temp_max);
+      temperatureChart.update();
+    }
+    syncChartTheme(temperatureChart);
+
+    if (!phChart) {
+      phChart = new Chart(document.getElementById('phChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'pH', data: payload.charts?.ph || [], borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.14)', tension: 0.35, fill: true },
+            { label: 'pH min', data: buildReferenceSeries(labels, config.ph_min), borderColor: 'rgba(239,159,39,0.9)', borderDash: [6, 6], pointRadius: 0, tension: 0 },
+            { label: 'pH max', data: buildReferenceSeries(labels, config.ph_max), borderColor: 'rgba(226,75,74,0.9)', borderDash: [6, 6], pointRadius: 0, tension: 0 }
+          ]
+        },
+        options: chartOptions()
+      });
+    } else {
+      phChart.data.labels = labels;
+      phChart.data.datasets[0].data = payload.charts?.ph || [];
+      phChart.data.datasets[1].data = buildReferenceSeries(labels, config.ph_min);
+      phChart.data.datasets[2].data = buildReferenceSeries(labels, config.ph_max);
+      phChart.update();
+    }
+    syncChartTheme(phChart);
+  }
+
+  function renderCards(cards) {
+    cardNodes.forEach(node => {
+      const cardName = node.dataset.card;
+      const payload = cards?.[cardName];
+      if (!payload) return;
+
+      node.classList.remove('sensor-status-ok', 'sensor-status-warn', 'sensor-status-danger', 'sensor-status-neutral');
+      node.classList.add(`sensor-status-${payload.status}`);
+      node.querySelector('[data-field="value"]').textContent = payload.value ?? '--';
+      node.querySelector('[data-field="status"]').textContent = statusLabels[payload.status] || payload.status || 'Info';
+      node.querySelector('[data-field="meta"]').textContent = payload.meta ?? '';
+    });
+
+    if (vacationStateLabel && cards?.vacationMode?.value) {
+      vacationStateLabel.textContent = cards.vacationMode.value;
+    }
+  }
+
+  function renderAlerts(alerts) {
+    if (!alertsList) return;
+    if (!alerts || !alerts.length) {
+      alertsList.innerHTML = '<p class="empty-state">No hay alertas pendientes.</p>';
+      return;
+    }
+
+    alertsList.innerHTML = alerts.map(alert => `
+      <article class="alert-item">
+        <span class="alert-badge level-${alert.nivel}">Nivel ${alert.nivel}</span>
+        <div class="alert-copy">
+          <strong>${alert.mensaje}</strong>
+          <span>${alert.time}</span>
+        </div>
+        <button class="btn btn-outline mark-alert-btn" data-alert-id="${alert.id}" type="button">Marcar leida</button>
+      </article>
+    `).join('');
+  }
+
+  function renderFeedings(feedings) {
+    if (!feedingsTableBody) return;
+    if (!feedings || !feedings.length) {
+      feedingsTableBody.innerHTML = '<tr><td colspan="3" class="table-empty">Sin registros.</td></tr>';
+      return;
+    }
+
+    feedingsTableBody.innerHTML = feedings.map(item => `
+      <tr>
+        <td>${item.created_at ? new Date(item.created_at.replace(' ', 'T')).toLocaleString('es-AR') : '--'}</td>
+        <td>${item.grams !== null ? Number(item.grams).toFixed(2) + ' g' : '--'}</td>
+        <td>${item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : '--'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderConfig(config) {
+    const map = {
+      configTempMin: `${Number(config.temp_min).toFixed(1)} °C`,
+      configTempMax: `${Number(config.temp_max).toFixed(1)} °C`,
+      configPhMin: Number(config.ph_min).toFixed(2),
+      configPhMax: Number(config.ph_max).toFixed(2),
+      configTargetTemp: `${Number(config.temp_objetivo).toFixed(1)} °C`
+    };
+
+    Object.entries(map).forEach(([id, value]) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = value;
+    });
+
+    const targetInput = document.getElementById('temp_objetivo');
+    if (targetInput) targetInput.value = Number(config.temp_objetivo).toFixed(1);
+  }
+
+  function renderAll(payload, keepCharts = false) {
+    renderCards(payload.cards || {});
+    renderAlerts(payload.alerts || []);
+    renderFeedings(payload.feedings || []);
+    renderConfig(payload.config || {});
+    if (latestTimestamp) {
+      latestTimestamp.textContent = payload.latestTimestamp
+        ? new Date(payload.latestTimestamp.replace(' ', 'T')).toLocaleString('es-AR')
+        : 'Sin lecturas';
+    }
+    if (!keepCharts) renderCharts(payload);
+  }
+
+  async function postJson(url, body = {}) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: new URLSearchParams(body)
+    });
+    return response.json();
+  }
+
+  async function refreshLatest() {
+    const response = await fetch(dashboardState.endpoints.latest, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    renderAll({ ...dashboardState, ...payload }, true);
+  }
+
+  document.addEventListener('click', async event => {
+    const alertButton = event.target.closest('.mark-alert-btn');
+    if (alertButton) {
+      const payload = await postJson(dashboardState.endpoints.markAlertTemplate.replace('__id__', alertButton.dataset.alertId));
+      renderAlerts(payload.alerts || []);
+    }
+
+    const vacationButton = event.target.closest('#vacationToggleBtn, #vacationQuickToggle');
+    if (vacationButton) {
+      const payload = await postJson(dashboardState.endpoints.vacationToggle);
+      renderConfig(payload.config || {});
+      renderCards({ vacationMode: {
+        value: payload.modoVacaciones ? 'Activo' : 'Inactivo',
+        status: payload.modoVacaciones ? 'ok' : 'neutral',
+        meta: payload.modoVacaciones ? 'Rutinas automaticas habilitadas' : 'Modo manual activo'
+      }});
+    }
+  });
+
+  document.getElementById('feedNowForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const grams = document.getElementById('cantidad_gramos')?.value || '5';
+    const payload = await postJson(dashboardState.endpoints.feed, { cantidad_gramos: grams });
+    renderFeedings(payload.feedings || []);
+    renderCards({ lastFeeding: payload.lastFeeding || {} });
+  });
+
+  document.getElementById('targetTemperatureForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const target = document.getElementById('temp_objetivo')?.value || '';
+    const payload = await postJson(dashboardState.endpoints.targetTemperature, { temp_objetivo: target });
+    renderConfig(payload.config || {});
+  });
+
+  window.addEventListener('themechange', () => {
+    syncChartTheme(temperatureChart);
+    syncChartTheme(phChart);
+  });
+
+  renderAll(dashboardState);
+  setInterval(refreshLatest, 30000);
+}
+
+/* Global loader hooks
+   Registered after form-specific listeners so prevented submits do not lock the UI.
+*/
+document.addEventListener('submit', event => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  if (form.dataset.skipLoader === 'true') return;
+  if (event.defaultPrevented) return;
+
+  showGlobalLoader();
+});
