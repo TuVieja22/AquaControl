@@ -12,6 +12,15 @@ use Throwable;
 
 class Dashboard extends BaseController
 {
+    private const DEFAULT_CONFIG = [
+        'temp_min'        => 24.00,
+        'temp_max'        => 27.00,
+        'ph_min'          => 6.80,
+        'ph_max'          => 7.60,
+        'temp_objetivo'   => 25.50,
+        'modo_vacaciones' => 0,
+    ];
+
     private SensorModel $sensorModel;
     private AlimentacionModel $alimentacionModel;
     private AlertaModel $alertaModel;
@@ -20,10 +29,10 @@ class Dashboard extends BaseController
 
     public function __construct()
     {
-        $this->database           = db_connect();
-        $this->sensorModel        = new SensorModel();
-        $this->alimentacionModel  = new AlimentacionModel();
-        $this->alertaModel        = new AlertaModel();
+        $this->database = db_connect();
+        $this->sensorModel = new SensorModel();
+        $this->alimentacionModel = new AlimentacionModel();
+        $this->alertaModel = new AlertaModel();
         $this->configuracionModel = new ConfiguracionPeceraModel();
     }
 
@@ -44,7 +53,7 @@ class Dashboard extends BaseController
 
     public function latest(): ResponseInterface
     {
-        return $this->response->setJSON($this->buildRealtimePayload());
+        return $this->dashboardResponse($this->userId());
     }
 
     public function markAlertRead(int $alertId): ResponseInterface
@@ -56,147 +65,99 @@ class Dashboard extends BaseController
                 ->where('id', $alertId)
                 ->where('usuario_id', $userId)
                 ->first();
+
             if ($alert) {
                 $this->alertaModel->update($alertId, ['leida' => 1]);
             }
         }
 
-        return $this->response->setJSON([
-            'success' => true,
-            'alerts'  => $this->fetchAlerts($userId),
-        ]);
+        return $this->dashboardResponse($userId, ['success' => true]);
     }
 
     public function feedNow(): ResponseInterface
     {
-        $userId    = $this->userId();
-        $grams     = (float) ($this->request->getPost('cantidad_gramos') ?? 5);
-        $createdAt = date('Y-m-d H:i:s');
+        $userId = $this->userId();
 
         if ($this->tableExists('alimentaciones')) {
             $this->alimentacionModel->insert([
-                'usuario_id'       => $userId,
-                'cantidad_gramos'  => $grams,
-                'tipo'             => 'manual',
-                'created_at'       => $createdAt,
+                'usuario_id'      => $userId,
+                'cantidad_gramos' => (float) ($this->request->getPost('cantidad_gramos') ?? 5),
+                'tipo'            => 'manual',
+                'created_at'      => date('Y-m-d H:i:s'),
             ]);
         }
 
-        return $this->response->setJSON([
-            'success'      => true,
-            'message'      => 'Alimentacion manual registrada.',
-            'lastFeeding'  => $this->formatFeeding($this->fetchLastFeeding($userId)),
-            'feedings'     => $this->fetchFeedings($userId),
-        ]);
+        return $this->dashboardResponse($userId, ['success' => true]);
     }
 
     public function toggleVacation(): ResponseInterface
     {
         $userId = $this->userId();
         $config = $this->ensureConfig($userId);
-        $next   = (int) ! ((int) ($config['modo_vacaciones'] ?? 0));
+        $nextState = (int) ! ((int) ($config['modo_vacaciones'] ?? 0));
 
-        if ($this->tableExists('configuracion_pecera')) {
-            $payload = ['modo_vacaciones' => $next];
-            if (isset($config['id'])) {
-                $this->configuracionModel->update($config['id'], $payload);
-            } else {
-                $payload['usuario_id'] = $userId;
-                $this->configuracionModel->insert($payload);
-            }
-        }
+        $this->saveConfig($userId, ['modo_vacaciones' => $nextState]);
 
-        return $this->response->setJSON([
-            'success'        => true,
-            'modoVacaciones' => $next,
-            'config'         => $this->ensureConfig($userId, true),
-        ]);
+        return $this->dashboardResponse($userId, ['success' => true]);
     }
 
     public function updateTargetTemperature(): ResponseInterface
     {
-        $userId         = $this->userId();
-        $targetTemp     = round((float) $this->request->getPost('temp_objetivo'), 2);
-        $config         = $this->ensureConfig($userId);
+        $userId = $this->userId();
 
-        if ($this->tableExists('configuracion_pecera')) {
-            $payload = ['temp_objetivo' => $targetTemp];
-            if (isset($config['id'])) {
-                $this->configuracionModel->update($config['id'], $payload);
-            } else {
-                $payload['usuario_id'] = $userId;
-                $this->configuracionModel->insert($payload);
-            }
-        }
-
-        return $this->response->setJSON([
-            'success' => true,
-            'config'  => $this->ensureConfig($userId, true),
+        $this->saveConfig($userId, [
+            'temp_objetivo' => round((float) $this->request->getPost('temp_objetivo'), 2),
         ]);
+
+        return $this->dashboardResponse($userId, ['success' => true]);
     }
 
     public function receiveData(): ResponseInterface
     {
-        $userId = $this->userId();
-        $input  = $this->request->getJSON(true) ?: $this->request->getPost();
-
         if (! $this->tableExists('lecturas_sensores')) {
-            return $this->response->setStatusCode(503)->setJSON([
-                'success' => false,
-                'message' => 'La tabla de lecturas_sensores no existe.',
-            ]);
+            return $this->response
+                ->setStatusCode(503)
+                ->setJSON([
+                    'success' => false,
+                    'message' => 'La tabla lecturas_sensores no existe.',
+                ]);
         }
 
+        $userId = $this->userId();
+        $input = $this->request->getJSON(true) ?: $this->request->getPost();
+
         $this->sensorModel->insert([
-            'usuario_id'       => $userId,
-            'temperatura'      => $input['temperatura'] ?? null,
-            'ph'               => $input['ph'] ?? null,
-            'turbidez'         => $input['turbidez'] ?? null,
-            'nivel_agua'       => isset($input['nivel_agua']) ? (int) $input['nivel_agua'] : 1,
-            'calefactor'       => isset($input['calefactor']) ? (int) $input['calefactor'] : 0,
-            'modo_vacaciones'  => isset($input['modo_vacaciones']) ? (int) $input['modo_vacaciones'] : 0,
-            'created_at'       => date('Y-m-d H:i:s'),
+            'usuario_id'      => $userId,
+            'temperatura'     => $input['temperatura'] ?? null,
+            'ph'              => $input['ph'] ?? null,
+            'turbidez'        => $input['turbidez'] ?? null,
+            'nivel_agua'      => isset($input['nivel_agua']) ? (int) $input['nivel_agua'] : 1,
+            'calefactor'      => isset($input['calefactor']) ? (int) $input['calefactor'] : 0,
+            'modo_vacaciones' => isset($input['modo_vacaciones']) ? (int) $input['modo_vacaciones'] : 0,
+            'created_at'      => date('Y-m-d H:i:s'),
         ]);
 
-        return $this->response->setJSON([
-            'success' => true,
-            'latest'  => $this->buildRealtimePayload(),
-        ]);
+        return $this->dashboardResponse($userId, ['success' => true]);
     }
 
     private function buildViewData(string $activeSection): array
     {
-        $userId      = $this->userId();
-        $config      = $this->ensureConfig($userId);
-        $history     = $this->fetchSensorHistory($userId);
-        $latest      = $this->fetchLatestReading($userId);
-        $feedings    = $this->fetchFeedings($userId);
+        $userId = $this->userId();
 
         return [
-            'title'          => 'Dashboard',
-            'activeSection'  => $activeSection,
-            'dashboardData'  => [
-                'userName'        => (string) session()->get('user_nombre'),
-                'config'          => $config,
-                'cards'           => $this->buildCards($latest, $config, $this->fetchLastFeeding($userId)),
-                'alerts'          => $this->fetchAlerts($userId),
-                'feedings'        => $feedings,
-                'charts'          => $history,
-                'latestTimestamp' => $latest['created_at'] ?? null,
-                'endpoints'       => [
-                    'latest'             => base_url('dashboard/api/latest'),
-                    'feed'               => base_url('dashboard/control/feed'),
-                    'vacationToggle'     => base_url('dashboard/control/vacation-toggle'),
-                    'targetTemperature'  => base_url('dashboard/control/target-temperature'),
-                    'markAlertTemplate'  => base_url('dashboard/alerts/__id__/read'),
-                ],
-            ],
+            'title'         => 'Dashboard',
+            'extraCss'      => ['css/dashboard.css'],
+            'extraJs'       => ['js/dashboard.js'],
+            'activeSection' => $activeSection,
+            'dashboardData' => array_merge($this->buildDashboardPayload($userId), [
+                'userName'  => (string) session()->get('user_nombre'),
+                'endpoints' => $this->buildEndpoints(),
+            ]),
         ];
     }
 
-    private function buildRealtimePayload(): array
+    private function buildDashboardPayload(int $userId): array
     {
-        $userId = $this->userId();
         $config = $this->ensureConfig($userId);
         $latest = $this->fetchLatestReading($userId);
 
@@ -205,28 +166,53 @@ class Dashboard extends BaseController
             'cards'           => $this->buildCards($latest, $config, $this->fetchLastFeeding($userId)),
             'alerts'          => $this->fetchAlerts($userId),
             'feedings'        => $this->fetchFeedings($userId),
+            'charts'          => $this->fetchSensorHistory($userId),
             'latestTimestamp' => $latest['created_at'] ?? null,
         ];
+    }
+
+    private function buildEndpoints(): array
+    {
+        return [
+            'latest'            => base_url('dashboard/api/latest'),
+            'feed'              => base_url('dashboard/control/feed'),
+            'vacationToggle'    => base_url('dashboard/control/vacation-toggle'),
+            'targetTemperature' => base_url('dashboard/control/target-temperature'),
+            'markAlertTemplate' => base_url('dashboard/alerts/__id__/read'),
+        ];
+    }
+
+    private function dashboardResponse(int $userId, array $extra = []): ResponseInterface
+    {
+        return $this->response->setJSON(array_merge($this->buildDashboardPayload($userId), $extra));
     }
 
     private function buildCards(?array $latest, array $config, ?array $lastFeeding): array
     {
         $temperature = $latest['temperatura'] ?? null;
-        $ph          = $latest['ph'] ?? null;
-        $vacation    = (int) ($config['modo_vacaciones'] ?? $latest['modo_vacaciones'] ?? 0) === 1;
+        $ph = $latest['ph'] ?? null;
+        $vacationMode = (int) ($config['modo_vacaciones'] ?? $latest['modo_vacaciones'] ?? 0) === 1;
 
         return [
             'temperature' => [
                 'value'  => $temperature !== null ? number_format((float) $temperature, 1) . ' °C' : '--',
                 'raw'    => $temperature !== null ? (float) $temperature : null,
                 'status' => $this->rangeStatus($temperature, (float) $config['temp_min'], (float) $config['temp_max']),
-                'meta'   => 'Optimo: ' . number_format((float) $config['temp_min'], 1) . ' - ' . number_format((float) $config['temp_max'], 1) . ' °C',
+                'meta'   => sprintf(
+                    'Optimo: %.1f - %.1f °C',
+                    (float) $config['temp_min'],
+                    (float) $config['temp_max']
+                ),
             ],
             'ph' => [
                 'value'  => $ph !== null ? number_format((float) $ph, 2) : '--',
                 'raw'    => $ph !== null ? (float) $ph : null,
                 'status' => $this->rangeStatus($ph, (float) $config['ph_min'], (float) $config['ph_max']),
-                'meta'   => 'Optimo: ' . number_format((float) $config['ph_min'], 2) . ' - ' . number_format((float) $config['ph_max'], 2),
+                'meta'   => sprintf(
+                    'Optimo: %.2f - %.2f',
+                    (float) $config['ph_min'],
+                    (float) $config['ph_max']
+                ),
             ],
             'waterLevel' => [
                 'value'  => ((int) ($latest['nivel_agua'] ?? 0) === 1) ? 'OK' : 'Bajo',
@@ -240,59 +226,41 @@ class Dashboard extends BaseController
             ],
             'lastFeeding' => $this->formatFeeding($lastFeeding),
             'vacationMode' => [
-                'value'  => $vacation ? 'Activo' : 'Inactivo',
-                'status' => $vacation ? 'ok' : 'neutral',
-                'meta'   => $vacation ? 'Rutinas automaticas habilitadas' : 'Modo manual activo',
-                'raw'    => $vacation,
+                'value'  => $vacationMode ? 'Activo' : 'Inactivo',
+                'status' => $vacationMode ? 'ok' : 'neutral',
+                'meta'   => $vacationMode ? 'Rutinas automaticas habilitadas' : 'Modo manual activo',
+                'raw'    => $vacationMode,
             ],
         ];
     }
 
     private function fetchLatestReading(int $userId): ?array
     {
-        if (! $this->tableExists('lecturas_sensores')) {
-            return null;
-        }
-
-        try {
-            return $this->sensorModel->ultimaLectura($userId);
-        } catch (Throwable) {
-            return null;
-        }
+        return $this->fromTable(
+            'lecturas_sensores',
+            fn (): ?array => $this->sensorModel->ultimaLectura($userId),
+            null
+        );
     }
 
     private function fetchSensorHistory(int $userId): array
     {
-        $history = [
-            'labels'       => [],
-            'temperature'  => [],
-            'ph'           => [],
-        ];
+        return $this->fromTable('lecturas_sensores', function () use ($userId): array {
+            $history = $this->emptyHistory();
 
-        if (! $this->tableExists('lecturas_sensores')) {
-            return $history;
-        }
-
-        try {
             foreach ($this->sensorModel->historial($userId, 24) as $row) {
-                $history['labels'][]      = date('H:i', strtotime($row['created_at']));
+                $history['labels'][] = date('H:i', strtotime($row['created_at']));
                 $history['temperature'][] = $row['temperatura'] !== null ? (float) $row['temperatura'] : null;
-                $history['ph'][]          = $row['ph'] !== null ? (float) $row['ph'] : null;
+                $history['ph'][] = $row['ph'] !== null ? (float) $row['ph'] : null;
             }
-        } catch (Throwable) {
-            return $history;
-        }
 
-        return $history;
+            return $history;
+        }, $this->emptyHistory());
     }
 
     private function fetchAlerts(int $userId): array
     {
-        if (! $this->tableExists('alertas')) {
-            return [];
-        }
-
-        try {
+        return $this->fromTable('alertas', function () use ($userId): array {
             return array_map(function (array $alert): array {
                 return [
                     'id'         => (int) $alert['id'],
@@ -303,35 +271,23 @@ class Dashboard extends BaseController
                     'time'       => date('d/m H:i', strtotime($alert['created_at'])),
                 ];
             }, $this->alertaModel->noLeidasPorUsuario($userId, 5));
-        } catch (Throwable) {
-            return [];
-        }
+        }, []);
     }
 
     private function fetchFeedings(int $userId): array
     {
-        if (! $this->tableExists('alimentaciones')) {
-            return [];
-        }
-
-        try {
+        return $this->fromTable('alimentaciones', function () use ($userId): array {
             return array_map([$this, 'formatFeeding'], $this->alimentacionModel->ultimasPorUsuario($userId, 10));
-        } catch (Throwable) {
-            return [];
-        }
+        }, []);
     }
 
     private function fetchLastFeeding(int $userId): ?array
     {
-        if (! $this->tableExists('alimentaciones')) {
-            return null;
-        }
-
-        try {
-            return $this->alimentacionModel->ultimaPorUsuario($userId);
-        } catch (Throwable) {
-            return null;
-        }
+        return $this->fromTable(
+            'alimentaciones',
+            fn (): ?array => $this->alimentacionModel->ultimaPorUsuario($userId),
+            null
+        );
     }
 
     private function formatFeeding(?array $feeding): array
@@ -371,25 +327,35 @@ class Dashboard extends BaseController
             return $cache[$userId];
         }
 
-        $config = null;
-        if ($this->tableExists('configuracion_pecera')) {
-            try {
-                $config = $this->configuracionModel->porUsuario($userId);
-            } catch (Throwable) {
-                $config = null;
-            }
-        }
+        $config = $this->fromTable(
+            'configuracion_pecera',
+            fn (): ?array => $this->configuracionModel->porUsuario($userId),
+            null
+        );
 
-        $cache[$userId] = array_merge([
-            'temp_min'        => 24.00,
-            'temp_max'        => 27.00,
-            'ph_min'          => 6.80,
-            'ph_max'          => 7.60,
-            'temp_objetivo'   => 25.50,
-            'modo_vacaciones' => 0,
-        ], $config ?? []);
+        $cache[$userId] = array_merge(self::DEFAULT_CONFIG, $config ?? []);
 
         return $cache[$userId];
+    }
+
+    private function saveConfig(int $userId, array $changes): array
+    {
+        $config = $this->ensureConfig($userId);
+
+        if (! $this->tableExists('configuracion_pecera')) {
+            return array_merge($config, $changes);
+        }
+
+        $payload = $changes;
+
+        if (isset($config['id'])) {
+            $this->configuracionModel->update($config['id'], $payload);
+        } else {
+            $payload['usuario_id'] = $userId;
+            $this->configuracionModel->insert($payload);
+        }
+
+        return $this->ensureConfig($userId, true);
     }
 
     private function rangeStatus($value, float $min, float $max): string
@@ -408,9 +374,37 @@ class Dashboard extends BaseController
         return ($value >= $min - $margin && $value <= $max + $margin) ? 'warn' : 'danger';
     }
 
+    private function fromTable(string $table, callable $callback, mixed $fallback): mixed
+    {
+        if (! $this->tableExists($table)) {
+            return $fallback;
+        }
+
+        try {
+            return $callback();
+        } catch (Throwable) {
+            return $fallback;
+        }
+    }
+
+    private function emptyHistory(): array
+    {
+        return [
+            'labels'      => [],
+            'temperature' => [],
+            'ph'          => [],
+        ];
+    }
+
     private function tableExists(string $table): bool
     {
-        return $this->database->tableExists($table);
+        static $cache = [];
+
+        if (! array_key_exists($table, $cache)) {
+            $cache[$table] = $this->database->tableExists($table);
+        }
+
+        return $cache[$table];
     }
 
     private function userId(): int

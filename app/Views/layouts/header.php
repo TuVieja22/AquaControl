@@ -1,3 +1,15 @@
+<?php
+$isAuthenticated = (bool) session()->get('user_id');
+$authenticatedLinks = [
+    ['href' => base_url('dashboard'), 'label' => 'Panel principal'],
+    ['href' => base_url('dashboard/history') . '#historial', 'label' => 'Historial'],
+    ['href' => base_url('dashboard/settings') . '#configuracion', 'label' => 'Configuracion'],
+];
+$guestLinks = [
+    ['href' => base_url('auth/login'), 'label' => 'Iniciar sesion', 'class' => 'btn-nav'],
+    ['href' => base_url('auth/register'), 'label' => 'Registrarse', 'class' => 'btn-nav primary'],
+];
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,11 +33,9 @@
   <link rel="stylesheet" href="<?= base_url('css/components/theme-switch.css') ?>">
   <link rel="stylesheet" href="<?= base_url('css/components/loader.css') ?>">
   <link rel="stylesheet" href="<?= base_url('css/components/logout-button.css') ?>">
-  <?php if (! empty($extraCss ?? [])): ?>
-    <?php foreach (($extraCss ?? []) as $cssFile): ?>
-      <link rel="stylesheet" href="<?= base_url($cssFile) ?>">
-    <?php endforeach; ?>
-  <?php endif; ?>
+  <?php foreach (($extraCss ?? []) as $cssFile): ?>
+    <link rel="stylesheet" href="<?= base_url($cssFile) ?>">
+  <?php endforeach; ?>
 </head>
 <body>
 
@@ -72,6 +82,7 @@
         <div class="brand-icon">AC</div>
         Aqua<span>Control</span>
       </a>
+
       <div class="navbar-links">
         <div class="theme-switch-shell" title="Cambiar tema">
           <span class="theme-switch-text">Tema</span>
@@ -82,24 +93,19 @@
             </label>
           </div>
         </div>
-        <?php if (session()->get('user_id')): ?>
+
+        <?php if ($isAuthenticated): ?>
           <span class="nav-user"><?= esc((string) session()->get('user_nombre')) ?></span>
-          <a href="<?= base_url('dashboard') ?>" class="btn-nav">Panel principal</a>
-          <a href="<?= base_url('dashboard/history') ?>#historial" class="btn-nav">Historial</a>
-          <a href="<?= base_url('dashboard/settings') ?>#configuracion" class="btn-nav">Configuracion</a>
+          <?php foreach ($authenticatedLinks as $link): ?>
+            <a href="<?= esc($link['href']) ?>" class="btn-nav"><?= esc($link['label']) ?></a>
+          <?php endforeach; ?>
           <div class="logout-button-wrap navbar-logout">
-            <a href="<?= base_url('auth/logout') ?>" class="Btn" aria-label="Cerrar sesion">
-              <span class="sign" aria-hidden="true">
-                <svg viewBox="0 0 512 512">
-                  <path d="M377.9 105.9 500.7 228.7c15 15 15 39.3 0 54.3L377.9 406.1c-15.1 15.1-41 4.4-41-17V320H192c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40h144.9v-69.1c0-21.4 25.9-32.1 41-17ZM192 352H96c-17.7 0-32-14.3-32-32V192c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96C42.98 96 0 138.1 0 192v128c0 53 42.98 96 96 96h96c17.7 0 32-14.3 32-32s-14.3-32-32-32Z"/>
-                </svg>
-              </span>
-              <span class="text">Salir</span>
-            </a>
+            <?= view('components/logout_button') ?>
           </div>
         <?php else: ?>
-          <a href="<?= base_url('auth/login') ?>" class="btn-nav">Iniciar sesion</a>
-          <a href="<?= base_url('auth/register') ?>" class="btn-nav primary">Registrarse</a>
+          <?php foreach ($guestLinks as $link): ?>
+            <a href="<?= esc($link['href']) ?>" class="<?= esc($link['class']) ?>"><?= esc($link['label']) ?></a>
+          <?php endforeach; ?>
         <?php endif; ?>
       </div>
     </div>

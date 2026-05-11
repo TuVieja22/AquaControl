@@ -3,16 +3,18 @@
 namespace App\Controllers;
 
 use App\Models\UserModel;
-use CodeIgniter\Controller;
+use CodeIgniter\HTTP\RedirectResponse;
+use Config\Services;
 
-/**
- * Auth Controller
- * app/Controllers/Auth.php
- *
- * Maneja: registro, login, logout, recuperación y reset de contraseña.
- */
 class Auth extends BaseController
 {
+    private const AUTH_ASSETS = [
+        'extraCss' => ['css/auth.css'],
+        'extraJs'  => ['js/auth.js'],
+    ];
+
+    private const PASSWORD_RULE = 'required|min_length[8]|regex_match[/^(?=.*[A-Z])(?=.*[0-9]).+$/]';
+
     protected UserModel $userModel;
 
     public function __construct()
@@ -20,62 +22,83 @@ class Auth extends BaseController
         $this->userModel = new UserModel();
     }
 
-    // ════════════════════════════════════════════════════════════
-    // REGISTRO
-    // ════════════════════════════════════════════════════════════
-
-    public function register(): string|\CodeIgniter\HTTP\RedirectResponse
+    public function register(): string|RedirectResponse
     {
-        // Si ya está logueado, redirigir al dashboard
-        if (session()->get('user_id')) {
-            return redirect()->to(base_url('dashboard'));
+        if ($redirect = $this->redirectIfAuthenticated()) {
+            return $redirect;
         }
 
         if ($this->request->getMethod() === 'POST') {
             return $this->processRegister();
         }
 
-        return view('auth/register');
+        return $this->renderAuth('register', ['title' => 'Crear cuenta']);
     }
 
-    private function processRegister(): string|\CodeIgniter\HTTP\RedirectResponse
+    public function login(): string|RedirectResponse
     {
-        $rules = [
-            'nombre'           => 'required|min_length[2]|max_length[100]',
-            'email'            => 'required|valid_email|max_length[150]|is_unique[usuarios.email]',
-            'password'         => 'required|min_length[8]|regex_match[/^(?=.*[A-Z])(?=.*[0-9]).+$/]',
-            'password_confirm' => 'required|matches[password]',
-            'terms'            => 'required',
-        ];
+        if ($redirect = $this->redirectIfAuthenticated()) {
+            return $redirect;
+        }
 
-        $messages = [
-            'nombre' => [
-                'required'   => 'El nombre es obligatorio.',
-                'min_length' => 'El nombre debe tener al menos 2 caracteres.',
-            ],
-            'email' => [
-                'required'    => 'El correo electrónico es obligatorio.',
-                'valid_email' => 'Ingresa un correo válido.',
-                'is_unique'   => 'Este correo ya está registrado.',
-            ],
-            'password' => [
-                'required'    => 'La contraseña es obligatoria.',
-                'min_length'  => 'La contraseña debe tener al menos 8 caracteres.',
-                'regex_match' => 'La contraseña debe contener al menos una mayúscula y un número.',
-            ],
-            'password_confirm' => [
-                'required' => 'Confirma tu contraseña.',
-                'matches'  => 'Las contraseñas no coinciden.',
-            ],
-            'terms' => [
-                'required' => 'Debes aceptar los términos y condiciones.',
-            ],
-        ];
+        if ($this->request->getMethod() === 'POST') {
+            return $this->processLogin();
+        }
+
+        return $this->renderAuth('login', ['title' => 'Iniciar sesion']);
+    }
+
+    public function logout(): RedirectResponse
+    {
+        session()->destroy();
+
+        return redirect()
+            ->to(base_url('auth/login'))
+            ->with('info', 'Sesion cerrada correctamente.');
+    }
+
+    public function recover(): string|RedirectResponse
+    {
+        if ($this->request->getMethod() === 'POST') {
+            return $this->processRecover();
+        }
+
+        return $this->renderAuth('recover', ['title' => 'Recuperar contrasena']);
+    }
+
+    public function reset(?string $token = null): string|RedirectResponse
+    {
+        $token = $token ?? $this->request->getPost('token') ?? $this->request->getGet('token');
+
+        if (! $token) {
+            return redirect()
+                ->to(base_url('auth/recover'))
+                ->with('error', 'Token invalido o expirado.');
+        }
+
+        $user = $this->userModel->findByTokenValido($token);
+        if (! $user) {
+            return redirect()
+                ->to(base_url('auth/recover'))
+                ->with('error', 'El enlace expiro o ya fue usado. Solicita uno nuevo.');
+        }
+
+        if ($this->request->getMethod() === 'POST') {
+            return $this->processReset($user, $token);
+        }
+
+        return $this->renderAuth('reset', [
+            'title' => 'Nueva contrasena',
+            'token' => $token,
+        ]);
+    }
+
+    private function processRegister(): string|RedirectResponse
+    {
+        ['rules' => $rules, 'messages' => $messages] = $this->registerValidation();
 
         if (! $this->validate($rules, $messages)) {
-            return view('auth/register', [
-                'errors' => $this->validator->getErrors(),
-            ]);
+            return $this->renderValidationErrors('register', ['title' => 'Crear cuenta']);
         }
 
         $userId = $this->userModel->registrar([
@@ -85,243 +108,247 @@ class Auth extends BaseController
         ]);
 
         if (! $userId) {
-            return view('auth/register', [
+            return $this->renderAuth('register', [
+                'title'  => 'Crear cuenta',
                 'errors' => ['general' => 'Error al crear la cuenta. Intenta nuevamente.'],
             ]);
         }
 
-        // Auto-login tras registro
         $user = $this->userModel->find($userId);
         $this->setSession($user);
 
-        session()->setFlashdata('success', '¡Cuenta creada exitosamente! Bienvenido/a a AquaControl.');
-        return redirect()->to(base_url('dashboard'));
+        return redirect()
+            ->to(base_url('dashboard'))
+            ->with('success', 'Cuenta creada exitosamente. Bienvenido/a a AquaControl.');
     }
 
-    // ════════════════════════════════════════════════════════════
-    // LOGIN
-    // ════════════════════════════════════════════════════════════
-
-    public function login(): string|\CodeIgniter\HTTP\RedirectResponse
+    private function processLogin(): string|RedirectResponse
     {
-        if (session()->get('user_id')) {
-            return redirect()->to(base_url('dashboard'));
-        }
-
-        if ($this->request->getMethod() === 'POST') {
-            return $this->processLogin();
-        }
-
-        return view('auth/login');
-    }
-
-    private function processLogin(): string|\CodeIgniter\HTTP\RedirectResponse
-    {
-        $rules = [
-            'email'    => 'required|valid_email',
-            'password' => 'required',
-        ];
-
-        $messages = [
-            'email'    => ['required' => 'El correo es obligatorio.', 'valid_email' => 'Correo inválido.'],
-            'password' => ['required' => 'La contraseña es obligatoria.'],
-        ];
+        ['rules' => $rules, 'messages' => $messages] = $this->loginValidation();
 
         if (! $this->validate($rules, $messages)) {
-            return view('auth/login', [
-                'errors' => $this->validator->getErrors(),
-            ]);
+            return $this->renderValidationErrors('login', ['title' => 'Iniciar sesion']);
         }
 
-        $email    = $this->request->getPost('email');
-        $password = $this->request->getPost('password');
-
+        $email = (string) $this->request->getPost('email');
+        $password = (string) $this->request->getPost('password');
         $user = $this->userModel->findByEmail($email);
 
-        // Mensaje genérico para evitar enumeración de usuarios
         if (! $user || ! $this->userModel->verifyPassword($password, $user['password'])) {
-            session()->setFlashdata('error', 'Correo o contraseña incorrectos.');
-            return redirect()->back()->withInput();
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Correo o contrasena incorrectos.');
         }
 
         $this->setSession($user);
-
-        // Regenerar ID de sesión tras login (seguridad)
         session()->regenerate(true);
 
-        session()->setFlashdata('success', '¡Bienvenido/a, ' . esc($user['nombre']) . '!');
-        return redirect()->to(base_url('dashboard'));
+        return redirect()
+            ->to(base_url('dashboard'))
+            ->with('success', 'Bienvenido/a, ' . $user['nombre'] . '!');
     }
 
-    // ════════════════════════════════════════════════════════════
-    // LOGOUT
-    // ════════════════════════════════════════════════════════════
-
-    public function logout(): \CodeIgniter\HTTP\RedirectResponse
+    private function processRecover(): string|RedirectResponse
     {
-        session()->destroy();
-        session()->setFlashdata('info', 'Sesión cerrada correctamente.');
-        return redirect()->to(base_url('auth/login'));
-    }
-
-    // ════════════════════════════════════════════════════════════
-    // RECUPERACIÓN DE CONTRASEÑA
-    // ════════════════════════════════════════════════════════════
-
-    public function recover(): string|\CodeIgniter\HTTP\RedirectResponse
-    {
-        if ($this->request->getMethod() === 'POST') {
-            return $this->processRecover();
-        }
-
-        return view('auth/recover');
-    }
-
-    private function processRecover(): string|\CodeIgniter\HTTP\RedirectResponse
-    {
-        $rules    = ['email' => 'required|valid_email'];
-        $messages = ['email' => ['required' => 'El correo es obligatorio.', 'valid_email' => 'Correo inválido.']];
+        ['rules' => $rules, 'messages' => $messages] = $this->recoverValidation();
 
         if (! $this->validate($rules, $messages)) {
-            return view('auth/recover', ['errors' => $this->validator->getErrors()]);
+            return $this->renderValidationErrors('recover', ['title' => 'Recuperar contrasena']);
         }
 
-        $email = $this->request->getPost('email');
-        $user  = $this->userModel->findByEmail($email);
-
-        // Siempre mostrar el mismo mensaje (evitar enumeración)
-        $msg = 'Si ese correo existe en nuestro sistema, recibirás un enlace en los próximos minutos.';
+        $email = (string) $this->request->getPost('email');
+        $user = $this->userModel->findByEmail($email);
 
         if ($user) {
-            $token = $this->userModel->generarTokenRecuperacion($user['id']);
-            $this->enviarEmailRecuperacion($user['email'], $user['nombre'], $token);
+            $token = $this->userModel->generarTokenRecuperacion((int) $user['id']);
+            $this->sendRecoveryEmail($user['email'], $user['nombre'], $token);
         }
 
-        session()->setFlashdata('success', $msg);
-        return redirect()->to(base_url('auth/recover'));
+        return redirect()
+            ->to(base_url('auth/recover'))
+            ->with('success', 'Si ese correo existe en nuestro sistema, recibiras un enlace en los proximos minutos.');
     }
 
-    // ════════════════════════════════════════════════════════════
-    // RESET DE CONTRASEÑA
-    // ════════════════════════════════════════════════════════════
-
-    public function reset(?string $token = null): string|\CodeIgniter\HTTP\RedirectResponse
+    private function processReset(array $user, string $token): string|RedirectResponse
     {
-        $token = $token ?? $this->request->getPost('token') ?? $this->request->getGet('token');
-
-        if (! $token) {
-            session()->setFlashdata('error', 'Token inválido o expirado.');
-            return redirect()->to(base_url('auth/recover'));
-        }
-
-        $user = $this->userModel->findByTokenValido($token);
-
-        if (! $user) {
-            session()->setFlashdata('error', 'El enlace expiró o ya fue usado. Solicita uno nuevo.');
-            return redirect()->to(base_url('auth/recover'));
-        }
-
-        if ($this->request->getMethod() === 'POST') {
-            return $this->processReset($user, $token);
-        }
-
-        return view('auth/reset', ['token' => $token]);
-    }
-
-    private function processReset(array $user, string $token): string|\CodeIgniter\HTTP\RedirectResponse
-    {
-        $rules = [
-            'password'         => 'required|min_length[8]|regex_match[/^(?=.*[A-Z])(?=.*[0-9]).+$/]',
-            'password_confirm' => 'required|matches[password]',
-        ];
-
-        $messages = [
-            'password' => [
-                'required'    => 'La contraseña es obligatoria.',
-                'min_length'  => 'Mínimo 8 caracteres.',
-                'regex_match' => 'Debe contener al menos una mayúscula y un número.',
-            ],
-            'password_confirm' => [
-                'required' => 'Confirma la contraseña.',
-                'matches'  => 'Las contraseñas no coinciden.',
-            ],
-        ];
+        ['rules' => $rules, 'messages' => $messages] = $this->resetValidation();
 
         if (! $this->validate($rules, $messages)) {
-            return view('auth/reset', [
-                'token'  => $token,
-                'errors' => $this->validator->getErrors(),
+            return $this->renderValidationErrors('reset', [
+                'title' => 'Nueva contrasena',
+                'token' => $token,
             ]);
         }
 
-        $this->userModel->restablecerPassword(
-            $user['id'],
-            $this->request->getPost('password')
-        );
+        $this->userModel->restablecerPassword((int) $user['id'], (string) $this->request->getPost('password'));
 
-        session()->setFlashdata('success', '¡Contraseña actualizada! Ya puedes iniciar sesión.');
-        return redirect()->to(base_url('auth/login'));
+        return redirect()
+            ->to(base_url('auth/login'))
+            ->with('success', 'Contrasena actualizada. Ya puedes iniciar sesion.');
     }
 
-    // ════════════════════════════════════════════════════════════
-    // HELPERS PRIVADOS
-    // ════════════════════════════════════════════════════════════
+    private function renderAuth(string $view, array $data = []): string
+    {
+        return view('auth/' . $view, array_merge(self::AUTH_ASSETS, $data));
+    }
 
-    /**
-     * Establece los datos de sesión del usuario autenticado
-     */
+    private function renderValidationErrors(string $view, array $data = []): string
+    {
+        return $this->renderAuth($view, array_merge($data, [
+            'errors' => $this->validator->getErrors(),
+        ]));
+    }
+
+    private function redirectIfAuthenticated(): ?RedirectResponse
+    {
+        if (! session()->get('user_id')) {
+            return null;
+        }
+
+        return redirect()->to(base_url('dashboard'));
+    }
+
+    private function registerValidation(): array
+    {
+        return [
+            'rules' => [
+                'nombre'           => 'required|min_length[2]|max_length[100]',
+                'email'            => 'required|valid_email|max_length[150]|is_unique[usuarios.email]',
+                'password'         => self::PASSWORD_RULE,
+                'password_confirm' => 'required|matches[password]',
+                'terms'            => 'required',
+            ],
+            'messages' => [
+                'nombre' => [
+                    'required'   => 'El nombre es obligatorio.',
+                    'min_length' => 'El nombre debe tener al menos 2 caracteres.',
+                ],
+                'email' => [
+                    'required'    => 'El correo electronico es obligatorio.',
+                    'valid_email' => 'Ingresa un correo valido.',
+                    'is_unique'   => 'Este correo ya esta registrado.',
+                ],
+                'password' => $this->passwordMessages('La contrasena'),
+                'password_confirm' => [
+                    'required' => 'Confirma tu contrasena.',
+                    'matches'  => 'Las contrasenas no coinciden.',
+                ],
+                'terms' => [
+                    'required' => 'Debes aceptar los terminos y condiciones.',
+                ],
+            ],
+        ];
+    }
+
+    private function loginValidation(): array
+    {
+        return [
+            'rules' => [
+                'email'    => 'required|valid_email',
+                'password' => 'required',
+            ],
+            'messages' => [
+                'email' => [
+                    'required'    => 'El correo es obligatorio.',
+                    'valid_email' => 'Correo invalido.',
+                ],
+                'password' => [
+                    'required' => 'La contrasena es obligatoria.',
+                ],
+            ],
+        ];
+    }
+
+    private function recoverValidation(): array
+    {
+        return [
+            'rules' => [
+                'email' => 'required|valid_email',
+            ],
+            'messages' => [
+                'email' => [
+                    'required'    => 'El correo es obligatorio.',
+                    'valid_email' => 'Correo invalido.',
+                ],
+            ],
+        ];
+    }
+
+    private function resetValidation(): array
+    {
+        return [
+            'rules' => [
+                'password'         => self::PASSWORD_RULE,
+                'password_confirm' => 'required|matches[password]',
+            ],
+            'messages' => [
+                'password' => $this->passwordMessages('La contrasena', 'Minimo 8 caracteres.'),
+                'password_confirm' => [
+                    'required' => 'Confirma la contrasena.',
+                    'matches'  => 'Las contrasenas no coinciden.',
+                ],
+            ],
+        ];
+    }
+
+    private function passwordMessages(string $label, string $lengthMessage = 'La contrasena debe tener al menos 8 caracteres.'): array
+    {
+        return [
+            'required'    => $label . ' es obligatoria.',
+            'min_length'  => $lengthMessage,
+            'regex_match' => 'Debe contener al menos una mayuscula y un numero.',
+        ];
+    }
+
     private function setSession(array $user): void
     {
         session()->set([
-            'user_id'    => $user['id'],
-            'user_email' => $user['email'],
-            'user_nombre'=> $user['nombre'],
-            'logged_in'  => true,
+            'user_id'     => $user['id'],
+            'user_email'  => $user['email'],
+            'user_nombre' => $user['nombre'],
+            'logged_in'   => true,
         ]);
     }
 
-    /**
-     * Envía el email de recuperación de contraseña.
-     * Configura el email en app/Config/Email.php
-     */
-    private function enviarEmailRecuperacion(string $email, string $nombre, string $token): void
+    private function sendRecoveryEmail(string $email, string $name, string $token): void
     {
         $resetUrl = base_url('auth/reset/' . $token);
+        $message = <<<HTML
+<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#0D2B24;color:#E1F5EE;padding:40px;border-radius:16px;">
+    <h2 style="color:#5DCAA5;font-size:24px;margin-bottom:8px;">AquaControl</h2>
+    <p style="color:rgba(159,225,203,0.7);font-size:13px;margin-bottom:32px;">Sistema Inteligente IoT</p>
+    <h3 style="color:#fff;margin-bottom:12px;">Hola, {$name}</h3>
+    <p style="color:rgba(159,225,203,0.75);line-height:1.7;">
+        Recibimos una solicitud para restablecer la contrasena de tu cuenta.
+        Haz clic en el boton a continuacion para crear una nueva contrasena.
+        <br><br>
+        <strong style="color:#EF9F27;">Este enlace expira en 1 hora.</strong>
+    </p>
+    <div style="text-align:center;margin:32px 0;">
+        <a href="{$resetUrl}" style="background:#1D9E75;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">
+            Restablecer contrasena
+        </a>
+    </div>
+    <p style="color:rgba(159,225,203,0.4);font-size:12px;line-height:1.6;">
+        Si no solicitaste este cambio, ignora este correo. Tu contrasena seguira siendo la misma.<br>
+        O copia este enlace en tu navegador:<br>
+        <a href="{$resetUrl}" style="color:#5DCAA5;word-break:break-all;">{$resetUrl}</a>
+    </p>
+</div>
+HTML;
 
-        $emailService = \Config\Services::email();
+        $emailService = Services::email();
         $emailService->setTo($email);
         $emailService->setFrom(env('email.fromEmail', 'noreply@aquacontrol.com'), 'AquaControl');
-        $emailService->setSubject('Recuperación de contraseña – AquaControl');
-        $emailService->setMessage("
-            <div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#0D2B24;color:#E1F5EE;padding:40px;border-radius:16px;'>
-                <h2 style='color:#5DCAA5;font-size:24px;margin-bottom:8px;'>🐟 AquaControl</h2>
-                <p style='color:rgba(159,225,203,0.7);font-size:13px;margin-bottom:32px;'>Sistema Inteligente IoT</p>
-                <h3 style='color:#fff;margin-bottom:12px;'>Hola, {$nombre}</h3>
-                <p style='color:rgba(159,225,203,0.75);line-height:1.7;'>
-                    Recibimos una solicitud para restablecer la contraseña de tu cuenta.
-                    Haz clic en el botón a continuación para crear una nueva contraseña.
-                    <br><br>
-                    <strong style='color:#EF9F27;'>Este enlace expira en 1 hora.</strong>
-                </p>
-                <div style='text-align:center;margin:32px 0;'>
-                    <a href='{$resetUrl}'
-                       style='background:#1D9E75;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;'>
-                        Restablecer contraseña
-                    </a>
-                </div>
-                <p style='color:rgba(159,225,203,0.4);font-size:12px;line-height:1.6;'>
-                    Si no solicitaste este cambio, ignora este correo. Tu contraseña seguirá siendo la misma.<br>
-                    O copia este enlace en tu navegador:<br>
-                    <a href='{$resetUrl}' style='color:#5DCAA5;word-break:break-all;'>{$resetUrl}</a>
-                </p>
-            </div>
-        ");
+        $emailService->setSubject('Recuperacion de contrasena - AquaControl');
+        $emailService->setMessage($message);
         $emailService->setMailType('html');
 
         try {
             $emailService->send();
-        } catch (\Exception $e) {
-            log_message('error', 'Error enviando email recuperación: ' . $e->getMessage());
+        } catch (\Exception $exception) {
+            log_message('error', 'Error enviando email de recuperacion: ' . $exception->getMessage());
         }
     }
 }
