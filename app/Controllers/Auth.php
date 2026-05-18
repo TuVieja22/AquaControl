@@ -114,12 +114,9 @@ class Auth extends BaseController
             ]);
         }
 
-        $user = $this->userModel->find($userId);
-        $this->setSession($user);
-
         return redirect()
-            ->to(base_url('dashboard'))
-            ->with('success', 'Cuenta creada exitosamente. Bienvenido/a a AquaControl.');
+            ->to(base_url('auth/login'))
+            ->with('success', 'Cuenta creada exitosamente. Por seguridad, inicia sesion con tus credenciales.');
     }
 
     private function processLogin(): string|RedirectResponse
