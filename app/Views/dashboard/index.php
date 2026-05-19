@@ -5,7 +5,7 @@
   <section class="dashboard-shell container">
     <aside class="dashboard-sidebar glass-card">
       <p class="dashboard-kicker">AquaControl IoT</p>
-      <h1>Dashboard</h1>
+      <h1>Mi pecera</h1>
       <p class="dashboard-intro">Monitoreo y control continuo de la pecera de <?= esc($dashboardData['userName']) ?>.</p>
 
       <nav class="dashboard-menu">

@@ -246,8 +246,18 @@
   color: var(--danger);
 }
 
-.table-wrap {
-  overflow-x: auto;
+.feeding-card .table-wrap {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.feeding-card .history-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-bg-strong);
+  backdrop-filter: blur(4px);
+  z-index: 1;
 }
 
 .history-table {
@@ -339,6 +349,10 @@
 
   .alert-item {
     grid-template-columns: 1fr;
+  }
+
+  .feeding-card .table-wrap {
+    max-height: 280px;
   }
 
   .control-inline .btn,

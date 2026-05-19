@@ -347,21 +347,13 @@ $purchasePayload = json_encode([
     </div>
   </section>
 
-  <?php if (! session()->get('user_id')): ?>
-    <section style="padding: 80px 0; text-align: center;">
-      <div class="container">
-        <h2 style="font-family: var(--font-display); font-size: clamp(1.6rem,4vw,2.4rem); font-weight:700; color:var(--text-primary); margin-bottom:16px; letter-spacing:-0.02em;">
-          ¿Listo para automatizar<br>tu pecera?
-        </h2>
+  
+        <center>
         <p style="color:var(--text-muted); margin-bottom:32px; font-size:1rem;">
           Crea tu cuenta gratis y conecta tu ESP32 en minutos.
         </p>
-        <a href="<?= base_url('auth/register') ?>" class="btn btn-primary btn-lg" style="display:inline-flex; width:auto;">
-          Crear cuenta gratis →
-        </a>
-      </div>
-    </section>
-  <?php endif; ?>
+        </center>
+       
 
 </main>
 
