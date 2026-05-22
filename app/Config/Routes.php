@@ -25,6 +25,7 @@ $routes->group('dashboard', ['filter' => 'auth'], function ($routes) {
     $routes->post('control/feed', 'Dashboard::feedNow');
     $routes->post('control/vacation-toggle', 'Dashboard::toggleVacation');
     $routes->post('control/target-temperature', 'Dashboard::updateTargetTemperature');
+    
 });
 
 $routes->set404Override(static function () {

@@ -8,6 +8,7 @@
       <h1>Mi pecera</h1>
       <p class="dashboard-intro">Monitoreo y control continuo de la pecera de <?= esc($dashboardData['userName']) ?>.</p>
 
+      
       <nav class="dashboard-menu">
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link <?= $activeSection === 'overview' ? 'is-active' : '' ?>">Panel principal</a>
         <a href="<?= base_url('dashboard/history') ?>#historial" class="dashboard-link <?= $activeSection === 'history' ? 'is-active' : '' ?>">Historial</a>
@@ -31,10 +32,10 @@
       </div>
     </aside>
 
+
     <div class="dashboard-main">
       <section class="dashboard-hero glass-card" id="panel-principal">
         <div>
-          <p class="section-tag">Panel principal</p>
           <h2 class="dashboard-title">Estado en tiempo real de la pecera</h2>
           <p class="dashboard-subtitle">Actualizacion automatica cada 30 segundos desde `dashboard/api/latest`.</p>
         </div>

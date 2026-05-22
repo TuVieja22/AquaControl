@@ -9,11 +9,26 @@
 const THEME_KEY = 'aquacontrol-theme';
 const pageLoader = document.querySelector('[data-page-loader]');
 let loaderRequests = 0;
+const LOADER_SAFETY_TIMEOUT_MS = 9000;
+let loaderSafetyTimer = null;
+
+function armLoaderSafetyTimer() {
+  if (!pageLoader) return;
+
+  if (loaderSafetyTimer !== null) {
+    window.clearTimeout(loaderSafetyTimer);
+  }
+
+  loaderSafetyTimer = window.setTimeout(() => {
+    hideGlobalLoader(true);
+  }, LOADER_SAFETY_TIMEOUT_MS);
+}
 
 function showGlobalLoader() {
   if (!pageLoader) return;
   pageLoader.classList.add('is-visible');
   document.body.classList.add('is-loading');
+  armLoaderSafetyTimer();
 }
 
 function hideGlobalLoader(force = false) {
@@ -29,6 +44,11 @@ function hideGlobalLoader(force = false) {
 
   pageLoader.classList.remove('is-visible');
   document.body.classList.remove('is-loading');
+
+  if (loaderSafetyTimer !== null) {
+    window.clearTimeout(loaderSafetyTimer);
+    loaderSafetyTimer = null;
+  }
 }
 
 function setLoaderBusy(isBusy) {
@@ -91,6 +111,10 @@ document.querySelectorAll('[data-theme-toggle]').forEach(toggle => {
 });
 
 showGlobalLoader();
+
+document.addEventListener('DOMContentLoaded', () => {
+  hideGlobalLoader(true);
+}, { once: true });
 
 window.addEventListener('load', () => {
   hideGlobalLoader(true);

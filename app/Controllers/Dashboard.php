@@ -10,6 +10,8 @@ use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
+
+
 class Dashboard extends BaseController
 {
     private const DEFAULT_CONFIG = [
@@ -35,6 +37,8 @@ class Dashboard extends BaseController
         $this->alertaModel = new AlertaModel();
         $this->configuracionModel = new ConfiguracionPeceraModel();
     }
+
+   
 
     public function index(): string
     {

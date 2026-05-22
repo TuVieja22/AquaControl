@@ -1,12 +1,13 @@
 <?php
 $isAuthenticated = (bool) session()->get('user_id');
-$authenticatedLinks = [
+$authenticatedLinks = [   
+ 
     ['href' => base_url('dashboard'), 'label' => 'Panel principal'],
     ['href' => base_url('dashboard/history') . '#historial', 'label' => 'Historial'],
     ['href' => base_url('dashboard/settings') . '#configuracion', 'label' => 'Configuracion'],
 ];
 $guestLinks = [
-    ['href' => base_url('auth/login'), 'label' => 'Iniciar sesion', 'class' => 'btn-nav'],
+    ['href' => base_url('auth/login'  ), 'label' => 'Iniciar sesion', 'class' => 'btn-nav'],
     ['href' => base_url('auth/register'), 'label' => 'Registrarse', 'class' => 'btn-nav primary'],
 ];
 ?>
