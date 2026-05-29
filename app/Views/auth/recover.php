@@ -3,7 +3,7 @@
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark">&#x1F511;</div>
+      <div class="logo-mark">AC</div>
       <h2>Recuperar contrasena</h2>
       <p>Te enviaremos un enlace para restablecerla</p>
     </div>

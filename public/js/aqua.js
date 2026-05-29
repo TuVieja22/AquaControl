@@ -367,6 +367,86 @@ if ('IntersectionObserver' in window) {
   });
 }
 
+/* Premium landing interactions */
+const revealNodes = document.querySelectorAll('[data-reveal]');
+if (revealNodes.length > 0) {
+  if ('IntersectionObserver' in window) {
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
+
+    revealNodes.forEach((node, index) => {
+      node.style.transitionDelay = `${Math.min(index % 5, 4) * 70}ms`;
+      revealObserver.observe(node);
+    });
+  } else {
+    revealNodes.forEach(node => node.classList.add('is-visible'));
+  }
+}
+
+const landingDemo = document.querySelector('[data-dashboard-demo]');
+if (landingDemo) {
+  const temperatureNode = landingDemo.querySelector('[data-live-temperature]');
+  const phNode = landingDemo.querySelector('[data-live-ph]');
+  const alertNode = landingDemo.querySelector('[data-live-alerts]');
+  const healthNode = landingDemo.querySelector('[data-live-health]');
+  const syncNode = landingDemo.querySelector('[data-live-sync]');
+  let tick = 0;
+
+  function updateLiveMetric(node, value) {
+    if (!node) return;
+
+    const wrapper = node.closest('.live-stat, .ecosystem-state');
+    node.textContent = value;
+
+    if (wrapper) {
+      wrapper.classList.add('is-updated');
+      window.setTimeout(() => wrapper.classList.remove('is-updated'), 420);
+    }
+  }
+
+  function renderLandingDemo() {
+    tick += 1;
+    const temperature = 25.4 + Math.sin(tick / 2) * 0.4;
+    const ph = 6.82 + Math.cos(tick / 3) * 0.05;
+    const health = 97 + Math.round(Math.sin(tick / 4) * 1);
+
+    updateLiveMetric(temperatureNode, `${temperature.toFixed(1)}\u00b0C`);
+    updateLiveMetric(phNode, ph.toFixed(2));
+    updateLiveMetric(alertNode, tick % 9 === 0 ? '1' : '0');
+    updateLiveMetric(healthNode, `${health}%`);
+
+    if (syncNode) {
+      syncNode.textContent = `hace ${2 + (tick % 5)} s`;
+    }
+  }
+
+  renderLandingDemo();
+  window.setInterval(renderLandingDemo, 2800);
+}
+
+document.querySelectorAll('[data-testimonial-carousel]').forEach(carousel => {
+  const track = carousel.querySelector('.testimonial-track');
+  const next = carousel.querySelector('[data-testimonial-next]');
+  const prev = carousel.querySelector('[data-testimonial-prev]');
+
+  if (!track) return;
+
+  function scrollByCard(direction) {
+    const card = track.querySelector('.testimonial-card');
+    const amount = card ? card.getBoundingClientRect().width + 16 : track.clientWidth * 0.9;
+    track.scrollBy({ left: amount * direction, behavior: 'smooth' });
+  }
+
+  next?.addEventListener('click', () => scrollByCard(1));
+  prev?.addEventListener('click', () => scrollByCard(-1));
+});
+
 /* Dashboard */
 const dashboardDataNode = document.getElementById('dashboard-data');
 if (dashboardDataNode) {

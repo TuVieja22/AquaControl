@@ -34,7 +34,7 @@
   margin: 0 0 24px;
   overflow: hidden;
   border: 1px solid var(--surface-border);
-  border-radius: 20px;
+  border-radius: 8px;
   background: var(--surface-bg);
   box-shadow: var(--shadow-card);
 }
@@ -181,7 +181,7 @@
   padding: 16px;
   background: var(--surface-bg);
   border: 1px solid var(--surface-border);
-  border-radius: 16px;
+  border-radius: 8px;
   transition: var(--transition);
   cursor: pointer;
 }
@@ -205,7 +205,7 @@
 
 .purchase-summary {
   padding: 20px;
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--surface-bg);
   border: 1px solid var(--surface-border);
 }
@@ -258,7 +258,7 @@
 .purchase-feedback {
   display: none;
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid transparent;
   font-size: 0.92rem;
 }
@@ -299,7 +299,7 @@
 
 .purchase-sdk-panel {
   padding: 18px;
-  border-radius: 18px;
+  border-radius: 8px;
   background: var(--surface-bg);
   border: 1px solid var(--surface-border);
 }

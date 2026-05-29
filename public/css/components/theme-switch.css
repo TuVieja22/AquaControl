@@ -3,15 +3,14 @@
 */
 
 .theme-switch-shell {
-  position: fixed;
-  top: 16px;
-  right: 20px;
-  z-index: 1200;
+  position: static;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transform: scale(0.84);
-  transform-origin: top right;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.035);
 }
 
 .theme-switch-text {
@@ -22,22 +21,23 @@
 
 .toggle-switch {
   position: relative;
-  width: 100px;
-  height: 50px;
-  --light: #d8dbe0;
-  --dark: #28292c;
-  --link: rgb(27, 129, 112);
-  --link-hover: rgb(24, 94, 82);
+  width: 50px;
+  height: 28px;
+  --light: #dff8ff;
+  --dark: #0c1322;
+  --link: #00d4ff;
+  --link-hover: #40f2bf;
 }
 
 .switch-label {
   position: absolute;
   width: 100%;
-  height: 50px;
+  height: 28px;
   background-color: var(--dark);
-  border-radius: 25px;
+  border-radius: 999px;
   cursor: pointer;
-  border: 3px solid var(--dark);
+  border: 1px solid rgba(0,212,255,0.24);
+  box-shadow: inset 0 0 18px rgba(0,212,255,0.08);
 }
 
 .checkbox {
@@ -49,7 +49,7 @@
   position: absolute;
   width: 100%;
   height: 100%;
-  border-radius: 25px;
+  border-radius: 999px;
   -webkit-transition: 0.3s;
   transition: 0.3s;
 }
@@ -61,23 +61,23 @@
 .slider::before {
   content: "";
   position: absolute;
-  top: 10px;
-  left: 10px;
-  width: 25px;
-  height: 25px;
+  top: 6px;
+  left: 7px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  -webkit-box-shadow: inset 12px -4px 0px 0px var(--light);
-  box-shadow: inset 12px -4px 0px 0px var(--light);
-  background-color: var(--dark);
+  -webkit-box-shadow: inset 6px -2px 0px 0px var(--light);
+  box-shadow: inset 6px -2px 0px 0px var(--light);
+  background-color: transparent;
   -webkit-transition: 0.3s;
   transition: 0.3s;
 }
 
 .checkbox:checked ~ .slider::before {
-  -webkit-transform: translateX(50px);
-  -ms-transform: translateX(50px);
-  transform: translateX(50px);
-  background-color: var(--dark);
+  -webkit-transform: translateX(21px);
+  -ms-transform: translateX(21px);
+  transform: translateX(21px);
+  background-color: #ffcf66;
   -webkit-box-shadow: none;
   box-shadow: none;
 }
@@ -87,9 +87,5 @@
     display: none;
   }
 
-  .theme-switch-shell {
-    top: 14px;
-    right: 14px;
-    transform: scale(0.76);
-  }
+  .theme-switch-shell { display: none; }
 }

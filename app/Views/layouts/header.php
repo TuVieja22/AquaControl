@@ -4,15 +4,19 @@ $userRole = (string) session()->get('user_role');
 $authenticatedLinks = [   
  
     ['href' => base_url('dashboard'), 'label' => 'Panel principal'],
-    ['href' => base_url('dashboard/history') . '#historial', 'label' => 'Historial'],
-    ['href' => base_url('dashboard/settings') . '#configuracion', 'label' => 'Configuracion'],
     ['href' => base_url('dispositivos'), 'label' => 'Dispositivos'],
 ];
 if ($userRole === 'administrador') {
     $authenticatedLinks[] = ['href' => base_url('usuarios'), 'label' => 'Usuarios'];
 }
+$landingLinks = [
+    ['href' => base_url('/') . '#producto', 'label' => 'Producto'],
+    ['href' => base_url('/') . '#caracteristicas', 'label' => 'Caracteristicas'],
+    ['href' => base_url('/') . '#demo', 'label' => 'Demo'],
+    ['href' => base_url('/') . '#planes', 'label' => 'Planes'],
+];
 $guestLinks = [
-    ['href' => base_url('auth/login'  ), 'label' => 'Iniciar sesion', 'class' => 'btn-nav'],
+    ['href' => base_url('auth/login'), 'label' => 'Iniciar sesion', 'class' => 'btn-nav'],
     ['href' => base_url('auth/register'), 'label' => 'Registrarse', 'class' => 'btn-nav primary'],
 ];
 ?>
@@ -23,7 +27,7 @@ $guestLinks = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="AquaControl - Sistema inteligente de monitoreo y control de ecosistemas acuaticos basado en IoT con ESP32.">
   <title><?= isset($title) ? esc($title) . ' | AquaControl' : 'AquaControl - Ecosistemas Acuaticos IoT' ?></title>
-  <link rel="icon" type="image/svg+xml" href="<?= base_url('img/favicon.svg') ?>">
+  <link rel="icon" type="image/x-icon" href="<?= base_url('favicon.ico') ?>">
   <script>
     (function () {
       document.documentElement.classList.add('js');
@@ -90,6 +94,12 @@ $guestLinks = [
       </a>
 
       <div class="navbar-links">
+        <div class="nav-section-links" aria-label="Secciones principales">
+          <?php foreach ($landingLinks as $link): ?>
+            <a href="<?= esc($link['href']) ?>"><?= esc($link['label']) ?></a>
+          <?php endforeach; ?>
+        </div>
+
         <div class="theme-switch-shell" title="Cambiar tema">
           <span class="theme-switch-text">Tema</span>
           <div class="toggle-switch">

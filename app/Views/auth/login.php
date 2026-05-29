@@ -3,7 +3,7 @@
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark">&#x1F41F;</div>
+      <div class="logo-mark">AC</div>
       <h2>Bienvenido de nuevo</h2>
       <p>Inicia sesion para acceder a tu dashboard</p>
     </div>

@@ -22,6 +22,7 @@
   const feedback = document.getElementById('purchaseFeedback');
   const submitButton = document.getElementById('purchaseSubmit');
   const submitButtonLabel = form.querySelector('[data-purchase-submit-label]');
+  const defaultSubmitLabel = submitButtonLabel?.textContent.trim() || 'Pagar ahora';
   const mercadoPagoContainer = document.getElementById('mercadoPagoContainer');
   const paypalContainer = document.getElementById('paypalContainer');
 
@@ -159,7 +160,7 @@
   function setSubmitting(isSubmitting) {
     submitButton.disabled = isSubmitting;
     if (submitButtonLabel) {
-      submitButtonLabel.textContent = isSubmitting ? 'Cargando' : 'Pagar ahora';
+      submitButtonLabel.textContent = isSubmitting ? 'Cargando' : defaultSubmitLabel;
     }
   }
 

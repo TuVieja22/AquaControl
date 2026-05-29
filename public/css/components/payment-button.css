@@ -4,18 +4,19 @@
 */
 
 .purchase-payment-action .Btn {
-  width: 130px;
-  height: 40px;
+  width: 100%;
+  min-height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgb(15, 15, 15);
-  border: none;
-  color: white;
-  font-weight: 600;
-  gap: 8px;
+  background: linear-gradient(135deg, #78efff, var(--aqua-cyan, #00d4ff) 58%, #2ca5ff);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  color: #00131c;
+  font-weight: 900;
+  gap: 10px;
   cursor: pointer;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.103);
+  box-shadow: 0 18px 50px rgba(0,212,255,0.24);
   position: relative;
   overflow: hidden;
   transition-duration: .3s;
@@ -26,20 +27,20 @@
 }
 
 .purchase-payment-action .svgIcon path {
-  fill: white;
+  fill: #00131c;
 }
 
 .purchase-payment-action .Btn::before {
-  width: 130px;
-  height: 130px;
+  width: 180px;
+  height: 180px;
   position: absolute;
   content: "";
-  background-color: white;
+  background-color: rgba(255,255,255,0.7);
   border-radius: 50%;
   left: -100%;
   top: 0;
   transition-duration: .3s;
-  mix-blend-mode: difference;
+  mix-blend-mode: soft-light;
 }
 
 .purchase-payment-action .Btn:hover::before {
@@ -49,7 +50,7 @@
 }
 
 .purchase-payment-action .Btn:active {
-  transform: translate(5px,5px);
+  transform: translateY(1px);
   transition-duration: .3s;
 }
 

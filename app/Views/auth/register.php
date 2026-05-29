@@ -3,7 +3,7 @@
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark">&#x1F41F;</div>
+      <div class="logo-mark">AC</div>
       <h2>Crear cuenta</h2>
       <p>Unete a AquaControl y automatiza tu pecera</p>
     </div>

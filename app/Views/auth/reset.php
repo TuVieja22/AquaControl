@@ -3,7 +3,7 @@
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark">&#x1F510;</div>
+      <div class="logo-mark">AC</div>
       <h2>Nueva contrasena</h2>
       <p>Elige una contrasena segura para tu cuenta</p>
     </div>
