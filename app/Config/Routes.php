@@ -6,6 +6,13 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->get('/', 'Home::index');
 
+$routes->group('checkout', function ($routes) {
+    $routes->post('mercadopago/preference', 'Checkout::mercadoPagoPreference');
+    $routes->get('mercadopago/success', 'Checkout::mercadoPagoSuccess');
+    $routes->get('mercadopago/failure', 'Checkout::mercadoPagoFailure');
+    $routes->get('mercadopago/pending', 'Checkout::mercadoPagoPending');
+});
+
 $routes->group('auth', function ($routes) {
     $routes->match(['get', 'post'], 'register', 'Auth::register');
     $routes->match(['get', 'post'], 'login', 'Auth::login');
@@ -26,6 +33,18 @@ $routes->group('dashboard', ['filter' => 'auth'], function ($routes) {
     $routes->post('control/vacation-toggle', 'Dashboard::toggleVacation');
     $routes->post('control/target-temperature', 'Dashboard::updateTargetTemperature');
     
+});
+
+$routes->group('dispositivos', ['filter' => 'auth'], function ($routes) {
+    $routes->get('/', 'Dispositivos::index');
+    $routes->post('nuevo', 'Dispositivos::create');
+    $routes->match(['get', 'post'], 'editar/(:num)', 'Dispositivos::edit/$1');
+    $routes->post('eliminar/(:num)', 'Dispositivos::delete/$1');
+});
+
+$routes->group('usuarios', ['filter' => 'role:administrador'], function ($routes) {
+    $routes->get('/', 'Usuarios::index');
+    $routes->match(['get', 'post'], 'editar/(:num)', 'Usuarios::edit/$1');
 });
 
 $routes->set404Override(static function () {

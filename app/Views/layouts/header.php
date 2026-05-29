@@ -1,11 +1,16 @@
 <?php
 $isAuthenticated = (bool) session()->get('user_id');
+$userRole = (string) session()->get('user_role');
 $authenticatedLinks = [   
  
     ['href' => base_url('dashboard'), 'label' => 'Panel principal'],
     ['href' => base_url('dashboard/history') . '#historial', 'label' => 'Historial'],
     ['href' => base_url('dashboard/settings') . '#configuracion', 'label' => 'Configuracion'],
+    ['href' => base_url('dispositivos'), 'label' => 'Dispositivos'],
 ];
+if ($userRole === 'administrador') {
+    $authenticatedLinks[] = ['href' => base_url('usuarios'), 'label' => 'Usuarios'];
+}
 $guestLinks = [
     ['href' => base_url('auth/login'  ), 'label' => 'Iniciar sesion', 'class' => 'btn-nav'],
     ['href' => base_url('auth/register'), 'label' => 'Registrarse', 'class' => 'btn-nav primary'],

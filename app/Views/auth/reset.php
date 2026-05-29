@@ -22,7 +22,7 @@
             id="password"
             name="password"
             class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
-            placeholder="Minimo 8 caracteres"
+            placeholder="Minimo 8, Aa, 123 y simbolo"
             autocomplete="new-password"
             required
           >

@@ -5,7 +5,9 @@
   const PASSWORD_MESSAGES = {
     short: 'La contrasena debe tener al menos 8 caracteres.',
     uppercase: 'Debe contener al menos una letra mayuscula.',
-    number: 'Debe contener al menos un numero.'
+    lowercase: 'Debe contener al menos una letra minuscula.',
+    number: 'Debe contener al menos un numero.',
+    special: 'Debe contener al menos un caracter especial.'
   };
 
   const strengthPalette = ['#E24B4A', '#EF9F27', '#EF9F27', '#1D9E75', '#5DCAA5'];
@@ -74,8 +76,16 @@
       return PASSWORD_MESSAGES.uppercase;
     }
 
+    if (!/[a-z]/.test(value)) {
+      return PASSWORD_MESSAGES.lowercase;
+    }
+
     if (!/[0-9]/.test(value)) {
       return PASSWORD_MESSAGES.number;
+    }
+
+    if (!/[^A-Za-z0-9]/.test(value)) {
+      return PASSWORD_MESSAGES.special;
     }
 
     return '';
@@ -88,7 +98,7 @@
       score += 1;
     }
 
-    if (password.length >= 12) {
+    if (/[a-z]/.test(password)) {
       score += 1;
     }
 

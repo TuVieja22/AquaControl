@@ -6,7 +6,7 @@ use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
-class AuthFilter implements FilterInterface
+class RoleFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
@@ -14,6 +14,15 @@ class AuthFilter implements FilterInterface
             session()->setFlashdata('error', 'Debes iniciar sesion para acceder.');
 
             return redirect()->to(base_url('auth/login'));
+        }
+
+        $allowedRoles = array_filter((array) $arguments);
+        $currentRole = (string) session()->get('user_role');
+
+        if ($allowedRoles !== [] && ! in_array($currentRole, $allowedRoles, true)) {
+            session()->setFlashdata('error', 'No tienes permisos para acceder a esa seccion.');
+
+            return redirect()->to(base_url('dashboard'));
         }
     }
 

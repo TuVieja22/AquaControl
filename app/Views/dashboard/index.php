@@ -1,4 +1,7 @@
-<?php $dashboardJson = json_encode($dashboardData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>
+<?php
+$dashboardJson = json_encode($dashboardData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$isAdmin = session()->get('user_role') === 'administrador';
+?>
 <?= view('layouts/header') ?>
 
 <main class="dashboard-page" id="dashboardApp">
@@ -13,6 +16,10 @@
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link <?= $activeSection === 'overview' ? 'is-active' : '' ?>">Panel principal</a>
         <a href="<?= base_url('dashboard/history') ?>#historial" class="dashboard-link <?= $activeSection === 'history' ? 'is-active' : '' ?>">Historial</a>
         <a href="<?= base_url('dashboard/settings') ?>#configuracion" class="dashboard-link <?= $activeSection === 'settings' ? 'is-active' : '' ?>">Configuracion</a>
+        <a href="<?= base_url('dispositivos') ?>" class="dashboard-link">Dispositivos</a>
+        <?php if ($isAdmin): ?>
+          <a href="<?= base_url('usuarios') ?>" class="dashboard-link">Usuarios</a>
+        <?php endif; ?>
       </nav>
 
       <div class="logout-button-wrap dashboard-logout">
@@ -34,6 +41,8 @@
 
 
     <div class="dashboard-main">
+      <?= view('components/flash_messages', ['types' => ['success', 'error', 'info']]) ?>
+
       <section class="dashboard-hero glass-card" id="panel-principal">
         <div>
           <h2 class="dashboard-title">Estado en tiempo real de la pecera</h2>

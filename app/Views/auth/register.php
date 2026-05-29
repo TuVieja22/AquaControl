@@ -18,7 +18,7 @@
       <?= csrf_field() ?>
 
       <div class="form-group">
-        <label class="form-label" for="nombre">Nombre completo</label>
+        <label class="form-label" for="nombre">Nombre y apellido</label>
         <input
           type="text"
           id="nombre"
@@ -59,7 +59,7 @@
             id="password"
             name="password"
             class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
-            placeholder="Minimo 8 caracteres"
+            placeholder="Minimo 8, Aa, 123 y simbolo"
             autocomplete="new-password"
             required
           >

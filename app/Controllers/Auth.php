@@ -13,7 +13,9 @@ class Auth extends BaseController
         'extraJs'  => ['js/auth.js'],
     ];
 
-    private const PASSWORD_RULE = 'required|min_length[8]|regex_match[/^(?=.*[A-Z])(?=.*[0-9]).+$/]';
+    private const MAX_LOGIN_ATTEMPTS = 5;
+    private const LOGIN_LOCK_MINUTES = 15;
+    private const PASSWORD_RULE = 'required|min_length[8]|regex_match[/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/]';
 
     protected UserModel $userModel;
 
@@ -127,17 +129,35 @@ class Auth extends BaseController
             return $this->renderValidationErrors('login', ['title' => 'Iniciar sesion']);
         }
 
-        $email = (string) $this->request->getPost('email');
+        $email = strtolower(trim((string) $this->request->getPost('email')));
         $password = (string) $this->request->getPost('password');
-        $user = $this->userModel->findByEmail($email);
 
-        if (! $user || ! $this->userModel->verifyPassword($password, $user['password'])) {
+        if ($this->isLoginThrottled($email)) {
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Correo o contrasena incorrectos.');
+                ->with('error', 'Demasiados intentos. Espera unos minutos antes de volver a probar.');
         }
 
+        $user = $this->userModel->findByEmail($email);
+
+        if ($user && $this->userModel->estaBloqueado($user)) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'La cuenta esta bloqueada temporalmente por intentos fallidos. Intenta nuevamente en ' . $this->formatLockTime($this->userModel->segundosBloqueoRestantes($user)) . '.');
+        }
+
+        if (! $user || ! $this->userModel->verifyPassword($password, $user['password'])) {
+            $this->registerFailedLogin($email, $user);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Correo o contrasena incorrectos. Si el problema continua, usa la recuperacion de contrasena.');
+        }
+
+        $this->clearFailedLogin($email, (int) $user['id']);
         $this->setSession($user);
         session()->regenerate(true);
 
@@ -294,7 +314,7 @@ class Auth extends BaseController
         return [
             'required'    => $label . ' es obligatoria.',
             'min_length'  => $lengthMessage,
-            'regex_match' => 'Debe contener al menos una mayuscula y un numero.',
+            'regex_match' => 'Debe contener mayusculas, minusculas, numeros y caracteres especiales.',
         ];
     }
 
@@ -304,8 +324,63 @@ class Auth extends BaseController
             'user_id'     => $user['id'],
             'user_email'  => $user['email'],
             'user_nombre' => $user['nombre'],
+            'user_role'   => $user['rol'] ?? UserModel::DEFAULT_ROLE,
             'logged_in'   => true,
         ]);
+    }
+
+    private function isLoginThrottled(string $email): bool
+    {
+        $state = Services::cache()->get($this->loginThrottleKey($email));
+
+        return is_array($state)
+            && isset($state['locked_until'])
+            && (int) $state['locked_until'] > time();
+    }
+
+    private function registerFailedLogin(string $email, ?array $user): void
+    {
+        $cache = Services::cache();
+        $key = $this->loginThrottleKey($email);
+        $state = $cache->get($key);
+
+        if (is_array($state) && isset($state['locked_until']) && (int) $state['locked_until'] <= time()) {
+            $state = null;
+        }
+
+        $attempts = is_array($state) ? (int) ($state['attempts'] ?? 0) : 0;
+        $attempts++;
+
+        $payload = ['attempts' => $attempts];
+        if ($attempts >= self::MAX_LOGIN_ATTEMPTS) {
+            $payload['locked_until'] = time() + (self::LOGIN_LOCK_MINUTES * 60);
+        }
+
+        $cache->save($key, $payload, self::LOGIN_LOCK_MINUTES * 60);
+
+        if ($user) {
+            $this->userModel->registrarIntentoFallido((int) $user['id'], self::MAX_LOGIN_ATTEMPTS, self::LOGIN_LOCK_MINUTES);
+        }
+    }
+
+    private function clearFailedLogin(string $email, int $userId): void
+    {
+        Services::cache()->delete($this->loginThrottleKey($email));
+        $this->userModel->resetearSeguridadLogin($userId);
+    }
+
+    private function loginThrottleKey(string $email): string
+    {
+        $ip = $this->request->getIPAddress();
+
+        return 'login_attempts_' . hash('sha256', strtolower(trim($email)) . '|' . $ip);
+    }
+
+    private function formatLockTime(int $seconds): string
+    {
+        $minutes = max(1, (int) ceil($seconds / 60));
+
+        return $minutes . ' minuto' . ($minutes === 1 ? '' : 's');
     }
 
     private function sendRecoveryEmail(string $email, string $name, string $token): void

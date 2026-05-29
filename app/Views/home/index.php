@@ -46,9 +46,11 @@ $purchasePayload = json_encode([
       <div class="hero-cta">
         <?php if (session()->get('user_id')): ?>
           <a href="<?= base_url('dashboard') ?>" class="btn btn-primary btn-lg">Ir a mi pecera →</a>
+          <a href="<?= base_url('/#comprar') ?>" class="btn btn-outline btn-lg">Comprar ahora</a>
         <?php else: ?>
           <a href="<?= base_url('auth/register') ?>" class="btn btn-primary btn-lg">Comenzar gratis →</a>
           <a href="<?= base_url('auth/login') ?>" class="btn btn-outline btn-lg">Iniciar sesion</a>
+          <a href="<?= base_url('/#comprar') ?>" class="btn btn-outline btn-lg">Comprar ahora</a>
         <?php endif; ?>
       </div>
 
@@ -204,6 +206,16 @@ $purchasePayload = json_encode([
           <p class="purchase-lead"><?= esc($productConfig['headline'] ?? '') ?></p>
           <p class="purchase-description"><?= esc($productConfig['description'] ?? '') ?></p>
 
+          <figure class="purchase-product-visual">
+            <img
+              src="<?= base_url('img/aquacontrol-product.png') ?>"
+              alt="Kit AquaControl IoT con sensores, modulo central, calefactor y alimentador automatico"
+              loading="lazy"
+              decoding="async"
+            >
+            <figcaption>Vista del kit AquaControl IoT incluido en la compra.</figcaption>
+          </figure>
+
           <div class="purchase-highlights">
             <article class="purchase-highlight glass-card">
               <span class="purchase-highlight-kicker">Checkout</span>
@@ -231,6 +243,8 @@ $purchasePayload = json_encode([
             </div>
             <span class="purchase-status">Compra segura</span>
           </div>
+
+          <?= view('components/flash_messages', ['types' => ['success', 'error', 'info']]) ?>
 
           <form id="purchaseForm" class="purchase-form" data-skip-loader="true" novalidate>
             <input type="hidden" name="product_sku" value="<?= esc($productConfig['sku'] ?? 'aquacontrol') ?>">

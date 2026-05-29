@@ -1,0 +1,149 @@
+.management-page {
+  padding: 42px 0 80px;
+}
+
+.management-hero {
+  padding: 28px 32px;
+}
+
+.management-card {
+  padding: 24px;
+}
+
+.management-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.75fr) minmax(0, 1.25fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.management-narrow {
+  max-width: 760px;
+}
+
+.management-form {
+  display: grid;
+  gap: 18px;
+}
+
+.management-form-actions,
+.management-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.management-form-actions .btn,
+.management-actions .btn {
+  width: auto;
+}
+
+.management-actions form {
+  margin: 0;
+}
+
+.management-count,
+.role-badge,
+.type-badge,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border-strong);
+  background: var(--theme-toggle-bg);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 7px 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.management-count {
+  min-width: 42px;
+  color: var(--teal-100);
+}
+
+.role-badge,
+.type-badge {
+  color: var(--teal-100);
+}
+
+.status-pill.is-active {
+  color: var(--ok);
+  border-color: rgba(29,158,117,0.28);
+  background: rgba(29,158,117,0.1);
+}
+
+.status-pill.is-muted {
+  color: var(--text-muted);
+}
+
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.management-table th,
+.management-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--surface-border);
+  color: var(--text-primary);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.management-table th {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field-help {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
+.danger-action {
+  color: #f7b2b1;
+  border-color: rgba(226,75,74,0.28);
+}
+
+.danger-action:hover,
+.danger-action:focus-visible {
+  background: rgba(226,75,74,0.1);
+  border-color: rgba(226,75,74,0.42);
+}
+
+select.form-control {
+  min-height: 48px;
+}
+
+@media (max-width: 980px) {
+  .management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .management-hero,
+  .management-card {
+    padding: 20px;
+  }
+
+  .management-form-actions .btn,
+  .management-actions .btn,
+  .management-actions form {
+    width: 100%;
+  }
+
+  .management-table th,
+  .management-table td {
+    min-width: 140px;
+  }
+}

@@ -29,9 +29,9 @@ class Home extends BaseController
                 ],
                 'payment' => [
                     'locale'                 => env('commerce.locale', 'es-AR'),
-                    'checkoutOrderUrl'       => env('commerce.checkoutOrderUrl', ''),
-                    'mercadoPagoPublicKey'   => env('mercadopago.publicKey', ''),
-                    'mercadoPagoPreferenceUrl' => env('mercadopago.preferenceUrl', ''),
+                    'checkoutOrderUrl'         => env('commerce.checkoutOrderUrl', ''),
+                    'mercadoPagoPublicKey'     => env('mercadopago.publicKey', ''),
+                    'mercadoPagoPreferenceUrl' => env('mercadopago.preferenceUrl', base_url('checkout/mercadopago/preference')),
                     'paypalClientId'         => env('paypal.clientId', ''),
                     'paypalCurrency'         => strtoupper((string) env('paypal.currency', env('commerce.currency', 'ARS'))),
                     'paypalCreateOrderUrl'   => env('paypal.createOrderUrl', ''),
