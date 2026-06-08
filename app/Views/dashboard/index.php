@@ -1,6 +1,60 @@
 <?php
 $dashboardJson = json_encode($dashboardData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $isAdmin = session()->get('user_role') === 'administrador';
+$cards = $dashboardData['cards'];
+$alertCount = count($dashboardData['alerts'] ?? []);
+$statusScores = [
+    'ok'      => 98,
+    'neutral' => 96,
+    'warn'    => 78,
+    'danger'  => 44,
+];
+$healthStatuses = [
+    $cards['temperature']['status'] ?? 'neutral',
+    $cards['ph']['status'] ?? 'neutral',
+    $cards['waterLevel']['status'] ?? 'neutral',
+    $cards['heater']['status'] ?? 'neutral',
+    $cards['vacationMode']['status'] ?? 'neutral',
+];
+$healthTotal = 0;
+foreach ($healthStatuses as $status) {
+    $healthTotal += $statusScores[$status] ?? $statusScores['neutral'];
+}
+$ecosystemHealth = max(0, min(100, (int) round($healthTotal / max(count($healthStatuses), 1)) - ($alertCount * 6)));
+$alertMetricMeta = $alertCount === 0
+    ? 'Sin eventos criticos'
+    : ($alertCount === 1 ? '1 evento pendiente' : $alertCount . ' eventos pendientes');
+$latestSyncText = 'Sin lecturas';
+if (! empty($dashboardData['latestTimestamp'])) {
+    $elapsedSeconds = max(0, time() - strtotime($dashboardData['latestTimestamp']));
+    if ($elapsedSeconds < 60) {
+        $latestSyncText = 'hace ' . $elapsedSeconds . ' s';
+    } elseif ($elapsedSeconds < 3600) {
+        $latestSyncText = 'hace ' . floor($elapsedSeconds / 60) . ' min';
+    } else {
+        $latestSyncText = date('d/m/Y H:i', strtotime($dashboardData['latestTimestamp']));
+    }
+}
+$waterTitle = ($cards['waterLevel']['status'] ?? 'neutral') === 'ok' ? 'Agua clara' : 'Revisar nivel';
+$feedingTitle = ($cards['lastFeeding']['value'] ?? '--') === '--' ? 'Alimentacion pendiente' : 'Ultima alimentacion';
+$feedingMeta = ($cards['lastFeeding']['value'] ?? '--') === '--'
+    ? ($cards['lastFeeding']['meta'] ?? 'Sin registros')
+    : ($cards['lastFeeding']['value'] . ' - ' . ($cards['lastFeeding']['meta'] ?? 'Registrada'));
+$vacationTitle = ($cards['vacationMode']['value'] ?? 'Inactivo') === 'Activo' ? 'Modo Ausencia listo' : 'Modo manual activo';
+$statusDotClasses = [
+    'ok'      => 'status-ok',
+    'neutral' => 'status-info',
+    'warn'    => 'status-warn',
+    'danger'  => 'status-danger',
+];
+$profile = $profile ?? [];
+$profileErrors = $profileErrors ?? [];
+$profileForm = $profileForm ?? [];
+$profileName = $profileForm['nombre'] ?? ($profile['nombre'] ?? '');
+$profileEmail = $profileForm['email'] ?? ($profile['email'] ?? '');
+$profileInitial = strtoupper(substr(trim((string) $profileName), 0, 1)) ?: 'U';
+$profileCreated = ! empty($profile['created_at']) ? date('d/m/Y', strtotime($profile['created_at'])) : 'Sin datos';
+$profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime($profile['updated_at'])) : 'Sin cambios';
 ?>
 <?= view('layouts/header') ?>
 
@@ -16,111 +70,88 @@ $isAdmin = session()->get('user_role') === 'administrador';
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link <?= $activeSection === 'overview' ? 'is-active' : '' ?>">Panel principal</a>
         <a href="<?= base_url('dashboard/history') ?>#historial" class="dashboard-link <?= $activeSection === 'history' ? 'is-active' : '' ?>">Historial</a>
         <a href="<?= base_url('dashboard/settings') ?>#configuracion" class="dashboard-link <?= $activeSection === 'settings' ? 'is-active' : '' ?>">Configuracion</a>
+        <a href="<?= base_url('dashboard/profile') ?>#perfil" class="dashboard-link <?= $activeSection === 'profile' ? 'is-active' : '' ?>">Mi cuenta</a>
         <a href="<?= base_url('dispositivos') ?>" class="dashboard-link">Dispositivos</a>
         <?php if ($isAdmin): ?>
           <a href="<?= base_url('usuarios') ?>" class="dashboard-link">Usuarios</a>
         <?php endif; ?>
       </nav>
 
-      <div class="logout-button-wrap dashboard-logout">
-        <a href="<?= base_url('auth/logout') ?>" class="Btn" aria-label="Cerrar sesion">
-          <span class="sign" aria-hidden="true">
-            <svg viewBox="0 0 512 512">
-              <path d="M377.9 105.9 500.7 228.7c15 15 15 39.3 0 54.3L377.9 406.1c-15.1 15.1-41 4.4-41-17V320H192c-22.1 0-40-17.9-40-40v-48c0-22.1 17.9-40 40-40h144.9v-69.1c0-21.4 25.9-32.1 41-17ZM192 352H96c-17.7 0-32-14.3-32-32V192c0-17.7 14.3-32 32-32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H96C42.98 96 0 138.1 0 192v128c0 53 42.98 96 96 96h96c17.7 0 32-14.3 32-32s-14.3-32-32-32Z"/>
-            </svg>
-          </span>
-          <span class="text">Salir</span>
-        </a>
-      </div>
-
-      <div class="dashboard-user glass-card">
-        <span class="dashboard-user-label">Usuario logueado</span>
-        <strong><?= esc($dashboardData['userName']) ?></strong>
-      </div>
     </aside>
 
 
     <div class="dashboard-main">
       <?= view('components/flash_messages', ['types' => ['success', 'error', 'info']]) ?>
 
-      <section class="dashboard-hero glass-card" id="panel-principal">
-        <div>
-          <h2 class="dashboard-title">Estado en tiempo real de la pecera</h2>
-          <p class="dashboard-subtitle">Actualizacion automatica cada 30 segundos desde `dashboard/api/latest`.</p>
-        </div>
-        <div class="dashboard-hero-meta">
-          <span class="live-dot"></span>
-          <span id="latestTimestamp"><?= esc($dashboardData['latestTimestamp'] ? date('d/m/Y H:i', strtotime($dashboardData['latestTimestamp'])) : 'Sin lecturas') ?></span>
-        </div>
-      </section>
-
-      <section class="sensor-grid">
-        <article class="sensor-card glass-card sensor-status-<?= esc($dashboardData['cards']['temperature']['status']) ?>" data-card="temperature">
-          <div class="sensor-card-head"><span>🌡️</span><span>Temperatura</span></div>
-          <strong class="sensor-value" data-field="value"><?= esc($dashboardData['cards']['temperature']['value']) ?></strong>
-          <span class="sensor-pill" data-field="status"><?= esc($dashboardData['cards']['temperature']['status']) ?></span>
-          <p class="sensor-meta" data-field="meta"><?= esc($dashboardData['cards']['temperature']['meta']) ?></p>
-        </article>
-
-        <article class="sensor-card glass-card sensor-status-<?= esc($dashboardData['cards']['ph']['status']) ?>" data-card="ph">
-          <div class="sensor-card-head"><span>🧪</span><span>pH</span></div>
-          <strong class="sensor-value" data-field="value"><?= esc($dashboardData['cards']['ph']['value']) ?></strong>
-          <span class="sensor-pill" data-field="status"><?= esc($dashboardData['cards']['ph']['status']) ?></span>
-          <p class="sensor-meta" data-field="meta"><?= esc($dashboardData['cards']['ph']['meta']) ?></p>
-        </article>
-
-        <article class="sensor-card glass-card sensor-status-<?= esc($dashboardData['cards']['waterLevel']['status']) ?>" data-card="waterLevel">
-          <div class="sensor-card-head"><span>💧</span><span>Nivel de agua</span></div>
-          <strong class="sensor-value" data-field="value"><?= esc($dashboardData['cards']['waterLevel']['value']) ?></strong>
-          <span class="sensor-pill" data-field="status"><?= esc($dashboardData['cards']['waterLevel']['status']) ?></span>
-          <p class="sensor-meta" data-field="meta"><?= esc($dashboardData['cards']['waterLevel']['meta']) ?></p>
-        </article>
-
-        <article class="sensor-card glass-card sensor-status-<?= esc($dashboardData['cards']['heater']['status']) ?>" data-card="heater">
-          <div class="sensor-card-head"><span>🔌</span><span>Calefactor</span></div>
-          <strong class="sensor-value" data-field="value"><?= esc($dashboardData['cards']['heater']['value']) ?></strong>
-          <span class="sensor-pill" data-field="status"><?= esc($dashboardData['cards']['heater']['status']) ?></span>
-          <p class="sensor-meta" data-field="meta"><?= esc($dashboardData['cards']['heater']['meta']) ?></p>
-        </article>
-
-        <article class="sensor-card glass-card sensor-status-<?= esc($dashboardData['cards']['lastFeeding']['status']) ?>" data-card="lastFeeding">
-          <div class="sensor-card-head"><span>🍽️</span><span>Ultima alimentacion</span></div>
-          <strong class="sensor-value" data-field="value"><?= esc($dashboardData['cards']['lastFeeding']['value']) ?></strong>
-          <span class="sensor-pill" data-field="status"><?= esc($dashboardData['cards']['lastFeeding']['status']) ?></span>
-          <p class="sensor-meta" data-field="meta"><?= esc($dashboardData['cards']['lastFeeding']['meta']) ?></p>
-        </article>
-
-        <article class="sensor-card glass-card sensor-status-<?= esc($dashboardData['cards']['vacationMode']['status']) ?>" data-card="vacationMode">
-          <div class="sensor-card-head"><span>🏖️</span><span>Modo vacaciones</span></div>
-          <strong class="sensor-value" data-field="value"><?= esc($dashboardData['cards']['vacationMode']['value']) ?></strong>
-          <span class="sensor-pill" data-field="status"><?= esc($dashboardData['cards']['vacationMode']['status']) ?></span>
-          <p class="sensor-meta" data-field="meta"><?= esc($dashboardData['cards']['vacationMode']['meta']) ?></p>
-          <button class="btn btn-outline sensor-inline-btn" id="vacationQuickToggle" type="button">Toggle</button>
-        </article>
-      </section>
-
-      <section class="dashboard-grid charts-grid">
-        <article class="glass-card chart-card">
-          <div class="panel-head">
-            <div>
-              <p class="section-tag">Ultimas 24 horas</p>
-              <h3>Temperatura</h3>
-            </div>
-            <span class="panel-range"><?= esc(number_format((float) $dashboardData['config']['temp_min'], 1)) ?> - <?= esc(number_format((float) $dashboardData['config']['temp_max'], 1)) ?> &deg;C</span>
+      <section class="dashboard-preview dashboard-live-panel" id="panel-principal">
+        <div class="dashboard-preview-header">
+          <div>
+            <span class="dashboard-chip"><span class="signal-dot"></span> En vivo</span>
+            <h2 class="dashboard-title">Acuario principal</h2>
           </div>
-          <canvas id="temperatureChart"></canvas>
-        </article>
+          <p>Ultima sincronizacion <strong id="latestTimestamp"><?= esc($latestSyncText) ?></strong></p>
+        </div>
 
-        <article class="glass-card chart-card">
-          <div class="panel-head">
-            <div>
-              <p class="section-tag">Ultimas 24 horas</p>
-              <h3>pH</h3>
+        <div class="dashboard-preview-grid dashboard-stat-grid">
+          <article class="live-stat sensor-status-<?= esc($cards['temperature']['status']) ?>" data-card="temperature">
+            <span>Temperatura</span>
+            <strong data-field="value"><?= esc($cards['temperature']['value']) ?></strong>
+            <small data-field="meta"><?= esc($cards['temperature']['meta']) ?></small>
+          </article>
+
+          <article class="live-stat sensor-status-<?= esc($cards['ph']['status']) ?>" data-card="ph">
+            <span>pH</span>
+            <strong data-field="value"><?= esc($cards['ph']['value']) ?></strong>
+            <small data-field="meta"><?= esc(($cards['ph']['status'] ?? 'neutral') === 'ok' ? 'Agua estable' : $cards['ph']['meta']) ?></small>
+          </article>
+
+          <article class="live-stat" data-summary="alerts">
+            <span>Alertas</span>
+            <strong id="alertsMetric"><?= esc((string) $alertCount) ?></strong>
+            <small id="alertsMetricMeta"><?= esc($alertMetricMeta) ?></small>
+          </article>
+
+          <article class="ecosystem-state" data-summary="health">
+            <span>Estado del ecosistema</span>
+            <strong id="ecosystemHealth"><?= esc((string) $ecosystemHealth) ?>%</strong>
+            <small id="ecosystemHealthMeta"><?= esc($alertMetricMeta) ?></small>
+            <div class="health-ring" aria-hidden="true"><span></span></div>
+          </article>
+        </div>
+
+        <div class="dashboard-chart-area dashboard-live-area">
+          <article class="chart-panel live-chart-panel">
+            <div class="chart-head">
+              <span>Temperatura / pH</span>
+              <strong>24 h</strong>
             </div>
-            <span class="panel-range"><?= esc(number_format((float) $dashboardData['config']['ph_min'], 2)) ?> - <?= esc(number_format((float) $dashboardData['config']['ph_max'], 2)) ?></span>
+            <canvas id="ecosystemChart"></canvas>
+          </article>
+
+          <div class="alert-stack live-status-stack">
+            <article data-status-card="water">
+              <span id="waterStatusDot" class="<?= esc($statusDotClasses[$cards['waterLevel']['status']] ?? 'status-info') ?>"></span>
+              <div>
+                <strong id="waterStatusTitle"><?= esc($waterTitle) ?></strong>
+                <small id="waterStatusMeta"><?= esc($cards['waterLevel']['meta']) ?></small>
+              </div>
+            </article>
+            <article data-status-card="feeding">
+              <span id="feedingStatusDot" class="<?= esc($statusDotClasses[$cards['lastFeeding']['status']] ?? 'status-info') ?>"></span>
+              <div>
+                <strong id="feedingStatusTitle"><?= esc($feedingTitle) ?></strong>
+                <small id="feedingStatusMeta"><?= esc($feedingMeta) ?></small>
+              </div>
+            </article>
+            <article data-status-card="vacation">
+              <span id="vacationStatusDot" class="<?= esc($statusDotClasses[$cards['vacationMode']['status']] ?? 'status-info') ?>"></span>
+              <div>
+                <strong id="vacationStatusTitle"><?= esc($vacationTitle) ?></strong>
+                <small id="vacationStatusMeta"><?= esc($cards['vacationMode']['meta']) ?></small>
+              </div>
+            </article>
           </div>
-          <canvas id="phChart"></canvas>
-        </article>
+        </div>
       </section>
 
       <section class="dashboard-grid content-grid">
@@ -251,10 +282,91 @@ $isAdmin = session()->get('user_role') === 'administrador';
           </div>
         </article>
       </section>
+
+      <section class="dashboard-grid profile-grid" id="perfil">
+        <article class="glass-card profile-card">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">Mi cuenta</p>
+              <h3>Datos de acceso</h3>
+            </div>
+          </div>
+
+          <form class="profile-form" action="<?= base_url('dashboard/profile') ?>" method="POST" novalidate>
+            <?= csrf_field() ?>
+
+            <div class="profile-form-grid">
+              <div class="form-group">
+                <label class="form-label" for="profile_nombre">Nombre y apellido</label>
+                <input class="form-control <?= isset($profileErrors['nombre']) ? 'is-invalid' : '' ?>" id="profile_nombre" name="nombre" type="text" value="<?= esc($profileName) ?>" autocomplete="name" required>
+                <p class="field-help">Aparece en el panel, alertas y registros de mantenimiento.</p>
+                <?php if (isset($profileErrors['nombre'])): ?>
+                  <div class="invalid-feedback"><span>&#9888;</span> <?= esc($profileErrors['nombre']) ?></div>
+                <?php endif; ?>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="profile_email">Correo electronico</label>
+                <input class="form-control <?= isset($profileErrors['email']) ? 'is-invalid' : '' ?>" id="profile_email" name="email" type="email" value="<?= esc($profileEmail) ?>" autocomplete="email" required>
+                <p class="field-help">Se usa para iniciar sesion y recuperar la cuenta.</p>
+                <?php if (isset($profileErrors['email'])): ?>
+                  <div class="invalid-feedback"><span>&#9888;</span> <?= esc($profileErrors['email']) ?></div>
+                <?php endif; ?>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="profile_current_password">Contrasena actual</label>
+                <input class="form-control <?= isset($profileErrors['current_password']) ? 'is-invalid' : '' ?>" id="profile_current_password" name="current_password" type="password" autocomplete="current-password" placeholder="Solo si cambias el email">
+                <p class="field-help">Confirma tu identidad antes de modificar el correo de acceso.</p>
+                <?php if (isset($profileErrors['current_password'])): ?>
+                  <div class="invalid-feedback"><span>&#9888;</span> <?= esc($profileErrors['current_password']) ?></div>
+                <?php endif; ?>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="profile_role">Rol actual</label>
+                <input class="form-control" id="profile_role" type="text" value="<?= esc($profile['roleLabel'] ?? 'Usuario comun') ?>" readonly>
+                <p class="field-help">Define los permisos disponibles dentro de AquaControl.</p>
+              </div>
+            </div>
+
+            <div class="profile-form-actions">
+              <button class="btn btn-primary" type="submit">Guardar cambios</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="glass-card profile-card profile-summary-card">
+          <div class="profile-identity">
+            <span class="profile-avatar"><?= esc($profileInitial) ?></span>
+            <div>
+              <p class="section-tag">Sesion activa</p>
+              <h3><?= esc($profile['nombre'] ?? $profileName) ?></h3>
+              <span><?= esc($profile['email'] ?? $profileEmail) ?></span>
+            </div>
+          </div>
+
+          <div class="profile-summary">
+            <div class="profile-summary-item">
+              <span>Rol</span>
+              <strong><?= esc($profile['roleLabel'] ?? 'Usuario comun') ?></strong>
+            </div>
+            <div class="profile-summary-item">
+              <span>Cuenta creada</span>
+              <strong><?= esc($profileCreated) ?></strong>
+            </div>
+            <div class="profile-summary-item">
+              <span>Ultima actualizacion</span>
+              <strong><?= esc($profileUpdated) ?></strong>
+            </div>
+          </div>
+        </article>
+      </section>
     </div>
   </section>
 </main>
 
 <script id="dashboard-data" type="application/json"><?= $dashboardJson ?></script>
+<script>window.aquaDashboardHandledByModule = true;</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <?= view('layouts/footer') ?>

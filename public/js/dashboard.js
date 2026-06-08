@@ -14,29 +14,17 @@
     danger: 'Critico',
     neutral: 'Info'
   };
+  const statusDotClasses = ['status-ok', 'status-info', 'status-warn', 'status-danger'];
+  const statusScores = {
+    ok: 98,
+    neutral: 96,
+    warn: 78,
+    danger: 44
+  };
   const cardStatusClasses = ['sensor-status-ok', 'sensor-status-warn', 'sensor-status-danger', 'sensor-status-neutral'];
   const chartDefinitions = {
-    temperature: {
-      canvasId: 'temperatureChart',
-      dataKey: 'temperature',
-      label: 'Temperatura',
-      fillColor: 'rgba(93,202,165,0.14)',
-      lineColor: '#5DCAA5',
-      minKey: 'temp_min',
-      maxKey: 'temp_max',
-      minLabel: 'Temp min',
-      maxLabel: 'Temp max'
-    },
-    ph: {
-      canvasId: 'phChart',
-      dataKey: 'ph',
-      label: 'pH',
-      fillColor: 'rgba(29,158,117,0.14)',
-      lineColor: '#1D9E75',
-      minKey: 'ph_min',
-      maxKey: 'ph_max',
-      minLabel: 'pH min',
-      maxLabel: 'pH max'
+    ecosystem: {
+      canvasId: 'ecosystemChart'
     }
   };
 
@@ -44,7 +32,20 @@
     latestTimestamp: document.getElementById('latestTimestamp'),
     vacationStateLabel: document.getElementById('vacationStateLabel'),
     alertsList: document.getElementById('alertsList'),
-    feedingsTableBody: document.getElementById('feedingsTableBody')
+    feedingsTableBody: document.getElementById('feedingsTableBody'),
+    alertsMetric: document.getElementById('alertsMetric'),
+    alertsMetricMeta: document.getElementById('alertsMetricMeta'),
+    ecosystemHealth: document.getElementById('ecosystemHealth'),
+    ecosystemHealthMeta: document.getElementById('ecosystemHealthMeta'),
+    waterStatusDot: document.getElementById('waterStatusDot'),
+    waterStatusTitle: document.getElementById('waterStatusTitle'),
+    waterStatusMeta: document.getElementById('waterStatusMeta'),
+    feedingStatusDot: document.getElementById('feedingStatusDot'),
+    feedingStatusTitle: document.getElementById('feedingStatusTitle'),
+    feedingStatusMeta: document.getElementById('feedingStatusMeta'),
+    vacationStatusDot: document.getElementById('vacationStatusDot'),
+    vacationStatusTitle: document.getElementById('vacationStatusTitle'),
+    vacationStatusMeta: document.getElementById('vacationStatusMeta')
   };
 
   function escapeHtml(value) {
@@ -62,8 +63,83 @@
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-AR');
   }
 
+  function formatRelativeTime(value, fallback = 'Sin lecturas') {
+    if (!value) {
+      return fallback;
+    }
+
+    const date = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (elapsedSeconds < 60) {
+      return `hace ${elapsedSeconds} s`;
+    }
+
+    if (elapsedSeconds < 3600) {
+      return `hace ${Math.floor(elapsedSeconds / 60)} min`;
+    }
+
+    return formatDateTime(value, fallback);
+  }
+
   function formatCardStatus(status) {
     return statusLabels[status] || status || 'Info';
+  }
+
+  function metricMeta(count) {
+    if (count === 0) {
+      return 'Sin eventos criticos';
+    }
+
+    return count === 1 ? '1 evento pendiente' : `${count} eventos pendientes`;
+  }
+
+  function ecosystemHealth() {
+    const cards = state.cards || {};
+    const statuses = [
+      cards.temperature?.status,
+      cards.ph?.status,
+      cards.waterLevel?.status,
+      cards.heater?.status,
+      cards.vacationMode?.status
+    ];
+    const total = statuses.reduce(function (sum, status) {
+      return sum + (statusScores[status] || statusScores.neutral);
+    }, 0);
+    const score = Math.round(total / statuses.length) - ((state.alerts?.length || 0) * 6);
+
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function setText(node, value) {
+    if (node) {
+      node.textContent = value;
+    }
+  }
+
+  function setStatusDot(node, status) {
+    if (!node) {
+      return;
+    }
+
+    node.classList.remove(...statusDotClasses);
+    node.classList.add({
+      ok: 'status-ok',
+      neutral: 'status-info',
+      warn: 'status-warn',
+      danger: 'status-danger'
+    }[status] || 'status-info');
+  }
+
+  function feedingMeta(card) {
+    if (!card || card.value === '--') {
+      return card?.meta || 'Sin registros';
+    }
+
+    return `${card.value} - ${card.meta || 'Registrada'}`;
   }
 
   function mergePayload(payload) {
@@ -71,12 +147,6 @@
       if (payload[key] !== undefined) {
         state[key] = payload[key];
       }
-    });
-  }
-
-  function buildReferenceSeries(labels, value) {
-    return labels.map(function () {
-      return value;
     });
   }
 
@@ -96,19 +166,41 @@
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      elements: {
+        point: { radius: 0, hitRadius: 10 },
+        line: { borderWidth: 4, borderCapStyle: 'round', borderJoinStyle: 'round' }
+      },
       plugins: {
         legend: {
+          display: false,
           labels: { color: theme.label }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(8, 14, 27, 0.92)',
+          borderColor: 'rgba(0, 212, 255, 0.24)',
+          borderWidth: 1,
+          titleColor: '#ffffff',
+          bodyColor: theme.label,
+          displayColors: false
         }
       },
       scales: {
         x: {
+          display: false,
           ticks: { color: theme.label },
-          grid: { color: theme.grid }
+          grid: { color: theme.grid, drawBorder: false }
         },
-        y: {
+        temperature: {
+          display: false,
+          position: 'left',
           ticks: { color: theme.label },
-          grid: { color: theme.grid }
+          grid: { color: theme.grid, drawBorder: false }
+        },
+        ph: {
+          display: false,
+          position: 'right',
+          ticks: { color: theme.label },
+          grid: { drawOnChartArea: false, drawBorder: false }
         }
       }
     };
@@ -117,28 +209,22 @@
   function datasetsFor(definition, labels) {
     return [
       {
-        label: definition.label,
-        data: state.charts?.[definition.dataKey] || [],
-        borderColor: definition.lineColor,
-        backgroundColor: definition.fillColor,
-        tension: 0.35,
+        label: 'Temperatura',
+        data: state.charts?.temperature || [],
+        yAxisID: 'temperature',
+        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(0, 212, 255, 0.18)',
+        tension: 0.42,
         fill: true
       },
       {
-        label: definition.minLabel,
-        data: buildReferenceSeries(labels, state.config?.[definition.minKey]),
-        borderColor: 'rgba(239,159,39,0.9)',
-        borderDash: [6, 6],
-        pointRadius: 0,
-        tension: 0
-      },
-      {
-        label: definition.maxLabel,
-        data: buildReferenceSeries(labels, state.config?.[definition.maxKey]),
-        borderColor: 'rgba(226,75,74,0.9)',
-        borderDash: [6, 6],
-        pointRadius: 0,
-        tension: 0
+        label: 'pH',
+        data: state.charts?.ph || [],
+        yAxisID: 'ph',
+        borderColor: '#40f2bf',
+        backgroundColor: 'rgba(64, 242, 191, 0.04)',
+        tension: 0.42,
+        fill: false
       }
     ];
   }
@@ -201,13 +287,46 @@
       }
 
       if (metaNode) {
-        metaNode.textContent = card.meta ?? '';
+        let statMeta = card.meta;
+        if (cardNode.matches('.dashboard-stat-grid [data-card="temperature"]')) {
+          statMeta = String(card.meta || '').replace('Optimo:', 'Rango ideal');
+        }
+        if (cardNode.matches('.dashboard-stat-grid [data-card="ph"]') && card.status === 'ok') {
+          statMeta = 'Agua estable';
+        }
+        metaNode.textContent = statMeta ?? '';
       }
     });
 
     if (nodes.vacationStateLabel && state.cards?.vacationMode?.value) {
       nodes.vacationStateLabel.textContent = state.cards.vacationMode.value;
     }
+  }
+
+  function renderLiveSummary() {
+    const alertsCount = state.alerts?.length || 0;
+    const alertsMeta = metricMeta(alertsCount);
+    const health = ecosystemHealth();
+    const water = state.cards?.waterLevel || {};
+    const feeding = state.cards?.lastFeeding || {};
+    const vacation = state.cards?.vacationMode || {};
+
+    setText(nodes.alertsMetric, String(alertsCount));
+    setText(nodes.alertsMetricMeta, alertsMeta);
+    setText(nodes.ecosystemHealth, `${health}%`);
+    setText(nodes.ecosystemHealthMeta, alertsMeta);
+
+    setStatusDot(nodes.waterStatusDot, water.status);
+    setText(nodes.waterStatusTitle, water.status === 'ok' ? 'Agua clara' : 'Revisar nivel');
+    setText(nodes.waterStatusMeta, water.meta || 'Sin lecturas');
+
+    setStatusDot(nodes.feedingStatusDot, feeding.status);
+    setText(nodes.feedingStatusTitle, feeding.value === '--' ? 'Alimentacion pendiente' : 'Ultima alimentacion');
+    setText(nodes.feedingStatusMeta, feedingMeta(feeding));
+
+    setStatusDot(nodes.vacationStatusDot, vacation.status);
+    setText(nodes.vacationStatusTitle, vacation.value === 'Activo' ? 'Modo Ausencia listo' : 'Modo manual activo');
+    setText(nodes.vacationStatusMeta, vacation.meta || '');
   }
 
   function renderAlerts() {
@@ -286,11 +405,12 @@
       return;
     }
 
-    nodes.latestTimestamp.textContent = formatDateTime(state.latestTimestamp, 'Sin lecturas');
+    nodes.latestTimestamp.textContent = formatRelativeTime(state.latestTimestamp, 'Sin lecturas');
   }
 
   function renderAll() {
     renderCards();
+    renderLiveSummary();
     renderAlerts();
     renderFeedings();
     renderConfig();

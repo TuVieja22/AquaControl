@@ -26,8 +26,10 @@ $routes->group('dashboard', ['filter' => 'auth'], function ($routes) {
     $routes->get('/', 'Dashboard::index');
     $routes->get('history', 'Dashboard::history');
     $routes->get('settings', 'Dashboard::settings');
+    $routes->get('profile', 'Dashboard::profile');
     $routes->get('api/latest', 'Dashboard::latest');
     $routes->post('api/data', 'Dashboard::receiveData');
+    $routes->post('profile', 'Dashboard::updateProfile');
     $routes->post('alerts/(:num)/read', 'Dashboard::markAlertRead/$1');
     $routes->post('control/feed', 'Dashboard::feedNow');
     $routes->post('control/vacation-toggle', 'Dashboard::toggleVacation');

@@ -6,7 +6,9 @@ use App\Models\AlertaModel;
 use App\Models\AlimentacionModel;
 use App\Models\ConfiguracionPeceraModel;
 use App\Models\SensorModel;
+use App\Models\UserModel;
 use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
@@ -27,6 +29,7 @@ class Dashboard extends BaseController
     private AlimentacionModel $alimentacionModel;
     private AlertaModel $alertaModel;
     private ConfiguracionPeceraModel $configuracionModel;
+    private UserModel $userModel;
     private BaseConnection $database;
 
     public function __construct()
@@ -36,6 +39,7 @@ class Dashboard extends BaseController
         $this->alimentacionModel = new AlimentacionModel();
         $this->alertaModel = new AlertaModel();
         $this->configuracionModel = new ConfiguracionPeceraModel();
+        $this->userModel = new UserModel();
     }
 
    
@@ -53,6 +57,11 @@ class Dashboard extends BaseController
     public function settings(): string
     {
         return view('dashboard/index', $this->buildViewData('settings'));
+    }
+
+    public function profile(): string
+    {
+        return view('dashboard/index', $this->buildViewData('profile'));
     }
 
     public function latest(): ResponseInterface
@@ -116,6 +125,84 @@ class Dashboard extends BaseController
         return $this->dashboardResponse($userId, ['success' => true]);
     }
 
+    public function updateProfile(): RedirectResponse
+    {
+        $userId = $this->userId();
+        $user = $this->userModel->find($userId);
+
+        if (! $user) {
+            session()->destroy();
+
+            return redirect()
+                ->to(base_url('auth/login'))
+                ->with('error', 'Tu sesion expiro. Inicia sesion nuevamente.');
+        }
+
+        ['rules' => $rules, 'messages' => $messages] = $this->profileValidation($userId);
+
+        if (! $this->validate($rules, $messages)) {
+            return $this->profileRedirect(
+                $this->validator->getErrors(),
+                'Revisa los datos de tu cuenta.'
+            );
+        }
+
+        $name = trim((string) $this->request->getPost('nombre'));
+        $email = strtolower(trim((string) $this->request->getPost('email')));
+        $currentPassword = (string) $this->request->getPost('current_password');
+
+        $emailChanged = $email !== strtolower((string) ($user['email'] ?? ''));
+        $nameChanged = $name !== (string) ($user['nombre'] ?? '');
+
+        if ($emailChanged && ! $this->userModel->verifyPassword($currentPassword, (string) $user['password'])) {
+            return $this->profileRedirect([
+                'current_password' => $currentPassword === ''
+                    ? 'Ingresa tu contrasena actual para cambiar el email.'
+                    : 'La contrasena actual no coincide.',
+            ], 'No se pudo confirmar tu identidad.');
+        }
+
+        if (! $nameChanged && ! $emailChanged) {
+            return redirect()
+                ->to(base_url('dashboard/profile') . '#perfil')
+                ->with('info', 'No habia cambios para guardar.');
+        }
+
+        $payload = [
+            'id'     => $userId,
+            'nombre' => $name,
+            'email'  => $email,
+        ];
+
+        if ($emailChanged) {
+            $payload['token_recuperacion'] = null;
+            $payload['token_expira'] = null;
+            $payload['login_intentos'] = 0;
+            $payload['bloqueado_hasta'] = null;
+        }
+
+        if (! $this->userModel->update($userId, $payload)) {
+            return $this->profileRedirect(
+                $this->userModel->errors(),
+                'No se pudo actualizar tu cuenta.'
+            );
+        }
+
+        session()->set([
+            'user_nombre' => $name,
+            'user_email'  => $email,
+        ]);
+        session()->regenerate(true);
+
+        $message = $emailChanged
+            ? 'Cuenta actualizada. Usa el nuevo correo en tu proximo inicio de sesion.'
+            : 'Cuenta actualizada correctamente.';
+
+        return redirect()
+            ->to(base_url('dashboard/profile') . '#perfil')
+            ->with('success', $message);
+    }
+
     public function receiveData(): ResponseInterface
     {
         if (! $this->tableExists('lecturas_sensores')) {
@@ -153,6 +240,9 @@ class Dashboard extends BaseController
             'extraCss'      => ['css/dashboard.css'],
             'extraJs'       => ['js/dashboard.js'],
             'activeSection' => $activeSection,
+            'profile'       => $this->fetchUserProfile($userId),
+            'profileErrors' => session()->getFlashdata('profile_errors') ?? [],
+            'profileForm'   => session()->getFlashdata('profile_form') ?? [],
             'dashboardData' => array_merge($this->buildDashboardPayload($userId), [
                 'userName'  => (string) session()->get('user_nombre'),
                 'endpoints' => $this->buildEndpoints(),
@@ -186,6 +276,57 @@ class Dashboard extends BaseController
         ];
     }
 
+    private function fetchUserProfile(int $userId): array
+    {
+        $user = $this->userModel->find($userId) ?? [];
+        $role = (string) ($user['rol'] ?? session()->get('user_role') ?? UserModel::DEFAULT_ROLE);
+
+        return [
+            'nombre'     => (string) ($user['nombre'] ?? session()->get('user_nombre') ?? ''),
+            'email'      => (string) ($user['email'] ?? session()->get('user_email') ?? ''),
+            'rol'        => $role,
+            'roleLabel'  => $this->userModel->roleLabel($role),
+            'created_at' => $user['created_at'] ?? null,
+            'updated_at' => $user['updated_at'] ?? null,
+        ];
+    }
+
+    private function profileValidation(int $userId): array
+    {
+        return [
+            'rules' => [
+                'nombre'           => 'required|min_length[2]|max_length[100]',
+                'email'            => 'required|valid_email|max_length[150]|is_unique[usuarios.email,id,' . $userId . ']',
+                'current_password' => 'permit_empty',
+            ],
+            'messages' => [
+                'nombre' => [
+                    'required'   => 'El nombre es obligatorio.',
+                    'min_length' => 'El nombre debe tener al menos 2 caracteres.',
+                    'max_length' => 'El nombre no puede superar los 100 caracteres.',
+                ],
+                'email' => [
+                    'required'    => 'El correo electronico es obligatorio.',
+                    'valid_email' => 'Ingresa un correo electronico valido.',
+                    'max_length'  => 'El correo no puede superar los 150 caracteres.',
+                    'is_unique'   => 'Este correo ya esta registrado en otra cuenta.',
+                ],
+            ],
+        ];
+    }
+
+    private function profileRedirect(array $errors, string $message): RedirectResponse
+    {
+        return redirect()
+            ->to(base_url('dashboard/profile') . '#perfil')
+            ->with('profile_errors', $errors)
+            ->with('profile_form', [
+                'nombre' => trim((string) $this->request->getPost('nombre')),
+                'email'  => strtolower(trim((string) $this->request->getPost('email'))),
+            ])
+            ->with('error', $message);
+    }
+
     private function dashboardResponse(int $userId, array $extra = []): ResponseInterface
     {
         return $this->response->setJSON(array_merge($this->buildDashboardPayload($userId), $extra));
@@ -213,7 +354,7 @@ class Dashboard extends BaseController
                 'raw'    => $ph !== null ? (float) $ph : null,
                 'status' => $this->rangeStatus($ph, (float) $config['ph_min'], (float) $config['ph_max']),
                 'meta'   => sprintf(
-                    'Optimo: %.2f - %.2f',
+                    'Rango ideal %.2f - %.2f',
                     (float) $config['ph_min'],
                     (float) $config['ph_max']
                 ),

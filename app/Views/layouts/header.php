@@ -40,7 +40,6 @@ $guestLinks = [
     }());
   </script>
   <link rel="stylesheet" href="<?= base_url('css/aqua.css') ?>">
-  <link rel="stylesheet" href="<?= base_url('css/components/theme-switch.css') ?>">
   <link rel="stylesheet" href="<?= base_url('css/components/loader.css') ?>">
   <link rel="stylesheet" href="<?= base_url('css/components/logout-button.css') ?>">
   <?php foreach (($extraCss ?? []) as $cssFile): ?>
@@ -98,16 +97,6 @@ $guestLinks = [
           <?php foreach ($landingLinks as $link): ?>
             <a href="<?= esc($link['href']) ?>"><?= esc($link['label']) ?></a>
           <?php endforeach; ?>
-        </div>
-
-        <div class="theme-switch-shell" title="Cambiar tema">
-          <span class="theme-switch-text">Tema</span>
-          <div class="toggle-switch">
-            <label class="switch-label" for="globalThemeToggle">
-              <input class="checkbox" id="globalThemeToggle" type="checkbox" data-theme-toggle aria-label="Cambiar entre tema claro y oscuro">
-              <span class="slider"></span>
-            </label>
-          </div>
         </div>
 
         <?php if ($isAuthenticated): ?>

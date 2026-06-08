@@ -449,7 +449,7 @@ document.querySelectorAll('[data-testimonial-carousel]').forEach(carousel => {
 
 /* Dashboard */
 const dashboardDataNode = document.getElementById('dashboard-data');
-if (dashboardDataNode) {
+if (dashboardDataNode && !window.aquaDashboardHandledByModule) {
   const dashboardState = JSON.parse(dashboardDataNode.textContent || '{}');
   const cardNodes = document.querySelectorAll('[data-card]');
   const latestTimestamp = document.getElementById('latestTimestamp');
