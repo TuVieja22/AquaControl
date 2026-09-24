@@ -23,7 +23,6 @@ El estado persistente real vive en backend: sesion, base de datos y configuracio
 | JavaScript vanilla | Validaciones, loader global, tema, checkout, dashboard en vivo. |
 | Chart.js por CDN | Grafico del dashboard IoT en `dashboard/index.php`. |
 | Mercado Pago JS SDK | Wallet/Brick de checkout, cargado dinamicamente por `purchase.js`. |
-| PayPal JS SDK | Preparado en frontend, cargado dinamicamente si se configuran endpoints. |
 | Google Fonts | Importadas desde `public/css/aqua.css`. |
 | LocalStorage | Guarda el tema en la clave `aquacontrol-theme`. |
 
@@ -157,7 +156,7 @@ Componente reutilizable para mensajes flash:
 
 ### `app/Views/components/logout_button.php`
 
-Boton reutilizable de cierre de sesion. Por defecto apunta a `auth/logout` y permite cambiar `href`, `label`, `ariaLabel` y clases.
+Boton reutilizable de cierre de sesion. Es un `<form method="POST">` con `csrf_field()` hacia `auth/logout` (el logout ya no acepta GET). Permite cambiar `action`, `label`, `ariaLabel` y clases.
 
 ### `app/Views/home/index.php`
 
@@ -183,10 +182,7 @@ El payload hidratado tiene esta forma:
   "payment": {
     "locale": "es-AR",
     "mercadoPagoPublicKey": "...",
-    "mercadoPagoPreferenceUrl": "http://.../checkout/mercadopago/preference",
-    "paypalClientId": "",
-    "paypalCreateOrderUrl": "",
-    "paypalCaptureOrderUrl": ""
+    "mercadoPagoPreferenceUrl": "http://.../checkout/mercadopago/preference"
   }
 }
 ```
@@ -238,7 +234,8 @@ Vista principal autenticada. Es la pantalla mas importante del frontend:
 
 - Recibe `$dashboardData` desde `Dashboard::buildViewData()`.
 - Calcula salud del ecosistema del lado servidor para el primer render.
-- Renderiza sidebar con secciones internas: panel, historial, configuracion, cuenta, dispositivos y usuarios si es admin.
+- Renderiza sidebar con secciones internas: panel, historial, configuracion, alimentador, cuenta, dispositivos, y usuarios y pedidos si es admin.
+- En Historial (`#filtros-historial`) muestra un formulario GET con Desde, Hasta y Dispositivo, y la cantidad de lecturas del rango.
 - Renderiza panel en vivo:
   - temperatura,
   - pH,
@@ -248,7 +245,8 @@ Vista principal autenticada. Es la pantalla mas importante del frontend:
   - estado de agua, alimentacion y modo vacaciones.
 - Renderiza lista de alertas no leidas.
 - Renderiza tabla de ultimas alimentaciones.
-- Renderiza formularios de control: alimentar ahora, modo vacaciones, temperatura objetivo.
+- Renderiza formularios de control: modo vacaciones y temperatura objetivo.
+- Renderiza la seccion Alimentador (`#alimentador`): estado del ESP32 (conectado, offline, orden en curso, ultima orden), "Alimentar ahora" y horarios de alimentacion con gramos por racion.
 - Renderiza formulario de perfil.
 - Hidrata JavaScript con `<script id="dashboard-data">`.
 - Carga Chart.js desde CDN.
@@ -260,8 +258,10 @@ Pantalla de dispositivos del usuario:
 
 - Formulario POST `dispositivos/nuevo`.
 - Tabla de dispositivos existentes.
-- Acciones editar/eliminar.
+- Acciones editar/eliminar y generar/regenerar/revocar API key.
 - Eliminar usa un `confirm()` nativo y POST a `dispositivos/eliminar/{id}`.
+- Columna "API key" con el prefijo visible y la ultima conexion del dispositivo.
+- Tras generar una key muestra un panel (`#api-key-nueva`) con la key completa (una sola vez), boton Copiar y ejemplo de request.
 - Incluye `csrf_field()` en formularios.
 
 ### `app/Views/devices/edit.php`
@@ -287,6 +287,15 @@ Formulario administrativo de usuario:
 - Permite cambiar nombre, rol y opcionalmente password.
 - El email se muestra readonly.
 - El backend impide dejar el sistema sin administradores activos.
+
+### `app/Views/orders/index.php`
+
+Pantalla administrativa de pedidos:
+
+- Resumen de aprobados (cantidad y monto) y pendientes.
+- Filtros por estado (`?estado=`) con contador por estado.
+- Tabla con fecha, referencia, pago de Mercado Pago, cliente, producto, total y estado.
+- Marca los pagos cuyo monto no coincide con el pedido para revision manual.
 
 ### `app/Views/errors/404.php`
 
@@ -342,13 +351,14 @@ Modulo principal del dashboard. Flujo:
 2. Guarda estado mutable local en `state`.
 3. Inicializa Chart.js sobre `#ecosystemChart`.
 4. Renderiza cards, resumen, alertas, tabla de alimentaciones, config y timestamp.
-5. Atiende acciones:
+5. Atiende acciones (todas envian el header `X-CSRF-TOKEN` via `window.AquaCsrf`):
    - marcar alerta leida,
-   - alimentar ahora,
+   - alimentar ahora (encola la orden para el ESP32 y muestra el mensaje del backend),
+   - guardar horarios de alimentacion,
    - alternar modo vacaciones,
    - guardar temperatura objetivo.
-6. Cada 30 segundos llama a `dashboard/api/latest`.
-7. Mezcla el payload recibido en `state` y repinta la UI.
+6. Llama a `dashboard/api/latest` cada 30 segundos, o cada 3 segundos mientras el alimentador tiene una orden en curso. En Historial, los endpoints incluyen los filtros elegidos para no volver a las 24 h.
+7. Mezcla el payload recibido en `state` y repinta la UI (incluido el estado del alimentador, `renderFeeder()`).
 
 Ejemplo de estado que espera:
 
@@ -382,15 +392,11 @@ Modulo del checkout:
 - Mantiene cantidad, precio unitario y total.
 - Valida email, cantidad, terminos y metodo.
 - Carga SDKs externos solo cuando el usuario confirma.
-- Para Mercado Pago:
-  - llama POST JSON a `checkout/mercadopago/preference`,
+- Mercado Pago es el unico medio de pago:
+  - llama POST JSON a `checkout/mercadopago/preference` con el header `X-CSRF-TOKEN`,
   - obtiene `preferenceId`,
   - monta el Brick Wallet.
-- Para PayPal:
-  - espera `paypalClientId`, `paypalCreateOrderUrl` y `paypalCaptureOrderUrl`,
-  - monta botones si los endpoints existen.
-
-PayPal esta preparado del lado cliente, pero el backend actual no define endpoints propios de orden/captura.
+- Al volver de Mercado Pago el backend verifica el pago y muestra el resultado como mensaje flash en `#checkout`.
 
 ## CSS y sistema visual
 
@@ -515,12 +521,15 @@ sequenceDiagram
     participant U as Usuario
     participant F as feedNowForm
     participant API as Dashboard::feedNow
-    participant DB as alimentaciones
+    participant Q as comandos_dispositivo
+    participant E as ESP32
     U->>F: Carga gramos y envia
-    F->>API: POST /dashboard/control/feed
-    API->>DB: Inserta alimentacion manual
-    API-->>F: JSON actualizado
-    F->>F: Repinta tabla y card de ultima alimentacion
+    F->>API: POST /dashboard/control/feed + X-CSRF-TOKEN
+    API->>Q: Encola comando alimentar
+    API-->>F: JSON con feeder.pending = true
+    F->>F: Muestra "Orden en cola" y consulta cada 3 s
+    E->>Q: Toma el comando, mueve el servo y confirma
+    F->>F: Al confirmar, repinta tabla de alimentaciones y estado
 ```
 
 ### Checkout Mercado Pago
@@ -544,11 +553,8 @@ sequenceDiagram
 
 - `aqua.js` y `auth.js` duplican validaciones de autenticacion. Conviene dejar una sola fuente para evitar mensajes divergentes y doble manejo de submit.
 - `aqua.js` conserva un bloque legacy de dashboard que referencia canvases `temperatureChart` y `phChart`, pero la vista actual usa `ecosystemChart`. Esta desactivado por `window.aquaDashboardHandledByModule`, aun asi puede eliminarse para reducir riesgo.
-- Los formularios renderizan `csrf_field()`, pero las peticiones AJAX no envian token CSRF. Si el backend activa CSRF global, esas llamadas fallarian hasta agregar header/token.
 - `theme-switch.css` existe, pero no se detecta un control visible con `data-theme-toggle` en el layout actual.
-- PayPal esta preparado en UI, pero faltan endpoints backend de crear/capturar orden.
-- `Checkout::redirectWithFlash()` redirige a `/#comprar`, pero la landing actual usa `#checkout`; ese anchor podria no posicionar al usuario donde espera.
-- Chart.js, Mercado Pago, PayPal SDK y Google Fonts dependen de servicios externos. Si fallan o estan bloqueados, la experiencia queda degradada.
+- Chart.js, Mercado Pago y Google Fonts dependen de servicios externos. Si fallan o estan bloqueados, la experiencia queda degradada.
 - Hay caracteres con mojibake en varias cadenas visibles o comentarios (`Â°C`, textos 404, comentarios). Conviene normalizar encoding UTF-8.
 - `welcome_message.php` es codigo starter no usado por la app actual.
 - El checkbox `Recordarme` del login no tiene implementacion backend.

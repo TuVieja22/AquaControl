@@ -28,6 +28,8 @@ class Filters extends BaseFilters
         'auth'          => \App\Filters\AuthFilter::class,
         'role'          => \App\Filters\RoleFilter::class,
         'csrf'          => CSRF::class,
+        'csrfheader'    => \App\Filters\CsrfTokenHeaderFilter::class,
+        'deviceauth'    => \App\Filters\DeviceAuthFilter::class,
         'toolbar'       => DebugToolbar::class,
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
@@ -75,12 +77,14 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // 'csrf',
+            // La API de dispositivos IoT se autentica por API key, no por sesion/cookie.
+            'csrf' => ['except' => ['dashboard/api/data', 'dashboard/api/commands*', 'checkout/mercadopago/webhook']],
             // 'invalidchars',
         ],
         'after' => [
             // 'honeypot',
             // 'secureheaders',
+            'csrfheader' => ['except' => ['dashboard/api/data', 'dashboard/api/commands*', 'checkout/mercadopago/webhook']],
         ],
     ];
 

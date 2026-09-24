@@ -20,14 +20,10 @@ $purchasePayload = json_encode([
         'checkoutOrderUrl'         => $paymentConfig['checkoutOrderUrl'] ?? '',
         'mercadoPagoPublicKey'     => $paymentConfig['mercadoPagoPublicKey'] ?? '',
         'mercadoPagoPreferenceUrl' => $paymentConfig['mercadoPagoPreferenceUrl'] ?? '',
-        'paypalClientId'           => $paymentConfig['paypalClientId'] ?? '',
-        'paypalCurrency'           => $paymentConfig['paypalCurrency'] ?? $currency,
-        'paypalCreateOrderUrl'     => $paymentConfig['paypalCreateOrderUrl'] ?? '',
-        'paypalCaptureOrderUrl'    => $paymentConfig['paypalCaptureOrderUrl'] ?? '',
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-$productImage = base_url('img/aquacontrol-product.png');
+$productImage =base_url('img/aquacontrol-product.png');
 $isAuthenticated = (bool) session()->get('user_id');
 
 $galleryItems = [
@@ -477,13 +473,6 @@ $testimonials = [
                 </span>
               </label>
 
-              <label class="purchase-method-card">
-                <input type="radio" name="payment_method" value="paypal">
-                <span class="purchase-method-copy">
-                  <strong>PayPal Checkout</strong>
-                  <small>Orden y captura preparadas para integracion con tu API.</small>
-                </span>
-              </label>
             </fieldset>
 
             <div class="purchase-summary" aria-live="polite">
@@ -534,7 +523,6 @@ $testimonials = [
 
             <div class="purchase-sdk-area">
               <div id="mercadoPagoContainer" class="purchase-sdk-panel" hidden></div>
-              <div id="paypalContainer" class="purchase-sdk-panel" hidden></div>
             </div>
           </form>
         </div>

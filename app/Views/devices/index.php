@@ -13,11 +13,12 @@ $form = $form ?? [];
 
       <nav class="dashboard-menu">
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link">Panel principal</a>
-        <a href="<?= base_url('dashboard/history') ?>#historial" class="dashboard-link">Historial</a>
+        <a href="<?= base_url('dashboard/history') ?>#filtros-historial" class="dashboard-link">Historial</a>
         <a href="<?= base_url('dashboard/settings') ?>#configuracion" class="dashboard-link">Configuracion</a>
         <a href="<?= base_url('dispositivos') ?>" class="dashboard-link is-active">Dispositivos</a>
         <?php if ($isAdmin): ?>
           <a href="<?= base_url('usuarios') ?>" class="dashboard-link">Usuarios</a>
+          <a href="<?= base_url('pedidos') ?>" class="dashboard-link">Pedidos</a>
         <?php endif; ?>
       </nav>
     </aside>
@@ -32,6 +33,30 @@ $form = $form ?? [];
           <p class="dashboard-subtitle">Guarda nombre, tipo y ubicacion para tener trazabilidad de cada componente.</p>
         </div>
       </section>
+
+      <?php if (! empty($newApiKey)): ?>
+        <section class="management-card glass-card api-key-panel" id="api-key-nueva">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">API key de dispositivo</p>
+              <h3><?= esc($newApiKey['nombre']) ?></h3>
+            </div>
+          </div>
+          <p class="dashboard-subtitle">Copiala y cargala en el firmware del ESP32. Por seguridad solo se guarda un hash: si la perdes, genera una nueva.</p>
+          <div class="api-key-value">
+            <code id="newApiKeyValue"><?= esc($newApiKey['key']) ?></code>
+            <button class="btn btn-outline" type="button" data-copy-target="newApiKeyValue">Copiar</button>
+          </div>
+          <p class="api-key-help">Envia las lecturas con el header <code>X-Device-Key</code> (o <code>Authorization: Bearer</code>):</p>
+          <pre class="api-key-example"><code>POST <?= esc($apiEndpoint) ?>
+
+X-Device-Key: <?= esc($newApiKey['key']) ?>
+
+Content-Type: application/json
+
+{"temperatura": 25.4, "ph": 7.1, "nivel_agua": 1, "calefactor": 0}</code></pre>
+        </section>
+      <?php endif; ?>
 
       <section class="management-grid">
         <article class="management-card glass-card">
@@ -96,21 +121,45 @@ $form = $form ?? [];
                   <th>Nombre</th>
                   <th>Tipo</th>
                   <th>Ubicacion</th>
+                  <th>API key</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 <?php if ($devices === []): ?>
-                  <tr><td colspan="4" class="table-empty">Todavia no hay dispositivos registrados.</td></tr>
+                  <tr><td colspan="5" class="table-empty">Todavia no hay dispositivos registrados.</td></tr>
                 <?php else: ?>
                   <?php foreach ($devices as $device): ?>
                     <tr>
                       <td><?= esc($device['nombre']) ?></td>
                       <td><span class="type-badge"><?= esc($typeOptions[$device['tipo']] ?? ucfirst((string) $device['tipo'])) ?></span></td>
                       <td><?= esc($device['ubicacion']) ?></td>
+                      <td class="api-key-cell">
+                        <?php if (! empty($device['api_key_prefijo'])): ?>
+                          <code><?= esc($device['api_key_prefijo']) ?>&hellip;</code>
+                          <small>
+                            <?= ! empty($device['ultima_conexion'])
+                                ? 'Ultima conexion ' . esc(date('d/m/Y H:i', strtotime($device['ultima_conexion'])))
+                                : 'Sin conexiones aun' ?>
+                          </small>
+                        <?php else: ?>
+                          <small>Sin API key</small>
+                        <?php endif; ?>
+                      </td>
                       <td>
                         <div class="management-actions">
                           <a class="btn btn-outline" href="<?= base_url('dispositivos/editar/' . $device['id']) ?>">Editar</a>
+                          <form action="<?= base_url('dispositivos/api-key/' . $device['id']) ?>" method="POST"
+                            <?= ! empty($device['api_key_hash']) ? 'onsubmit="return confirm(\'Regenerar la API key? La actual dejara de funcionar.\');"' : '' ?>>
+                            <?= csrf_field() ?>
+                            <button class="btn btn-outline" type="submit"><?= ! empty($device['api_key_hash']) ? 'Regenerar key' : 'Generar key' ?></button>
+                          </form>
+                          <?php if (! empty($device['api_key_hash'])): ?>
+                            <form action="<?= base_url('dispositivos/api-key/' . $device['id'] . '/revocar') ?>" method="POST" onsubmit="return confirm('Revocar la API key? El dispositivo no podra enviar lecturas.');">
+                              <?= csrf_field() ?>
+                              <button class="btn btn-ghost danger-action" type="submit">Revocar</button>
+                            </form>
+                          <?php endif; ?>
                           <form action="<?= base_url('dispositivos/eliminar/' . $device['id']) ?>" method="POST" onsubmit="return confirm('Eliminar este dispositivo?');">
                             <?= csrf_field() ?>
                             <button class="btn btn-ghost danger-action" type="submit">Eliminar</button>

@@ -12,6 +12,7 @@ class SensorModel extends Model
     protected $useAutoIncrement = true;
     protected $allowedFields    = [
         'usuario_id',
+        'dispositivo_id',
         'temperatura',
         'ph',
         'turbidez',
@@ -38,5 +39,22 @@ class SensorModel extends Model
             ->where('created_at >=', $since)
             ->orderBy('created_at', 'ASC')
             ->findAll();
+    }
+
+    /**
+     * Lecturas del usuario entre dos fechas (inclusive), opcionalmente de un solo dispositivo.
+     */
+    public function historialRango(int $userId, string $desde, string $hasta, ?int $deviceId = null): array
+    {
+        $query = $this->select('temperatura, ph, nivel_agua, calefactor, modo_vacaciones, created_at')
+            ->where('usuario_id', $userId)
+            ->where('created_at >=', $desde)
+            ->where('created_at <=', $hasta);
+
+        if ($deviceId !== null) {
+            $query->where('dispositivo_id', $deviceId);
+        }
+
+        return $query->orderBy('created_at', 'ASC')->findAll();
     }
 }

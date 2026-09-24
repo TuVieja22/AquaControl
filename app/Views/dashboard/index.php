@@ -55,6 +55,17 @@ $profileEmail = $profileForm['email'] ?? ($profile['email'] ?? '');
 $profileInitial = strtoupper(substr(trim((string) $profileName), 0, 1)) ?: 'U';
 $profileCreated = ! empty($profile['created_at']) ? date('d/m/Y', strtotime($profile['created_at'])) : 'Sin datos';
 $profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime($profile['updated_at'])) : 'Sin cambios';
+$historyFilters = $historyFilters ?? ['custom' => false, 'desde' => '', 'hasta' => '', 'dispositivo' => null, 'label' => '24 h', 'error' => null];
+$devices = $devices ?? [];
+$selectedDevice = null;
+foreach ($devices as $device) {
+    if ((int) $device['id'] === $historyFilters['dispositivo']) {
+        $selectedDevice = $device;
+    }
+}
+$feeder = $dashboardData['feeder'];
+$feedingConfig = config(\Config\Feeding::class);
+$chartRangeLabel = $historyFilters['label'] . ($selectedDevice ? ' · ' . $selectedDevice['nombre'] : '');
 ?>
 <?= view('layouts/header') ?>
 
@@ -68,12 +79,14 @@ $profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime(
       
       <nav class="dashboard-menu">
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link <?= $activeSection === 'overview' ? 'is-active' : '' ?>">Panel principal</a>
-        <a href="<?= base_url('dashboard/history') ?>#historial" class="dashboard-link <?= $activeSection === 'history' ? 'is-active' : '' ?>">Historial</a>
+        <a href="<?= base_url('dashboard/history') ?>#filtros-historial" class="dashboard-link <?= $activeSection === 'history' ? 'is-active' : '' ?>">Historial</a>
         <a href="<?= base_url('dashboard/settings') ?>#configuracion" class="dashboard-link <?= $activeSection === 'settings' ? 'is-active' : '' ?>">Configuracion</a>
+        <a href="<?= base_url('dashboard/settings') ?>#alimentador" class="dashboard-link">Alimentador</a>
         <a href="<?= base_url('dashboard/profile') ?>#perfil" class="dashboard-link <?= $activeSection === 'profile' ? 'is-active' : '' ?>">Mi cuenta</a>
         <a href="<?= base_url('dispositivos') ?>" class="dashboard-link">Dispositivos</a>
         <?php if ($isAdmin): ?>
           <a href="<?= base_url('usuarios') ?>" class="dashboard-link">Usuarios</a>
+          <a href="<?= base_url('pedidos') ?>" class="dashboard-link">Pedidos</a>
         <?php endif; ?>
       </nav>
 
@@ -82,6 +95,48 @@ $profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime(
 
     <div class="dashboard-main">
       <?= view('components/flash_messages', ['types' => ['success', 'error', 'info']]) ?>
+
+      <?php if ($activeSection === 'history'): ?>
+        <section class="glass-card history-filters" id="filtros-historial">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">Historial de lecturas</p>
+              <h3>Filtrar por fecha y dispositivo</h3>
+            </div>
+          </div>
+          <form class="history-filters-form" action="<?= base_url('dashboard/history') ?>#filtros-historial" method="GET">
+            <div class="form-group">
+              <label class="form-label" for="historyDesde">Desde</label>
+              <input class="form-control" id="historyDesde" name="desde" type="date" max="<?= esc(date('Y-m-d')) ?>" value="<?= esc($historyFilters['custom'] ? $historyFilters['desde'] : '') ?>">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="historyHasta">Hasta</label>
+              <input class="form-control" id="historyHasta" name="hasta" type="date" max="<?= esc(date('Y-m-d')) ?>" value="<?= esc($historyFilters['custom'] ? $historyFilters['hasta'] : '') ?>">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="historyDispositivo">Dispositivo</label>
+              <select class="form-control" id="historyDispositivo" name="dispositivo">
+                <option value="">Todos los dispositivos</option>
+                <?php foreach ($devices as $device): ?>
+                  <option value="<?= esc((string) $device['id']) ?>" <?= (int) $device['id'] === $historyFilters['dispositivo'] ? 'selected' : '' ?>><?= esc($device['nombre']) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="history-filters-actions">
+              <button class="btn btn-primary" type="submit">Aplicar</button>
+              <a class="btn btn-outline" href="<?= base_url('dashboard/history') ?>#filtros-historial">Limpiar</a>
+            </div>
+          </form>
+          <?php if (! empty($historyFilters['error'])): ?>
+            <p class="history-filters-error" role="alert"><?= esc($historyFilters['error']) ?></p>
+          <?php endif; ?>
+          <p class="history-filters-meta">
+            Mostrando <strong><?= esc($chartRangeLabel) ?></strong>:
+            <?= esc((string) ($dashboardData['charts']['count'] ?? 0)) ?> lecturas.
+            <?php if (! $historyFilters['custom']): ?>Sin rango elegido se muestran las ultimas 24 h.<?php endif; ?>
+          </p>
+        </section>
+      <?php endif; ?>
 
       <section class="dashboard-preview dashboard-live-panel" id="panel-principal">
         <div class="dashboard-preview-header">
@@ -123,7 +178,7 @@ $profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime(
           <article class="chart-panel live-chart-panel">
             <div class="chart-head">
               <span>Temperatura / pH</span>
-              <strong>24 h</strong>
+              <strong><?= esc($chartRangeLabel) ?></strong>
             </div>
             <canvas id="ecosystemChart"></canvas>
           </article>
@@ -224,14 +279,6 @@ $profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime(
           </div>
 
           <div class="control-actions">
-            <form id="feedNowForm" class="control-form">
-              <label class="form-label" for="cantidad_gramos">Cantidad a dispensar</label>
-              <div class="control-inline">
-                <input class="form-control" id="cantidad_gramos" name="cantidad_gramos" type="number" step="0.1" min="0.1" value="5">
-                <button class="btn btn-primary" type="submit">Alimentar ahora</button>
-              </div>
-            </form>
-
             <div class="toggle-row">
               <div>
                 <span class="form-label">Modo vacaciones</span>
@@ -280,6 +327,68 @@ $profileUpdated = ! empty($profile['updated_at']) ? date('d/m/Y H:i', strtotime(
               <strong id="configTargetTemp"><?= esc(number_format((float) $dashboardData['config']['temp_objetivo'], 1)) ?> &deg;C</strong>
             </div>
           </div>
+        </article>
+      </section>
+
+      <section class="dashboard-grid control-grid feeder-grid" id="alimentador">
+        <article class="glass-card control-card">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">Alimentador</p>
+              <h3>Activar servo ahora</h3>
+            </div>
+          </div>
+
+          <div class="control-actions">
+            <div class="feeder-status feeder-status-<?= esc($feeder['statusLevel']) ?>" id="feederStatus" role="status" aria-live="polite">
+              <span class="feeder-status-dot" aria-hidden="true"></span>
+              <div>
+                <strong id="feederStatusText"><?= esc($feeder['statusText']) ?></strong>
+                <small id="feederLastText"><?= esc($feeder['lastText'] ?? '') ?></small>
+              </div>
+            </div>
+
+            <form id="feedNowForm" class="control-form">
+              <label class="form-label" for="cantidad_gramos">Cantidad a dispensar (g)</label>
+              <div class="control-inline">
+                <input class="form-control" id="cantidad_gramos" name="cantidad_gramos" type="number" step="0.1" min="<?= esc((string) $feedingConfig->minGrams) ?>" max="<?= esc((string) $feedingConfig->maxGrams) ?>" value="<?= esc(number_format((float) $dashboardData['config']['cantidad_alim_gramos'], 1, '.', '')) ?>">
+                <button class="btn btn-primary" id="feedNowBtn" type="submit" <?= $feeder['hasDevice'] ? '' : 'disabled' ?>>Alimentar ahora</button>
+              </div>
+            </form>
+            <p class="feeder-feedback" id="feedNowFeedback" role="alert" hidden></p>
+          </div>
+        </article>
+
+        <article class="glass-card control-card">
+          <div class="panel-head">
+            <div>
+              <p class="section-tag">Programacion</p>
+              <h3>Horarios de alimentacion</h3>
+            </div>
+          </div>
+
+          <form id="feedingScheduleForm" class="control-form feeder-schedule-form">
+            <div class="feeder-schedule-fields">
+              <div class="form-group">
+                <label class="form-label" for="hora_alim_1">Horario 1</label>
+                <input class="form-control" id="hora_alim_1" name="hora_alim_1" type="time" value="<?= esc(substr((string) ($dashboardData['config']['hora_alim_1'] ?? ''), 0, 5)) ?>">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="hora_alim_2">Horario 2</label>
+                <input class="form-control" id="hora_alim_2" name="hora_alim_2" type="time" value="<?= esc(substr((string) ($dashboardData['config']['hora_alim_2'] ?? ''), 0, 5)) ?>">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="cantidad_alim_gramos">Gramos por racion</label>
+                <input class="form-control" id="cantidad_alim_gramos" name="cantidad_alim_gramos" type="number" step="0.1" min="<?= esc((string) $feedingConfig->minGrams) ?>" max="<?= esc((string) $feedingConfig->maxGrams) ?>" value="<?= esc(number_format((float) $dashboardData['config']['cantidad_alim_gramos'], 1, '.', '')) ?>" required>
+              </div>
+            </div>
+            <p class="toggle-copy" id="feederScheduleText"><?= esc($feeder['scheduleText']) ?></p>
+            <p class="toggle-copy">Deja un horario vacio para desactivarlo. A esa hora el alimentador se activa solo (con hasta <?= esc((string) $feedingConfig->scheduleWindowMinutes) ?> min de margen si estuvo offline).</p>
+            <div class="management-form-actions">
+              <button class="btn btn-outline" type="submit">Guardar horarios</button>
+            </div>
+            <p class="feeder-feedback" id="feedingScheduleFeedback" role="alert" hidden></p>
+          </form>
         </article>
       </section>
 

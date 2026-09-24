@@ -29,4 +29,17 @@ class Services extends BaseService
      *     return new \CodeIgniter\Example();
      * }
      */
+
+    /**
+     * Autenticacion de dispositivos IoT por API key (compartido durante el request
+     * para que el filtro y el controlador vean el mismo dispositivo).
+     */
+    public static function deviceAuth(bool $getShared = true): \App\Libraries\DeviceAuth
+    {
+        if ($getShared) {
+            return static::getSharedInstance('deviceAuth');
+        }
+
+        return new \App\Libraries\DeviceAuth(new \App\Models\DispositivoModel());
+    }
 }

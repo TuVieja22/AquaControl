@@ -24,7 +24,6 @@
   const submitButtonLabel = form.querySelector('[data-purchase-submit-label]');
   const defaultSubmitLabel = submitButtonLabel?.textContent.trim() || 'Pagar ahora';
   const mercadoPagoContainer = document.getElementById('mercadoPagoContainer');
-  const paypalContainer = document.getElementById('paypalContainer');
 
   const state = {
     mercadoPagoController: null,
@@ -145,7 +144,7 @@
       issues.push('Debes aceptar la continuacion al checkout seguro.');
     }
 
-    if (!['mercadopago', 'paypal'].includes(method)) {
+    if (method !== 'mercadopago') {
       issues.push('Selecciona un metodo de pago disponible.');
     }
 
@@ -193,16 +192,21 @@
     });
   }
 
+  function csrfHeaders(headers) {
+    return window.AquaCsrf ? window.AquaCsrf.headers(headers) : headers;
+  }
+
   async function postJson(url, payload) {
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: {
+      headers: csrfHeaders({
         'Content-Type': 'application/json',
         'X-Requested-With': 'XMLHttpRequest'
-      },
+      }),
       body: JSON.stringify(payload)
     });
+    window.AquaCsrf?.refresh(response);
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -214,10 +218,7 @@
 
   async function resetPaymentMounts() {
     mercadoPagoContainer.hidden = true;
-    paypalContainer.hidden = true;
     mercadoPagoContainer.classList.remove('is-loading');
-    paypalContainer.classList.remove('is-loading');
-    paypalContainer.innerHTML = '';
 
     if (state.mercadoPagoController && typeof state.mercadoPagoController.unmount === 'function') {
       await state.mercadoPagoController.unmount();
@@ -278,64 +279,6 @@
     setFeedback('Mercado Pago listo. Puedes continuar desde el boton oficial del checkout.', 'success');
   }
 
-  async function mountPayPal(orderPayload) {
-    const clientId = config.payment?.paypalClientId || '';
-    const createOrderUrl = config.payment?.paypalCreateOrderUrl || '';
-    const captureOrderUrl = config.payment?.paypalCaptureOrderUrl || '';
-    const currency = config.payment?.paypalCurrency || getCurrency();
-
-    if (!clientId || !createOrderUrl || !captureOrderUrl) {
-      setFeedback('Configura client id y endpoints de orden y captura para habilitar PayPal Checkout.', 'info');
-      return;
-    }
-
-    await resetPaymentMounts();
-    paypalContainer.hidden = false;
-    paypalContainer.classList.add('is-loading');
-    paypalContainer.innerHTML = '<div id="paypalButtonsRoot"></div>';
-
-    await ensureScript(
-      `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&components=buttons`,
-      'paypal'
-    );
-
-    paypalContainer.classList.remove('is-loading');
-
-    await window.paypal.Buttons({
-      style: {
-        layout: 'vertical',
-        color: 'gold',
-        shape: 'rect',
-        label: 'paypal',
-        tagline: false
-      },
-      createOrder: async function () {
-        const response = await postJson(createOrderUrl, orderPayload);
-        const orderId = response.orderID || response.orderId || response.id;
-
-        if (!orderId) {
-          throw new Error('El backend debe devolver un orderID valido para PayPal.');
-        }
-
-        return orderId;
-      },
-      onApprove: async function (data) {
-        await postJson(captureOrderUrl, {
-          orderID: data.orderID,
-          customer: orderPayload.customer,
-          product: orderPayload.product
-        });
-
-        setFeedback('Pago aprobado. La orden fue enviada para su captura y confirmacion.', 'success');
-      },
-      onError: function () {
-        setFeedback('PayPal no pudo iniciar el checkout. Revisa credenciales, moneda y endpoints.', 'error');
-      }
-    }).render('#paypalButtonsRoot');
-
-    setFeedback('PayPal listo. Completa el pago desde los botones oficiales.', 'success');
-  }
-
   async function handleSubmit(event) {
     event.preventDefault();
     clearFeedback();
@@ -345,17 +288,10 @@
       return;
     }
 
-    const orderPayload = buildOrderPayload();
-    const method = getSelectedMethod();
-
     setSubmitting(true);
 
     try {
-      if (method === 'mercadopago') {
-        await mountMercadoPago(orderPayload);
-      } else {
-        await mountPayPal(orderPayload);
-      }
+      await mountMercadoPago(buildOrderPayload());
     } catch (error) {
       setFeedback(error.message || 'No fue posible preparar el checkout seleccionado.', 'error');
     } finally {

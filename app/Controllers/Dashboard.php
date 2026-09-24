@@ -4,12 +4,15 @@ namespace App\Controllers;
 
 use App\Models\AlertaModel;
 use App\Models\AlimentacionModel;
+use App\Models\ComandoDispositivoModel;
 use App\Models\ConfiguracionPeceraModel;
+use App\Models\DispositivoModel;
 use App\Models\SensorModel;
 use App\Models\UserModel;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
+use Config\Feeding;
 use Throwable;
 
 
@@ -23,9 +26,17 @@ class Dashboard extends BaseController
         'ph_max'          => 7.60,
         'temp_objetivo'   => 25.50,
         'modo_vacaciones' => 0,
+        // Mismos defaults que las columnas de configuracion_pecera.
+        'hora_alim_1'          => '08:00:00',
+        'hora_alim_2'          => '18:00:00',
+        'cantidad_alim_gramos' => 1.00,
     ];
 
+    private const MAX_CHART_POINTS = 500;
+
     private SensorModel $sensorModel;
+    private DispositivoModel $dispositivoModel;
+    private ComandoDispositivoModel $comandoModel;
     private AlimentacionModel $alimentacionModel;
     private AlertaModel $alertaModel;
     private ConfiguracionPeceraModel $configuracionModel;
@@ -36,6 +47,8 @@ class Dashboard extends BaseController
     {
         $this->database = db_connect();
         $this->sensorModel = new SensorModel();
+        $this->dispositivoModel = new DispositivoModel();
+        $this->comandoModel = new ComandoDispositivoModel();
         $this->alimentacionModel = new AlimentacionModel();
         $this->alertaModel = new AlertaModel();
         $this->configuracionModel = new ConfiguracionPeceraModel();
@@ -87,20 +100,80 @@ class Dashboard extends BaseController
         return $this->dashboardResponse($userId, ['success' => true]);
     }
 
+    /**
+     * "Alimentar ahora": encola un comando para que el ESP32 mueva el servo. La
+     * alimentacion se registra en el historial recien cuando el dispositivo confirma.
+     */
     public function feedNow(): ResponseInterface
     {
         $userId = $this->userId();
+        $feeding = config(Feeding::class);
+        $grams = round((float) $this->request->getPost('cantidad_gramos'), 2);
 
-        if ($this->tableExists('alimentaciones')) {
-            $this->alimentacionModel->insert([
-                'usuario_id'      => $userId,
-                'cantidad_gramos' => (float) ($this->request->getPost('cantidad_gramos') ?? 5),
-                'tipo'            => 'manual',
-                'created_at'      => date('Y-m-d H:i:s'),
-            ]);
+        if ($grams < $feeding->minGrams || $grams > $feeding->maxGrams) {
+            return $this->feedError($userId, 422, sprintf(
+                'La cantidad debe estar entre %.1f y %.1f g.',
+                $feeding->minGrams,
+                $feeding->maxGrams
+            ));
         }
 
-        return $this->dashboardResponse($userId, ['success' => true]);
+        if ($this->feederDevices($userId) === []) {
+            return $this->feedError($userId, 409, 'No hay un alimentador conectado. Registra el ESP32 en Dispositivos y generale una API key.');
+        }
+
+        if ($this->comandoModel->alimentacionPendiente($userId) !== null) {
+            return $this->feedError($userId, 409, 'Ya hay una alimentacion en curso. Espera a que el dispositivo la confirme.');
+        }
+
+        $this->comandoModel->crearAlimentacionManual($userId, $grams);
+
+        return $this->dashboardResponse($userId, [
+            'success' => true,
+            'message' => 'Orden enviada. El alimentador la ejecutara en unos segundos.',
+        ]);
+    }
+
+    public function updateFeedingSchedule(): ResponseInterface
+    {
+        $userId = $this->userId();
+        $feeding = config(Feeding::class);
+
+        $rules = [
+            'hora_alim_1'          => 'permit_empty|regex_match[/^([01]\d|2[0-3]):[0-5]\d$/]',
+            'hora_alim_2'          => 'permit_empty|regex_match[/^([01]\d|2[0-3]):[0-5]\d$/]',
+            'cantidad_alim_gramos' => "required|decimal|greater_than_equal_to[{$feeding->minGrams}]|less_than_equal_to[{$feeding->maxGrams}]",
+        ];
+
+        if (! $this->validate($rules, [
+            'hora_alim_1'          => ['regex_match' => 'El horario 1 debe tener formato HH:MM.'],
+            'hora_alim_2'          => ['regex_match' => 'El horario 2 debe tener formato HH:MM.'],
+            'cantidad_alim_gramos' => [
+                'required'              => 'Indica la cantidad por racion.',
+                'decimal'               => 'La cantidad debe ser un numero.',
+                'greater_than_equal_to' => "La cantidad minima es {$feeding->minGrams} g.",
+                'less_than_equal_to'    => "La cantidad maxima es {$feeding->maxGrams} g.",
+            ],
+        ])) {
+            return $this->feedError($userId, 422, implode(' ', $this->validator->getErrors()));
+        }
+
+        $time = function (string $field): ?string {
+            $value = trim((string) $this->request->getPost($field));
+
+            return $value === '' ? null : $value . ':00';
+        };
+
+        $this->saveConfig($userId, [
+            'hora_alim_1'          => $time('hora_alim_1'),
+            'hora_alim_2'          => $time('hora_alim_2'),
+            'cantidad_alim_gramos' => round((float) $this->request->getPost('cantidad_alim_gramos'), 2),
+        ]);
+
+        return $this->dashboardResponse($userId, [
+            'success' => true,
+            'message' => 'Horarios de alimentacion guardados.',
+        ]);
     }
 
     public function toggleVacation(): ResponseInterface
@@ -203,6 +276,10 @@ class Dashboard extends BaseController
             ->with('success', $message);
     }
 
+    /**
+     * Ingesta de lecturas del ESP32. La ruta usa el filtro `deviceauth`, asi que el
+     * dispositivo (y por ende el usuario duenio) sale de la API key, no de la sesion.
+     */
     public function receiveData(): ResponseInterface
     {
         if (! $this->tableExists('lecturas_sensores')) {
@@ -214,11 +291,40 @@ class Dashboard extends BaseController
                 ]);
         }
 
-        $userId = $this->userId();
-        $input = $this->request->getJSON(true) ?: $this->request->getPost();
+        $device = service('deviceAuth')->device();
+        if ($device === null) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON(['success' => false, 'message' => 'Dispositivo no autenticado.']);
+        }
 
-        $this->sensorModel->insert([
+        $userId = (int) $device['usuario_id'];
+
+        try {
+            $input = $this->request->is('json') ? $this->request->getJSON(true) : $this->request->getPost();
+        } catch (Throwable) {
+            $input = null; // JSON mal formado
+        }
+
+        if (! is_array($input) || $input === [] || ! $this->validateData($input, [
+            'temperatura'     => 'permit_empty|decimal|greater_than[-10]|less_than[60]',
+            'ph'              => 'permit_empty|decimal|greater_than_equal_to[0]|less_than_equal_to[14]',
+            'turbidez'        => 'permit_empty|decimal',
+            'nivel_agua'      => 'permit_empty|in_list[0,1]',
+            'calefactor'      => 'permit_empty|in_list[0,1]',
+            'modo_vacaciones' => 'permit_empty|in_list[0,1]',
+        ])) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON([
+                    'success' => false,
+                    'errors'  => $this->validator?->getErrors() ?? ['body' => 'Se esperaba un objeto JSON con las lecturas.'],
+                ]);
+        }
+
+        $readingId = $this->sensorModel->insert([
             'usuario_id'      => $userId,
+            'dispositivo_id'  => (int) $device['id'],
             'temperatura'     => $input['temperatura'] ?? null,
             'ph'              => $input['ph'] ?? null,
             'turbidez'        => $input['turbidez'] ?? null,
@@ -228,12 +334,25 @@ class Dashboard extends BaseController
             'created_at'      => date('Y-m-d H:i:s'),
         ]);
 
-        return $this->dashboardResponse($userId, ['success' => true]);
+        // Respuesta compacta para el microcontrolador: confirma y devuelve la config vigente.
+        $config = $this->ensureConfig($userId);
+
+        return $this->response
+            ->setStatusCode(201)
+            ->setJSON([
+                'success'    => true,
+                'lectura_id' => $readingId,
+                'config'     => [
+                    'temp_objetivo'   => (float) $config['temp_objetivo'],
+                    'modo_vacaciones' => (int) $config['modo_vacaciones'],
+                ],
+            ]);
     }
 
     private function buildViewData(string $activeSection): array
     {
         $userId = $this->userId();
+        $filters = $this->resolveHistoryFilters($userId);
 
         return [
             'title'         => 'Dashboard',
@@ -243,14 +362,16 @@ class Dashboard extends BaseController
             'profile'       => $this->fetchUserProfile($userId),
             'profileErrors' => session()->getFlashdata('profile_errors') ?? [],
             'profileForm'   => session()->getFlashdata('profile_form') ?? [],
-            'dashboardData' => array_merge($this->buildDashboardPayload($userId), [
+            'historyFilters' => $filters,
+            'devices'       => $this->fromTable('dispositivos', fn (): array => $this->dispositivoModel->porUsuario($userId), []),
+            'dashboardData' => array_merge($this->buildDashboardPayload($userId, $filters), [
                 'userName'  => (string) session()->get('user_nombre'),
-                'endpoints' => $this->buildEndpoints(),
+                'endpoints' => $this->buildEndpoints($filters),
             ]),
         ];
     }
 
-    private function buildDashboardPayload(int $userId): array
+    private function buildDashboardPayload(int $userId, ?array $filters = null): array
     {
         $config = $this->ensureConfig($userId);
         $latest = $this->fetchLatestReading($userId);
@@ -260,19 +381,94 @@ class Dashboard extends BaseController
             'cards'           => $this->buildCards($latest, $config, $this->fetchLastFeeding($userId)),
             'alerts'          => $this->fetchAlerts($userId),
             'feedings'        => $this->fetchFeedings($userId),
-            'charts'          => $this->fetchSensorHistory($userId),
+            'charts'          => $this->fetchSensorHistory($userId, $filters ?? $this->resolveHistoryFilters($userId)),
+            'feeder'          => $this->buildFeederState($userId, $config),
             'latestTimestamp' => $latest['created_at'] ?? null,
         ];
     }
 
-    private function buildEndpoints(): array
+    /**
+     * Lee los filtros del historial desde la query string (`desde`, `hasta` en Y-m-d
+     * y `dispositivo`). Sin filtros validos se mantiene la ventana de las ultimas 24 h.
+     */
+    private function resolveHistoryFilters(int $userId): array
     {
+        $today = date('Y-m-d');
+        $filters = [
+            'custom'      => false,
+            'desde'       => date('Y-m-d', strtotime('-1 day')),
+            'hasta'       => $today,
+            'dispositivo' => null,
+            'label'       => '24 h',
+            'error'       => null,
+            'query'       => [],
+        ];
+
+        $desde = trim((string) $this->request->getGet('desde'));
+        $hasta = trim((string) $this->request->getGet('hasta'));
+        $deviceId = (int) $this->request->getGet('dispositivo');
+
+        if ($deviceId > 0) {
+            if ($this->fromTable('dispositivos', fn (): ?array => $this->dispositivoModel->buscarParaUsuario($deviceId, $userId), null)) {
+                $filters['dispositivo'] = $deviceId;
+                $filters['query']['dispositivo'] = $deviceId;
+            } else {
+                $filters['error'] = 'El dispositivo seleccionado no existe.';
+            }
+        }
+
+        if ($desde === '' && $hasta === '') {
+            return $filters;
+        }
+
+        $desdeDate = $this->parseDate($desde);
+        $hastaDate = $this->parseDate($hasta);
+
+        if (($desde !== '' && $desdeDate === null) || ($hasta !== '' && $hastaDate === null)) {
+            $filters['error'] = 'Las fechas deben tener formato AAAA-MM-DD.';
+
+            return $filters;
+        }
+
+        $desdeDate ??= $hastaDate;
+        $hastaDate ??= $today;
+
+        if ($desdeDate > $hastaDate) {
+            $filters['error'] = 'La fecha "desde" no puede ser posterior a "hasta".';
+
+            return $filters;
+        }
+
+        $filters['custom'] = true;
+        $filters['desde'] = $desdeDate;
+        $filters['hasta'] = $hastaDate;
+        $filters['label'] = $desdeDate === $hastaDate
+            ? date('d/m/Y', strtotime($desdeDate))
+            : date('d/m', strtotime($desdeDate)) . ' - ' . date('d/m/Y', strtotime($hastaDate));
+        $filters['query']['desde'] = $desdeDate;
+        $filters['query']['hasta'] = $hastaDate;
+
+        return $filters;
+    }
+
+    private function parseDate(string $value): ?string
+    {
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+        return ($date && $date->format('Y-m-d') === $value) ? $value : null;
+    }
+
+    private function buildEndpoints(array $filters = []): array
+    {
+        $historyQuery = ($filters['query'] ?? []) === [] ? '' : '?' . http_build_query($filters['query']);
+
         return [
-            'latest'            => base_url('dashboard/api/latest'),
-            'feed'              => base_url('dashboard/control/feed'),
-            'vacationToggle'    => base_url('dashboard/control/vacation-toggle'),
-            'targetTemperature' => base_url('dashboard/control/target-temperature'),
-            'markAlertTemplate' => base_url('dashboard/alerts/__id__/read'),
+            'latest'            => base_url('dashboard/api/latest') . $historyQuery,
+            'feed'              => base_url('dashboard/control/feed') . $historyQuery,
+            'vacationToggle'    => base_url('dashboard/control/vacation-toggle') . $historyQuery,
+            'targetTemperature' => base_url('dashboard/control/target-temperature') . $historyQuery,
+            'feedingSchedule'   => base_url('dashboard/control/feeding-schedule') . $historyQuery,
+            'markAlertTemplate' => base_url('dashboard/alerts/__id__/read') . $historyQuery,
         ];
     }
 
@@ -332,6 +528,102 @@ class Dashboard extends BaseController
         return $this->response->setJSON(array_merge($this->buildDashboardPayload($userId), $extra));
     }
 
+    private function feedError(int $userId, int $status, string $message): ResponseInterface
+    {
+        return $this->dashboardResponse($userId, ['success' => false, 'message' => $message])
+            ->setStatusCode($status);
+    }
+
+    /**
+     * Dispositivos del usuario que pueden recibir ordenes del alimentador
+     * (tienen API key y no son sensores puros).
+     */
+    private function feederDevices(int $userId): array
+    {
+        return array_values(array_filter(
+            $this->fromTable('dispositivos', fn (): array => $this->dispositivoModel->porUsuario($userId), []),
+            static fn (array $device): bool => ! empty($device['api_key_hash']) && $device['tipo'] !== 'sensor'
+        ));
+    }
+
+    private function buildFeederState(int $userId, array $config): array
+    {
+        $feeding = config(Feeding::class);
+        $devices = $this->feederDevices($userId);
+        $online = null;
+
+        foreach ($devices as $device) {
+            if (! empty($device['ultima_conexion']) && time() - strtotime($device['ultima_conexion']) <= $feeding->onlineThresholdSeconds) {
+                $online = $device;
+                break;
+            }
+        }
+
+        $last = $this->fromTable('comandos_dispositivo', fn (): ?array => $this->comandoModel->ultimaAlimentacion($userId), null);
+        $pending = $this->fromTable('comandos_dispositivo', fn (): ?array => $this->comandoModel->alimentacionPendiente($userId), null);
+        $deviceName = ($online ?? $devices[0] ?? [])['nombre'] ?? null;
+        $schedule = ComandoDispositivoModel::horasConfiguradas($config);
+        $nextFeeding = $this->comandoModel->proximoHorario($config);
+
+        if ($devices === []) {
+            [$statusLevel, $statusText] = ['danger', 'Sin alimentador vinculado. Registra el ESP32 en Dispositivos y generale una API key.'];
+        } elseif ($pending !== null) {
+            [$statusLevel, $statusText] = ['warn', $pending['estado'] === 'enviado'
+                ? 'El alimentador recibio la orden y esta moviendo el servo...'
+                : 'Orden en cola: esperando que el alimentador la tome.'];
+        } elseif ($online !== null) {
+            [$statusLevel, $statusText] = ['ok', 'Conectado: ' . $deviceName];
+        } else {
+            [$statusLevel, $statusText] = ['warn', $deviceName . ' sin contacto reciente (offline).'];
+        }
+
+        $lastLabels = [
+            'ejecutado' => 'ejecutada',
+            'fallido'   => 'fallo',
+            'expirado'  => 'expiro sin respuesta',
+        ];
+        $lastText = null;
+        if ($last !== null && isset($lastLabels[$last['estado']])) {
+            $lastText = sprintf(
+                'Ultima orden (%s): %s %s',
+                $last['origen'] === 'programado' ? 'programada' : 'manual',
+                $lastLabels[$last['estado']],
+                $this->localTime($last['finalizado_at'] ?? $last['created_at'])
+            );
+        }
+
+        return [
+            'hasDevice'    => $devices !== [],
+            'online'       => $online !== null,
+            'pending'      => $pending !== null,
+            'statusLevel'  => $statusLevel,
+            'statusText'   => $statusText,
+            'lastText'     => $lastText,
+            'scheduleText' => $schedule === []
+                ? 'Sin horarios programados.'
+                : sprintf(
+                    'Programado: %s (%s g por racion, hora Argentina). Proxima: %s.',
+                    implode(' y ', $schedule),
+                    rtrim(rtrim(number_format((float) ($config['cantidad_alim_gramos'] ?? 1), 2, '.', ''), '0'), '.'),
+                    $nextFeeding
+                ),
+        ];
+    }
+
+    /**
+     * Fecha guardada (en la zona de la app) formateada en la zona horaria del alimentador.
+     */
+    private function localTime(?string $value): string
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        return (new \DateTimeImmutable($value))
+            ->setTimezone(new \DateTimeZone(config(Feeding::class)->timezone))
+            ->format('d/m H:i');
+    }
+
     private function buildCards(?array $latest, array $config, ?array $lastFeeding): array
     {
         $temperature = $latest['temperatura'] ?? null;
@@ -388,19 +680,71 @@ class Dashboard extends BaseController
         );
     }
 
-    private function fetchSensorHistory(int $userId): array
+    private function fetchSensorHistory(int $userId, array $filters): array
     {
-        return $this->fromTable('lecturas_sensores', function () use ($userId): array {
+        return $this->fromTable('lecturas_sensores', function () use ($userId, $filters): array {
             $history = $this->emptyHistory();
 
-            foreach ($this->sensorModel->historial($userId, 24) as $row) {
-                $history['labels'][] = date('H:i', strtotime($row['created_at']));
+            if ($filters['custom']) {
+                $rows = $this->sensorModel->historialRango(
+                    $userId,
+                    $filters['desde'] . ' 00:00:00',
+                    $filters['hasta'] . ' 23:59:59',
+                    $filters['dispositivo']
+                );
+            } elseif ($filters['dispositivo'] !== null) {
+                $rows = $this->sensorModel->historialRango(
+                    $userId,
+                    date('Y-m-d H:i:s', strtotime('-24 hours')),
+                    date('Y-m-d H:i:s'),
+                    $filters['dispositivo']
+                );
+            } else {
+                $rows = $this->sensorModel->historial($userId, 24);
+            }
+
+            $labelFormat = ($filters['custom'] && $filters['desde'] !== $filters['hasta']) ? 'd/m H:i' : 'H:i';
+
+            foreach ($this->downsample($rows, self::MAX_CHART_POINTS) as $row) {
+                $history['labels'][] = date($labelFormat, strtotime($row['created_at']));
                 $history['temperature'][] = $row['temperatura'] !== null ? (float) $row['temperatura'] : null;
                 $history['ph'][] = $row['ph'] !== null ? (float) $row['ph'] : null;
             }
 
+            $history['count'] = count($rows);
+
             return $history;
         }, $this->emptyHistory());
+    }
+
+    /**
+     * Reduce la serie a como mucho $maxPoints promediando lecturas consecutivas,
+     * para que rangos de varios dias no saturen el grafico.
+     */
+    private function downsample(array $rows, int $maxPoints): array
+    {
+        $total = count($rows);
+        if ($total <= $maxPoints) {
+            return $rows;
+        }
+
+        $bucketSize = (int) ceil($total / $maxPoints);
+        $average = static function (array $bucket, string $field): ?float {
+            $values = array_filter(array_column($bucket, $field), static fn ($value): bool => $value !== null);
+
+            return $values === [] ? null : round(array_sum($values) / count($values), 2);
+        };
+
+        $sampled = [];
+        foreach (array_chunk($rows, $bucketSize) as $bucket) {
+            $sampled[] = [
+                'created_at'  => $bucket[0]['created_at'],
+                'temperatura' => $average($bucket, 'temperatura'),
+                'ph'          => $average($bucket, 'ph'),
+            ];
+        }
+
+        return $sampled;
     }
 
     private function fetchAlerts(int $userId): array
@@ -538,6 +882,7 @@ class Dashboard extends BaseController
             'labels'      => [],
             'temperature' => [],
             'ph'          => [],
+            'count'       => 0,
         ];
     }
 

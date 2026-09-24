@@ -12,11 +12,12 @@ $isAdmin = session()->get('user_role') === 'administrador';
 
       <nav class="dashboard-menu">
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link">Panel principal</a>
-        <a href="<?= base_url('dashboard/history') ?>#historial" class="dashboard-link">Historial</a>
+        <a href="<?= base_url('dashboard/history') ?>#filtros-historial" class="dashboard-link">Historial</a>
         <a href="<?= base_url('dashboard/settings') ?>#configuracion" class="dashboard-link">Configuracion</a>
         <a href="<?= base_url('dispositivos') ?>" class="dashboard-link is-active">Dispositivos</a>
         <?php if ($isAdmin): ?>
           <a href="<?= base_url('usuarios') ?>" class="dashboard-link">Usuarios</a>
+          <a href="<?= base_url('pedidos') ?>" class="dashboard-link">Pedidos</a>
         <?php endif; ?>
       </nav>
     </aside>

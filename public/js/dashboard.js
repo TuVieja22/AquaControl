@@ -143,7 +143,7 @@
   }
 
   function mergePayload(payload) {
-    ['config', 'cards', 'alerts', 'feedings', 'charts', 'latestTimestamp'].forEach(function (key) {
+    ['config', 'cards', 'alerts', 'feedings', 'charts', 'latestTimestamp', 'feeder'].forEach(function (key) {
       if (payload[key] !== undefined) {
         state[key] = payload[key];
       }
@@ -408,7 +408,43 @@
     nodes.latestTimestamp.textContent = formatRelativeTime(state.latestTimestamp, 'Sin lecturas');
   }
 
+  function renderFeeder() {
+    const feeder = state.feeder;
+    const statusNode = document.getElementById('feederStatus');
+    if (!feeder || !statusNode) {
+      return;
+    }
+
+    statusNode.classList.remove('feeder-status-ok', 'feeder-status-warn', 'feeder-status-danger');
+    statusNode.classList.add(`feeder-status-${feeder.statusLevel}`);
+    setText(document.getElementById('feederStatusText'), feeder.statusText || '');
+    setText(document.getElementById('feederLastText'), feeder.lastText || '');
+    setText(document.getElementById('feederScheduleText'), feeder.scheduleText || '');
+
+    const feedButton = document.getElementById('feedNowBtn');
+    if (feedButton) {
+      feedButton.disabled = !feeder.hasDevice || feeder.pending;
+    }
+  }
+
+  function showFeedback(id, payload) {
+    const node = document.getElementById(id);
+    if (!node) {
+      return;
+    }
+
+    if (!payload?.message) {
+      node.hidden = true;
+      return;
+    }
+
+    node.hidden = false;
+    node.textContent = payload.message;
+    node.classList.toggle('is-error', payload.success === false);
+  }
+
   function renderAll() {
+    renderFeeder();
     renderCards();
     renderLiveSummary();
     renderAlerts();
@@ -418,24 +454,32 @@
     renderCharts();
   }
 
+  function csrfHeaders(headers) {
+    return window.AquaCsrf ? window.AquaCsrf.headers(headers) : headers;
+  }
+
   async function requestJson(url, options = {}) {
     const response = await fetch(url, options);
-    if (!response.ok) {
+    window.AquaCsrf?.refresh(response);
+    const payload = await response.json().catch(function () {
+      return null;
+    });
+
+    // Los errores del backend (422/409) tambien traen el estado del dashboard y un mensaje.
+    if (!response.ok && !payload?.message) {
       return null;
     }
 
-    return response.json().catch(function () {
-      return null;
-    });
+    return payload;
   }
 
   async function postForm(url, data = {}) {
     return requestJson(url, {
       method: 'POST',
-      headers: {
+      headers: csrfHeaders({
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'X-Requested-With': 'XMLHttpRequest'
-      },
+      }),
       body: new URLSearchParams(data)
     });
   }
@@ -443,11 +487,31 @@
   async function applyRequest(promise) {
     const payload = await promise;
     if (!payload) {
-      return;
+      return null;
     }
 
     mergePayload(payload);
     renderAll();
+    scheduleRefresh();
+
+    return payload;
+  }
+
+  // Refresco periodico: cada 30 s, o cada 3 s mientras el alimentador tiene una orden en curso.
+  let refreshTimer = null;
+
+  function refreshLatest() {
+    applyRequest(requestJson(state.endpoints.latest, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Skip-Loader': 'true'
+      }
+    }));
+  }
+
+  function scheduleRefresh() {
+    window.clearTimeout(refreshTimer);
+    refreshTimer = window.setTimeout(refreshLatest, state.feeder?.pending ? 3000 : 30000);
   }
 
   document.addEventListener('click', function (event) {
@@ -463,11 +527,28 @@
     }
   });
 
-  document.getElementById('feedNowForm')?.addEventListener('submit', function (event) {
+  document.getElementById('feedNowForm')?.addEventListener('submit', async function (event) {
     event.preventDefault();
-    applyRequest(postForm(state.endpoints.feed, {
-      cantidad_gramos: document.getElementById('cantidad_gramos')?.value || '5'
+    const feedButton = document.getElementById('feedNowBtn');
+    if (feedButton) {
+      feedButton.disabled = true;
+    }
+
+    const payload = await applyRequest(postForm(state.endpoints.feed, {
+      cantidad_gramos: document.getElementById('cantidad_gramos')?.value || ''
     }));
+    showFeedback('feedNowFeedback', payload || { success: false, message: 'No se pudo enviar la orden.' });
+    renderFeeder();
+  });
+
+  document.getElementById('feedingScheduleForm')?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const payload = await applyRequest(postForm(state.endpoints.feedingSchedule, {
+      hora_alim_1: document.getElementById('hora_alim_1')?.value || '',
+      hora_alim_2: document.getElementById('hora_alim_2')?.value || '',
+      cantidad_alim_gramos: document.getElementById('cantidad_alim_gramos')?.value || ''
+    }));
+    showFeedback('feedingScheduleFeedback', payload || { success: false, message: 'No se pudieron guardar los horarios.' });
   });
 
   document.getElementById('targetTemperatureForm')?.addEventListener('submit', function (event) {
@@ -480,12 +561,5 @@
   window.addEventListener('themechange', renderCharts);
 
   renderAll();
-
-  window.setInterval(function () {
-    applyRequest(requestJson(state.endpoints.latest, {
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    }));
-  }, 30000);
+  scheduleRefresh();
 }());

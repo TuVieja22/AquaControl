@@ -8,6 +8,7 @@ $authenticatedLinks = [
 ];
 if ($userRole === 'administrador') {
     $authenticatedLinks[] = ['href' => base_url('usuarios'), 'label' => 'Usuarios'];
+    $authenticatedLinks[] = ['href' => base_url('pedidos'), 'label' => 'Pedidos'];
 }
 $landingLinks = [
     ['href' => base_url('/') . '#producto', 'label' => 'Producto'],
@@ -26,6 +27,8 @@ $guestLinks = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="AquaControl - Sistema inteligente de monitoreo y control de ecosistemas acuaticos basado en IoT con ESP32.">
+  <meta name="csrf-header" content="<?= esc(csrf_header()) ?>">
+  <meta name="csrf-token" content="<?= esc(csrf_hash()) ?>" data-field-name="<?= esc(csrf_token()) ?>">
   <title><?= isset($title) ? esc($title) . ' | AquaControl' : 'AquaControl - Ecosistemas Acuaticos IoT' ?></title>
   <link rel="icon" type="image/x-icon" href="<?= base_url('favicon.ico') ?>">
   <script>

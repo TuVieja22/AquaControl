@@ -32,10 +32,6 @@ class Home extends BaseController
                     'checkoutOrderUrl'         => env('commerce.checkoutOrderUrl', ''),
                     'mercadoPagoPublicKey'     => env('mercadopago.publicKey', ''),
                     'mercadoPagoPreferenceUrl' => env('mercadopago.preferenceUrl', base_url('checkout/mercadopago/preference')),
-                    'paypalClientId'         => env('paypal.clientId', ''),
-                    'paypalCurrency'         => strtoupper((string) env('paypal.currency', env('commerce.currency', 'ARS'))),
-                    'paypalCreateOrderUrl'   => env('paypal.createOrderUrl', ''),
-                    'paypalCaptureOrderUrl'  => env('paypal.captureOrderUrl', ''),
                 ],
             ],
         ]);

@@ -147,3 +147,94 @@ select.form-control {
     min-width: 140px;
   }
 }
+
+/* API keys de dispositivos */
+.api-key-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  border-color: var(--surface-border-strong);
+}
+
+.api-key-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.api-key-value code {
+  flex: 1 1 280px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.api-key-value .btn {
+  width: auto;
+}
+
+.api-key-help {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.api-key-example {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--surface-border);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.api-key-cell code {
+  display: block;
+  color: var(--text-primary);
+}
+
+.api-key-cell small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* Pedidos */
+.order-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.order-filters .btn {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.order-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.order-warning {
+  color: var(--warn);
+}
+
+.order-status-aprobado { color: var(--ok); border-color: var(--ok); }
+.order-status-pendiente,
+.order-status-en_proceso { color: var(--warn); border-color: var(--warn); }
+.order-status-rechazado,
+.order-status-cancelado,
+.order-status-reembolsado { color: var(--danger); border-color: var(--danger); }

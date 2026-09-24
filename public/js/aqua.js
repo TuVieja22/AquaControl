@@ -5,6 +5,40 @@
 
 'use strict';
 
+/* CSRF
+   El token vive en <meta name="csrf-token">. Como el servidor lo regenera en cada
+   POST, se actualiza desde el header de respuesta (junto con los csrf_field() de
+   los formularios de la pagina) para que la siguiente peticion siga siendo valida.
+*/
+window.AquaCsrf = (function () {
+  const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+  const headerName = document.querySelector('meta[name="csrf-header"]')?.content || 'X-CSRF-TOKEN';
+  const fieldName = tokenMeta?.dataset.fieldName || '';
+
+  function token() {
+    return tokenMeta?.content || '';
+  }
+
+  function headers(extra = {}) {
+    const value = token();
+    return value ? { ...extra, [headerName]: value } : { ...extra };
+  }
+
+  function refresh(response) {
+    const next = response?.headers?.get(headerName);
+    if (!next || !tokenMeta || next === tokenMeta.content) return;
+
+    tokenMeta.content = next;
+    if (fieldName) {
+      document.querySelectorAll(`input[name="${CSS.escape(fieldName)}"]`).forEach(input => {
+        input.value = next;
+      });
+    }
+  }
+
+  return { headerName, token, headers, refresh };
+}());
+
 /* Theme toggle */
 const THEME_KEY = 'aquacontrol-theme';
 const pageLoader = document.querySelector('[data-page-loader]');
@@ -652,9 +686,10 @@ if (dashboardDataNode && !window.aquaDashboardHandledByModule) {
   async function postJson(url, body = {}) {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      headers: window.AquaCsrf.headers({ 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }),
       body: new URLSearchParams(body)
     });
+    window.AquaCsrf.refresh(response);
     return response.json();
   }
 
@@ -720,4 +755,23 @@ document.addEventListener('submit', event => {
   if (event.defaultPrevented) return;
 
   showGlobalLoader();
+});
+
+/* Copiar al portapapeles (p. ej. API key de dispositivo recien generada) */
+document.addEventListener('click', async event => {
+  const button = event.target.closest('[data-copy-target]');
+  if (!button) return;
+
+  const source = document.getElementById(button.dataset.copyTarget);
+  if (!source) return;
+
+  const originalLabel = button.textContent;
+  try {
+    await navigator.clipboard.writeText(source.textContent.trim());
+    button.textContent = 'Copiada';
+  } catch (error) {
+    window.getSelection()?.selectAllChildren(source);
+    button.textContent = 'Selecciona y copia';
+  }
+  setTimeout(() => { button.textContent = originalLabel; }, 2000);
 });

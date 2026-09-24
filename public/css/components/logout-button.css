@@ -87,3 +87,15 @@
     width: 45px;
   }
 }
+
+/* El boton vive dentro de un <form> (logout por POST + CSRF). */
+.logout-button-wrap .logout-form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.logout-button-wrap button.Btn {
+  padding: 0;
+  font: inherit;
+  appearance: none;
+}

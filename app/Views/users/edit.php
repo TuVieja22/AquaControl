@@ -11,6 +11,7 @@
         <a href="<?= base_url('dashboard') ?>" class="dashboard-link">Panel principal</a>
         <a href="<?= base_url('dispositivos') ?>" class="dashboard-link">Dispositivos</a>
         <a href="<?= base_url('usuarios') ?>" class="dashboard-link is-active">Usuarios</a>
+        <a href="<?= base_url('pedidos') ?>" class="dashboard-link">Pedidos</a>
       </nav>
     </aside>
 

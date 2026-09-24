@@ -85,6 +85,49 @@ class Dispositivos extends BaseController
             ->with('success', 'Dispositivo eliminado correctamente.');
     }
 
+    /**
+     * Genera una API key nueva para el dispositivo (invalida la anterior si existia).
+     * La key en claro se muestra una sola vez; en la base solo queda su hash.
+     */
+    public function generateApiKey(int $id): RedirectResponse
+    {
+        $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
+        if (! $device) {
+            return redirect()
+                ->to(base_url('dispositivos'))
+                ->with('error', 'El dispositivo no existe o no tienes permisos sobre el.');
+        }
+
+        $apiKey = $this->dispositivoModel->generarApiKey($id);
+
+        return redirect()
+            ->to(base_url('dispositivos') . '#api-key-nueva')
+            ->with('device_api_key', [
+                'id'     => $id,
+                'nombre' => $device['nombre'],
+                'key'    => $apiKey,
+            ])
+            ->with('success', empty($device['api_key_hash'])
+                ? 'API key generada. Copiala ahora: no se volvera a mostrar.'
+                : 'API key regenerada. La anterior dejo de funcionar.');
+    }
+
+    public function revokeApiKey(int $id): RedirectResponse
+    {
+        $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
+        if (! $device) {
+            return redirect()
+                ->to(base_url('dispositivos'))
+                ->with('error', 'El dispositivo no existe o no tienes permisos sobre el.');
+        }
+
+        $this->dispositivoModel->revocarApiKey($id);
+
+        return redirect()
+            ->to(base_url('dispositivos'))
+            ->with('success', 'API key revocada. El dispositivo ya no podra enviar lecturas.');
+    }
+
     private function updateDevice(int $id, array $device): string|RedirectResponse
     {
         $payload = $this->devicePayload();
@@ -111,6 +154,8 @@ class Dispositivos extends BaseController
             'devices'     => $this->dispositivoModel->porUsuario($this->userId()),
             'typeOptions' => self::TYPE_OPTIONS,
             'errors'      => $errors,
+            'newApiKey'   => session()->getFlashdata('device_api_key'),
+            'apiEndpoint' => base_url('dashboard/api/data'),
             'form'        => [
                 'nombre'    => $this->request->getPost('nombre') ?? '',
                 'tipo'      => $this->request->getPost('tipo') ?? '',
