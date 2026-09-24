@@ -18,7 +18,7 @@
                   ACK:<id>:OK                alimentacion terminada
                   ACK:<id>:ERR:<motivo>      no se pudo alimentar
                   (cualquier otra linea es un log y el puente solo la muestra)
-    PC -> ESP32   FEED:<id>:<gramos>         mover el servo para dispensar esos gramos
+    PC -> ESP32   FEED:<id>:<gramos>         un giro del servo (ida y vuelta)
                   PING                       responde PONG
 */
 
@@ -30,13 +30,12 @@
 #define PIN_DS18B20 18
 #define PIN_SERVO   19
 
-// ---------- Alimentador (calibrar) ----------
-const int   SERVO_CERRADO = 0;          // grados con la compuerta cerrada
-const int   SERVO_ABIERTO = 90;         // grados con la compuerta abierta
-const int   MS_ABIERTO = 1000;          // tiempo abierto en cada apertura
-const int   MS_ENTRE_APERTURAS = 500;
-const float GRAMOS_POR_APERTURA = 5.0;  // pesa lo que cae en UNA apertura y ajusta este valor
-const int   MAX_APERTURAS = 10;         // tope de seguridad por orden
+// ---------- Alimentador ----------
+// Cada orden hace UN solo movimiento: ida (abre) y vuelta (cierra).
+// La cantidad de comida depende de cuanto tiempo queda abierto.
+const int SERVO_CERRADO = 0;    // grados con la compuerta cerrada
+const int SERVO_ABIERTO = 90;   // grados con la compuerta abierta
+const int MS_ABIERTO = 1000;    // tiempo abierto antes de volver
 
 // ---------- Temperatura ----------
 const unsigned long INTERVALO_TEMP_MS = 2000;
@@ -50,22 +49,15 @@ unsigned long ultimoPedidoTemp = 0;
 bool convirtiendo = false;
 String bufferSerie;
 
+// Un solo ciclo por orden: abre, espera y cierra. Los gramos que manda la pagina
+// quedan en el historial, pero no cambian la cantidad de movimientos.
 void alimentar(long id, float gramos) {
-  if (gramos <= 0) {
-    Serial.printf("ACK:%ld:ERR:gramos invalidos\n", id);
-    return;
-  }
+  Serial.printf("Alimentando (racion de %.2f g): un giro de ida y vuelta...\n", gramos);
 
-  int aperturas = (int) ceil(gramos / GRAMOS_POR_APERTURA);
-  aperturas = constrain(aperturas, 1, MAX_APERTURAS);
-  Serial.printf("Alimentando %.2f g (%d apertura/s)...\n", gramos, aperturas);
-
-  for (int i = 0; i < aperturas; i++) {
-    alimentador.write(SERVO_ABIERTO);
-    delay(MS_ABIERTO);
-    alimentador.write(SERVO_CERRADO);
-    delay(MS_ENTRE_APERTURAS);
-  }
+  alimentador.write(SERVO_ABIERTO);
+  delay(MS_ABIERTO);
+  alimentador.write(SERVO_CERRADO);
+  delay(500); // deja que llegue a la posicion cerrada antes de confirmar
 
   Serial.printf("ACK:%ld:OK\n", id);
 }

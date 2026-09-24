@@ -976,7 +976,7 @@ El servidor no puede enviar ordenes directamente al ESP32, por eso el dispositiv
 - Firmware: `firmware/aquacontrol_esp32_usb` (DS18B20 en GPIO 18, servo SG90 en GPIO 19). Protocolo de lineas por el puerto serie a 115200: el ESP32 envia `T:24.56` cada 2 s y `ACK:<id>:OK` al terminar de alimentar; la PC envia `FEED:<id>:<gramos>`.
 - Puente: `firmware/puente_usb.ps1` detecta el puerto (CP210x/CH340), envia la temperatura a `/dashboard/api/data` cada 5 s, consulta `/dashboard/api/commands` cada 2 s (solo si el ESP32 esta respondiendo) y confirma cada orden. Si el ESP32 no confirma en 60 s, la orden se marca `fallido`. Lee la API key de `firmware/config.local.ps1` (ignorado por git).
 - `iniciar_aquacontrol.bat` levanta todo con doble clic. El Monitor Serie del Arduino IDE tiene que estar cerrado (solo un programa puede usar el puerto COM).
-- Calibracion del servo en el sketch: `GRAMOS_POR_APERTURA` (5 g por defecto), `SERVO_ABIERTO`, `MS_ABIERTO` y `MAX_APERTURAS`.
+- Cada orden hace un solo giro del servo (ida a `SERVO_ABIERTO`, espera `MS_ABIERTO`, vuelta a `SERVO_CERRADO`), sin importar los gramos; los gramos quedan solo en el historial. La cantidad de comida se ajusta con `MS_ABIERTO` y `SERVO_ABIERTO`.
 
 **Modo WiFi (alternativa).** `firmware/aquacontrol_esp32/aquacontrol_esp32.ino` habla directo con la API. El servidor debe escuchar en la red (`php spark serve --host 0.0.0.0`) y el ESP32 debe estar en una red WiFi de 2.4 GHz.
 

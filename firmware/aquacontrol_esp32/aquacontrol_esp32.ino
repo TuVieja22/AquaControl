@@ -22,8 +22,8 @@
 #include <ESP32Servo.h>
 
 // ---------- Configuracion ----------
-const char* WIFI_SSID     = "TU_WIFI";
-const char* WIFI_PASSWORD = "TU_PASSWORD";
+const char* WIFI_SSID     = "RioTel_MEDINA_5847";
+const char* WIFI_PASSWORD = "6672503295";
 
 // IP de la PC donde corre `php spark serve --host 0.0.0.0` (no uses localhost: es el propio ESP32).
 const char* SERVER_URL = "http://192.168.0.10:8080";
@@ -32,8 +32,7 @@ const char* DEVICE_KEY = "aqk_PEGA_AQUI_LA_API_KEY";
 const int SERVO_PIN = 19;           // mismo pin que el modo USB
 const int SERVO_REPOSO = 0;          // grados con la compuerta cerrada
 const int SERVO_ABIERTO = 90;        // grados con la compuerta abierta
-const int MS_ABIERTO_POR_PORCION = 400;
-const float GRAMOS_POR_PORCION = 0.5; // calibrar: pesar lo que cae en una apertura
+const int MS_ABIERTO = 1000;         // tiempo abierto antes de volver
 
 const unsigned long POLL_INTERVAL_MS = 5000;     // consulta de ordenes
 const unsigned long READING_INTERVAL_MS = 60000; // envio de lecturas
@@ -64,17 +63,14 @@ bool beginRequest(HTTPClient& http, const String& path) {
   return true;
 }
 
-// Mueve el servo tantas veces como porciones hagan falta para los gramos pedidos.
+// Un solo giro por orden (ida y vuelta), igual que el firmware USB.
 bool dispensar(float gramos) {
-  int porciones = max(1, (int) round(gramos / GRAMOS_POR_PORCION));
-  Serial.printf("Alimentando %.2f g (%d porciones)\n", gramos, porciones);
+  Serial.printf("Alimentando (racion de %.2f g): un giro de ida y vuelta\n", gramos);
 
-  for (int i = 0; i < porciones; i++) {
-    feederServo.write(SERVO_ABIERTO);
-    delay(MS_ABIERTO_POR_PORCION);
-    feederServo.write(SERVO_REPOSO);
-    delay(350);
-  }
+  feederServo.write(SERVO_ABIERTO);
+  delay(MS_ABIERTO);
+  feederServo.write(SERVO_REPOSO);
+  delay(500);
   return true; // si tenes un sensor de fin de carrera, devolve false cuando falle
 }
 
