@@ -352,7 +352,7 @@ $chartRangeLabel = $historyFilters['label'] . ($selectedDevice ? ' · ' . $selec
               <label class="form-label" for="cantidad_gramos">Cantidad a dispensar (g)</label>
               <div class="control-inline">
                 <input class="form-control" id="cantidad_gramos" name="cantidad_gramos" type="number" step="0.1" min="<?= esc((string) $feedingConfig->minGrams) ?>" max="<?= esc((string) $feedingConfig->maxGrams) ?>" value="<?= esc(number_format((float) $dashboardData['config']['cantidad_alim_gramos'], 1, '.', '')) ?>">
-                <button class="btn btn-primary" id="feedNowBtn" type="submit" <?= $feeder['hasDevice'] ? '' : 'disabled' ?>>Alimentar ahora</button>
+                <button class="btn btn-primary" id="feedNowBtn" type="submit" <?= ($feeder['hasDevice'] && $feeder['online'] && ! $feeder['pending']) ? '' : 'disabled' ?>>Alimentar ahora</button>
               </div>
             </form>
             <p class="feeder-feedback" id="feedNowFeedback" role="alert" hidden></p>

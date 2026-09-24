@@ -24,13 +24,15 @@ class Feeding extends BaseConfig
 
     /**
      * Minutos que un "Alimentar ahora" espera a que el dispositivo lo tome antes de expirar.
+     * Corto a proposito: una orden manual no debe ejecutarse mucho despues de apretar el boton.
      */
-    public int $manualCommandTtlMinutes = 5;
+    public int $manualCommandTtlMinutes = 1;
 
     /**
      * Segundos sin contacto a partir de los cuales el dispositivo se considera offline.
+     * El puente USB consulta cada 2 s, asi que 30 s sin noticias ya es una desconexion.
      */
-    public int $onlineThresholdSeconds = 120;
+    public int $onlineThresholdSeconds = 30;
 
     public float $minGrams = 0.1;
     public float $maxGrams = 20.0;

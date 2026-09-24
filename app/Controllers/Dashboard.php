@@ -122,6 +122,12 @@ class Dashboard extends BaseController
             return $this->feedError($userId, 409, 'No hay un alimentador conectado. Registra el ESP32 en Dispositivos y generale una API key.');
         }
 
+        // "Alimentar ahora" tiene que ser inmediato: si el ESP32 no esta en linea no se encola,
+        // para que no dispense minutos despues cuando nadie lo espera.
+        if ($this->onlineFeeder($userId) === null) {
+            return $this->feedError($userId, 409, 'El alimentador esta desconectado. Revisa que el ESP32 este enchufado y el puente USB abierto.');
+        }
+
         if ($this->comandoModel->alimentacionPendiente($userId) !== null) {
             return $this->feedError($userId, 409, 'Ya hay una alimentacion en curso. Espera a que el dispositivo la confirme.');
         }
@@ -546,18 +552,26 @@ class Dashboard extends BaseController
         ));
     }
 
-    private function buildFeederState(int $userId, array $config): array
+    /**
+     * Primer alimentador del usuario con contacto reciente, o null si ninguno esta en linea.
+     */
+    private function onlineFeeder(int $userId): ?array
     {
-        $feeding = config(Feeding::class);
-        $devices = $this->feederDevices($userId);
-        $online = null;
+        $threshold = config(Feeding::class)->onlineThresholdSeconds;
 
-        foreach ($devices as $device) {
-            if (! empty($device['ultima_conexion']) && time() - strtotime($device['ultima_conexion']) <= $feeding->onlineThresholdSeconds) {
-                $online = $device;
-                break;
+        foreach ($this->feederDevices($userId) as $device) {
+            if (! empty($device['ultima_conexion']) && time() - strtotime($device['ultima_conexion']) <= $threshold) {
+                return $device;
             }
         }
+
+        return null;
+    }
+
+    private function buildFeederState(int $userId, array $config): array
+    {
+        $devices = $this->feederDevices($userId);
+        $online = $this->onlineFeeder($userId);
 
         $last = $this->fromTable('comandos_dispositivo', fn (): ?array => $this->comandoModel->ultimaAlimentacion($userId), null);
         $pending = $this->fromTable('comandos_dispositivo', fn (): ?array => $this->comandoModel->alimentacionPendiente($userId), null);

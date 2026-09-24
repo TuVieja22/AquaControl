@@ -124,3 +124,10 @@ _modules/*
 
 /results/
 /phpunit*.xml
+
+#-------------------------
+# Configuracion local del puente USB (contiene la API key del ESP32)
+#-------------------------
+firmware/config.local.ps1
+# Salida de compilacion del Arduino IDE / arduino-cli
+firmware/**/build/

@@ -423,7 +423,7 @@
 
     const feedButton = document.getElementById('feedNowBtn');
     if (feedButton) {
-      feedButton.disabled = !feeder.hasDevice || feeder.pending;
+      feedButton.disabled = !feeder.hasDevice || !feeder.online || feeder.pending;
     }
   }
 
@@ -497,7 +497,10 @@
     return payload;
   }
 
-  // Refresco periodico: cada 30 s, o cada 3 s mientras el alimentador tiene una orden en curso.
+  // Refresco periodico: la temperatura llega del ESP32 cada ~5 s, asi que se consulta
+  // a ese ritmo; mientras el alimentador tiene una orden en curso, cada 2 s.
+  const REFRESH_MS = 5000;
+  const REFRESH_FEEDING_MS = 2000;
   let refreshTimer = null;
 
   function refreshLatest() {
@@ -511,7 +514,7 @@
 
   function scheduleRefresh() {
     window.clearTimeout(refreshTimer);
-    refreshTimer = window.setTimeout(refreshLatest, state.feeder?.pending ? 3000 : 30000);
+    refreshTimer = window.setTimeout(refreshLatest, state.feeder?.pending ? REFRESH_FEEDING_MS : REFRESH_MS);
   }
 
   document.addEventListener('click', function (event) {

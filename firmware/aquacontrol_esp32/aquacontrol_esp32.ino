@@ -29,7 +29,7 @@ const char* WIFI_PASSWORD = "TU_PASSWORD";
 const char* SERVER_URL = "http://192.168.0.10:8080";
 const char* DEVICE_KEY = "aqk_PEGA_AQUI_LA_API_KEY";
 
-const int SERVO_PIN = 13;
+const int SERVO_PIN = 19;           // mismo pin que el modo USB
 const int SERVO_REPOSO = 0;          // grados con la compuerta cerrada
 const int SERVO_ABIERTO = 90;        // grados con la compuerta abierta
 const int MS_ABIERTO_POR_PORCION = 400;

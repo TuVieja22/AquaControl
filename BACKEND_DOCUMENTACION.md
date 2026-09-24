@@ -104,7 +104,11 @@ app/
       2026-09-24-000008_CreatePedidosTable.php
   Views/
 firmware/
-  aquacontrol_esp32/aquacontrol_esp32.ino
+  aquacontrol_esp32_usb/aquacontrol_esp32_usb.ino   (modo USB: el que se usa hoy)
+  puente_usb.ps1                                    (puente PC <-> pagina para el modo USB)
+  config.example.ps1                                (copiar como config.local.ps1 con la API key; no se versiona)
+  aquacontrol_esp32/aquacontrol_esp32.ino           (alternativa por WiFi)
+iniciar_aquacontrol.bat                             (levanta MySQL, la pagina y el puente USB)
 public/
   index.php
 writable/
@@ -200,8 +204,8 @@ Configuracion del alimentador automatico:
 
 - `timezone`: zona en la que se interpretan los horarios (`America/Argentina/Buenos_Aires`).
 - `scheduleWindowMinutes` (30): margen despues de la hora programada para disparar la racion si el ESP32 estuvo offline.
-- `manualCommandTtlMinutes` (5): tiempo que espera un "Alimentar ahora" antes de expirar.
-- `onlineThresholdSeconds` (120): sin contacto por mas tiempo, el dispositivo se muestra offline.
+- `manualCommandTtlMinutes` (1): tiempo que espera un "Alimentar ahora" antes de expirar. Ademas, "Alimentar ahora" se rechaza si el ESP32 no esta en linea.
+- `onlineThresholdSeconds` (30): sin contacto por mas tiempo, el dispositivo se muestra offline (el puente USB consulta cada 2 s).
 - `minGrams` / `maxGrams`: limites de gramos por racion.
 
 ## Rutas y endpoints
@@ -965,7 +969,16 @@ sequenceDiagram
     A->>A: registra alimentacion en historial
 ```
 
-El servidor no puede enviar ordenes directamente al ESP32 porque este suele estar detras de un router, por eso el dispositivo consulta la cola. El firmware de ejemplo esta en `firmware/aquacontrol_esp32/aquacontrol_esp32.ino`. Para que el ESP32 alcance el servidor en desarrollo hay que levantarlo con `php spark serve --host 0.0.0.0`.
+El servidor no puede enviar ordenes directamente al ESP32, por eso el dispositivo consulta la cola. Hay dos formas de conectarlo:
+
+**Modo USB (el que se usa hoy).** El ESP32 esta enchufado por USB a la PC que corre la pagina y no usa WiFi.
+
+- Firmware: `firmware/aquacontrol_esp32_usb` (DS18B20 en GPIO 18, servo SG90 en GPIO 19). Protocolo de lineas por el puerto serie a 115200: el ESP32 envia `T:24.56` cada 2 s y `ACK:<id>:OK` al terminar de alimentar; la PC envia `FEED:<id>:<gramos>`.
+- Puente: `firmware/puente_usb.ps1` detecta el puerto (CP210x/CH340), envia la temperatura a `/dashboard/api/data` cada 5 s, consulta `/dashboard/api/commands` cada 2 s (solo si el ESP32 esta respondiendo) y confirma cada orden. Si el ESP32 no confirma en 60 s, la orden se marca `fallido`. Lee la API key de `firmware/config.local.ps1` (ignorado por git).
+- `iniciar_aquacontrol.bat` levanta todo con doble clic. El Monitor Serie del Arduino IDE tiene que estar cerrado (solo un programa puede usar el puerto COM).
+- Calibracion del servo en el sketch: `GRAMOS_POR_APERTURA` (5 g por defecto), `SERVO_ABIERTO`, `MS_ABIERTO` y `MAX_APERTURAS`.
+
+**Modo WiFi (alternativa).** `firmware/aquacontrol_esp32/aquacontrol_esp32.ino` habla directo con la API. El servidor debe escuchar en la red (`php spark serve --host 0.0.0.0`) y el ESP32 debe estar en una red WiFi de 2.4 GHz.
 
 ### Actualizacion de perfil
 
