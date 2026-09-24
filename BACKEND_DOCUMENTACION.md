@@ -109,7 +109,9 @@ firmware/
   aquacontrol_esp32_usb/aquacontrol_esp32_usb.ino   (alternativa por cable USB)
   puente_usb.ps1                                    (puente PC <-> pagina, solo para el modo USB)
   config.example.ps1                                (copiar como config.local.ps1 con la API key; no se versiona)
+  cargar_firmware.ps1                               (compila y carga el firmware; espera BOOT + EN)
 iniciar_aquacontrol.bat                             (levanta MySQL y la pagina; con MODO=usb tambien el puente)
+.env.example                                        (plantilla del .env sin credenciales)
 public/
   index.php
 writable/

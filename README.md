@@ -23,10 +23,22 @@ When updating, check the release notes to see if there are any changes you might
 to your `app` folder. The affected files can be copied or merged from
 `vendor/codeigniter4/framework/app`.
 
-## Setup
+## Setup (AquaControl)
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+1. `composer install`
+2. Copiar `.env.example` como `.env` y completar los valores vacios (base de datos, Gmail, Mercado Pago).
+   El `.env` real nunca se sube a GitHub.
+3. Con MySQL (XAMPP) encendido: `php spark migrate`
+4. Iniciar todo con doble clic en `iniciar_aquacontrol.bat` (MySQL + pagina en `http://localhost:8080`).
+
+ESP32 (DS18B20 en GPIO 18, servo SG90 en GPIO 19):
+
+- WiFi (recomendado): copiar `firmware/aquacontrol_esp32/secrets.example.h` como `secrets.h`,
+  completar red WiFi de 2.4 GHz, IP de la PC y la API key (se genera en la pagina, *Dispositivos*).
+- Cargar el firmware: `powershell -ExecutionPolicy Bypass -File firmware\cargar_firmware.ps1`
+  (con `-Modo usb` para la version por cable, que ademas usa `firmware\puente_usb.ps1`).
+
+Mas detalle en `BACKEND_DOCUMENTACION.md` y `FRONTEND_DOCUMENTACION.md`.
 
 ## Important Change with index.php
 
