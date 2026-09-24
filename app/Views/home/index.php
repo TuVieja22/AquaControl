@@ -23,7 +23,7 @@ $purchasePayload = json_encode([
     ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-$productImage =base_url('img/aquacontrol-product.png');
+$productImage = base_url('img/aquacontrol-product.png');
 $isAuthenticated = (bool) session()->get('user_id');
 
 $galleryItems = [
