@@ -51,24 +51,103 @@ unsigned long ultimaConsulta = 0;
 unsigned long ultimoIntentoWifi = 0;
 bool convirtiendo = false;
 bool avisoWifi = false;
+volatile uint8_t motivoDesconexion = 0;
+
+// Datos del router encontrados en el escaneo (para conectarse directo a ese canal/equipo).
+int32_t canalRed = 0;
+uint8_t bssidRed[6];
+bool hayBssid = false;
+
+// Si el router no responde (codigo 4), se prueba con otra potencia de transmision:
+// en muchas placas genericas eso resuelve la conexion. Con esta placa y este router
+// la que funciono fue 11 dBm, por eso se arranca con esa.
+const wifi_power_t POTENCIAS[] = { WIFI_POWER_11dBm, WIFI_POWER_8_5dBm, WIFI_POWER_15dBm, WIFI_POWER_19_5dBm };
+const char* NOMBRES_POTENCIA[] = { "11 dBm", "8.5 dBm", "15 dBm", "19.5 dBm" };
+int nivelPotencia = 0;
 
 // ---------------------------------------------------------------- WiFi
+
+// Guarda el motivo que informa el router cuando rechaza o corta la conexion.
+void alEventoWifi(WiFiEvent_t evento, WiFiEventInfo_t info) {
+  if (evento == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+    motivoDesconexion = info.wifi_sta_disconnected.reason;
+  }
+}
+
+const char* explicarMotivo(uint8_t motivo) {
+  switch (motivo) {
+    case 0:   return "todavia sin respuesta del router";
+    case 2:   case 14: case 15: case 202: case 204:
+              return "CLAVE INCORRECTA (revisa WIFI_PASSWORD, respeta mayusculas)";
+    case 4:   return "el router no respondio a la conexion (se prueba con otra potencia; "
+                     "si sigue, revisa filtro MAC o limite de equipos en el router)";
+    case 201: case 210: case 211:
+              return "NO ENCUENTRA LA RED (nombre mal escrito, red de 5 GHz o muy lejos)";
+    case 212: return "senal demasiado debil";
+    case 200: return "se perdio la senal del router";
+    case 203: case 205:
+              return "el router rechazo la conexion (filtro MAC o demasiados equipos?)";
+    default:  return "motivo no identificado";
+  }
+}
+
+// Diagnostico al arrancar: busca la red configurada entre las de 2.4 GHz visibles.
+void buscarRed() {
+  Serial.println("Buscando la red WiFi configurada...");
+  int total = WiFi.scanNetworks();
+  bool encontrada = false;
+  int mejorSenal = -1000;
+  for (int i = 0; i < total; i++) {
+    if (WiFi.SSID(i) == WIFI_SSID) {
+      encontrada = true;
+      Serial.printf("Red encontrada: senal %d dBm, canal %d, seguridad %d\n",
+                    WiFi.RSSI(i), WiFi.channel(i), (int) WiFi.encryptionType(i));
+      if (WiFi.RSSI(i) > mejorSenal) {   // si hay varios routers con el mismo nombre, el mas fuerte
+        mejorSenal = WiFi.RSSI(i);
+        canalRed = WiFi.channel(i);
+        memcpy(bssidRed, WiFi.BSSID(i), 6);
+        hayBssid = true;
+      }
+    }
+  }
+  if (!encontrada) {
+    Serial.printf("La red \"%s\" NO aparece entre las %d redes de 2.4 GHz visibles: "
+                  "revisa el nombre exacto (mayusculas) o si es de 5 GHz.\n", WIFI_SSID, total);
+  }
+  WiFi.scanDelete();
+}
 
 bool wifiListo() {
   if (WiFi.status() == WL_CONNECTED) {
     if (avisoWifi) {
-      Serial.printf("WiFi conectado. IP del ESP32: %s\n", WiFi.localIP().toString().c_str());
+      Serial.printf("WiFi conectado. IP del ESP32: %s  (senal %d dBm, potencia %s)\n",
+                    WiFi.localIP().toString().c_str(), WiFi.RSSI(), NOMBRES_POTENCIA[nivelPotencia]);
       avisoWifi = false;
     }
     return true;
   }
 
-  // Reintenta cada 10 s sin bloquear el resto del programa.
-  if (millis() - ultimoIntentoWifi >= 10000 || ultimoIntentoWifi == 0) {
+  // Cada intento tiene 20 s para completarse antes de reintentar (sin bloquear el programa).
+  if (ultimoIntentoWifi == 0 || millis() - ultimoIntentoWifi >= 20000) {
+    if (ultimoIntentoWifi != 0) {
+      Serial.printf("No se pudo conectar: %s (codigo %u)\n",
+                    explicarMotivo(motivoDesconexion), motivoDesconexion);
+      // El router no contesta: el siguiente intento va con menos potencia (y despues vuelve a empezar).
+      nivelPotencia = (nivelPotencia + 1) % 4;
+    }
     ultimoIntentoWifi = millis();
-    Serial.printf("Conectando a la red WiFi \"%s\"...\n", WIFI_SSID);
+    motivoDesconexion = 0;
+
     WiFi.disconnect();
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.setSleep(false);   // sin ahorro de energia: algunos routers cortan al ESP32 si "duerme"
+    WiFi.setTxPower(POTENCIAS[nivelPotencia]);
+    Serial.printf("Conectando a \"%s\" (clave de %u caracteres, potencia %s)...\n",
+                  WIFI_SSID, (unsigned) strlen(WIFI_PASSWORD), NOMBRES_POTENCIA[nivelPotencia]);
+    if (hayBssid) {
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD, canalRed, bssidRed);   // directo al router encontrado
+    } else {
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
     avisoWifi = true;
   }
   return false;
@@ -216,6 +295,9 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
+  WiFi.onEvent(alEventoWifi);
+  buscarRed();   // el escaneo enciende la radio; recien ahi la MAC es valida
+  Serial.printf("MAC del ESP32: %s (por si el router filtra equipos por MAC)\n", WiFi.macAddress().c_str());
   wifiListo();
 }
 
