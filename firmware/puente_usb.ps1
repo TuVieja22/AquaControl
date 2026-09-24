@@ -139,7 +139,9 @@ while ($true) {
 
     if ($linea) {
         $ultimaLinea = Get-Date
-        if ($linea -match '^T:(-?\d+(?:\.\d+)?)$') {
+        # La temperatura se busca al final de la linea: si el ESP32 se reinicia (p. ej. al
+        # tocar la protoboard) la primera linea puede venir con ruido delante.
+        if ($linea -match '(?:^|[^A-Za-z0-9])T:(-?\d+(?:\.\d+)?)$') {
             $ultimaTemp = [double]::Parse($matches[1], $inv)
             $tempNueva = $true
         } elseif ($linea -eq 'T:ERR') {
@@ -152,7 +154,7 @@ while ($true) {
             $id = [long]$matches[1]
             $pendientes.Remove($id)
             Send-Ack $id 'fallido' $matches[2]
-        } elseif ($linea -match '^[\x20-\x7E]+$') {
+        } elseif ($linea -match '^[\x20-\x7E]+$' -and $linea -notmatch '\?{6,}') {
             Log "[esp32] $linea" 'DarkGray'
         }
         # Lineas con bytes no imprimibles: ruido del arranque del ESP32, se ignoran.
