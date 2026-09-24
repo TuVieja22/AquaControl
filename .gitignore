@@ -131,3 +131,5 @@ _modules/*
 firmware/config.local.ps1
 # Salida de compilacion del Arduino IDE / arduino-cli
 firmware/**/build/
+# Credenciales WiFi y API key del firmware del ESP32
+firmware/**/secrets.h

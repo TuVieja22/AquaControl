@@ -138,7 +138,11 @@ while ($true) {
     }
 
     if ($linea) {
-        $ultimaLinea = Get-Date
+        # Solo cuentan como "ESP32 vivo" las lineas del protocolo USB. Si el ESP32 tiene
+        # cargado el firmware WiFi (que solo imprime logs), el puente no toma sus ordenes.
+        if ($linea -match '(?:^|[^A-Za-z0-9])T:|^ACK:|^READY$|^PONG$') {
+            $ultimaLinea = Get-Date
+        }
         # La temperatura se busca al final de la linea: si el ESP32 se reinicia (p. ej. al
         # tocar la protoboard) la primera linea puede venir con ruido delante.
         if ($linea -match '(?:^|[^A-Za-z0-9])T:(-?\d+(?:\.\d+)?)$') {

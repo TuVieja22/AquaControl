@@ -104,11 +104,12 @@ app/
       2026-09-24-000008_CreatePedidosTable.php
   Views/
 firmware/
-  aquacontrol_esp32_usb/aquacontrol_esp32_usb.ino   (modo USB: el que se usa hoy)
-  puente_usb.ps1                                    (puente PC <-> pagina para el modo USB)
+  aquacontrol_esp32/aquacontrol_esp32.ino           (modo WiFi: el que se usa hoy)
+  aquacontrol_esp32/secrets.example.h               (copiar como secrets.h con WiFi, IP y API key; no se versiona)
+  aquacontrol_esp32_usb/aquacontrol_esp32_usb.ino   (alternativa por cable USB)
+  puente_usb.ps1                                    (puente PC <-> pagina, solo para el modo USB)
   config.example.ps1                                (copiar como config.local.ps1 con la API key; no se versiona)
-  aquacontrol_esp32/aquacontrol_esp32.ino           (alternativa por WiFi)
-iniciar_aquacontrol.bat                             (levanta MySQL, la pagina y el puente USB)
+iniciar_aquacontrol.bat                             (levanta MySQL y la pagina; con MODO=usb tambien el puente)
 public/
   index.php
 writable/
@@ -971,14 +972,20 @@ sequenceDiagram
 
 El servidor no puede enviar ordenes directamente al ESP32, por eso el dispositivo consulta la cola. Hay dos formas de conectarlo:
 
-**Modo USB (el que se usa hoy).** El ESP32 esta enchufado por USB a la PC que corre la pagina y no usa WiFi.
+En los dos modos el hardware es el mismo (DS18B20 en GPIO 18, servo SG90 en GPIO 19 alimentado desde 5V/VIN) y cada orden hace un solo giro del servo (ida a `SERVO_ABIERTO`, espera `MS_ABIERTO`, vuelta a `SERVO_CERRADO`), sin importar los gramos; los gramos quedan solo en el historial. La cantidad de comida se ajusta con `MS_ABIERTO` y `SERVO_ABIERTO`.
 
-- Firmware: `firmware/aquacontrol_esp32_usb` (DS18B20 en GPIO 18, servo SG90 en GPIO 19). Protocolo de lineas por el puerto serie a 115200: el ESP32 envia `T:24.56` cada 2 s y `ACK:<id>:OK` al terminar de alimentar; la PC envia `FEED:<id>:<gramos>`.
-- Puente: `firmware/puente_usb.ps1` detecta el puerto (CP210x/CH340), envia la temperatura a `/dashboard/api/data` cada 5 s, consulta `/dashboard/api/commands` cada 2 s (solo si el ESP32 esta respondiendo) y confirma cada orden. Si el ESP32 no confirma en 60 s, la orden se marca `fallido`. Lee la API key de `firmware/config.local.ps1` (ignorado por git).
-- `iniciar_aquacontrol.bat` levanta todo con doble clic. El Monitor Serie del Arduino IDE tiene que estar cerrado (solo un programa puede usar el puerto COM).
-- Cada orden hace un solo giro del servo (ida a `SERVO_ABIERTO`, espera `MS_ABIERTO`, vuelta a `SERVO_CERRADO`), sin importar los gramos; los gramos quedan solo en el historial. La cantidad de comida se ajusta con `MS_ABIERTO` y `SERVO_ABIERTO`.
+**Modo WiFi (el que se usa hoy).** `firmware/aquacontrol_esp32` habla directo con la API: envia la temperatura cada 5 s, consulta ordenes cada 2 s y confirma cada giro. No hace falta el puente ni que el ESP32 este cerca de la PC.
 
-**Modo WiFi (alternativa).** `firmware/aquacontrol_esp32/aquacontrol_esp32.ino` habla directo con la API. El servidor debe escuchar en la red (`php spark serve --host 0.0.0.0`) y el ESP32 debe estar en una red WiFi de 2.4 GHz.
+- Requiere `firmware/aquacontrol_esp32/secrets.h` (copiar de `secrets.example.h`, ignorado por git) con `WIFI_SSID`, `WIFI_PASSWORD`, `SERVER_URL` y `DEVICE_KEY`.
+- La red WiFi debe ser de 2.4 GHz. El servidor debe escuchar en la red (`php spark serve --host 0.0.0.0`, ya incluido en `iniciar_aquacontrol.bat`) y conviene reservar la IP de la PC en el router para que `SERVER_URL` no cambie.
+- Libreria extra: ArduinoJson v7.
+- Si la pagina se publica en un hosting, basta con cambiar `SERVER_URL`: el ESP32 funciona sin la PC.
+
+**Modo USB (alternativa).** El ESP32 esta enchufado por USB a la PC y no usa WiFi.
+
+- Firmware: `firmware/aquacontrol_esp32_usb`. Protocolo de lineas por el puerto serie a 115200: el ESP32 envia `T:24.56` cada 2 s y `ACK:<id>:OK` al terminar de alimentar; la PC envia `FEED:<id>:<gramos>`.
+- Puente: `firmware/puente_usb.ps1` detecta el puerto (CP210x/CH340), envia la temperatura a `/dashboard/api/data` cada 5 s, consulta `/dashboard/api/commands` cada 2 s (solo si el ESP32 responde con el protocolo USB) y confirma cada orden. Si el ESP32 no confirma en 60 s, la orden se marca `fallido`. Lee la API key de `firmware/config.local.ps1` (ignorado por git).
+- En `iniciar_aquacontrol.bat` poner `MODO=usb`. El Monitor Serie del Arduino IDE tiene que estar cerrado (solo un programa puede usar el puerto COM).
 
 ### Actualizacion de perfil
 

@@ -1,82 +1,106 @@
 /*
-  AquaControl - ESP32: alimentador con servo + envio de lecturas
+  AquaControl - ESP32 por WiFi (sin PC intermedia)
 
-  Librerias (Arduino IDE > Administrar bibliotecas):
-    - ESP32Servo  (Kevin Harrington)
-    - ArduinoJson (Benoit Blanchon, v7)
+  El ESP32 habla directo con la pagina por WiFi:
+    - cada 5 s envia la temperatura     POST /dashboard/api/data
+    - cada 2 s pregunta si alimentar     GET  /dashboard/api/commands
+      (boton "Alimentar ahora" y horarios programados)
+    - al terminar el giro confirma       POST /dashboard/api/commands/{id}/ack
 
-  Flujo del alimentador:
-    1. Cada POLL_INTERVAL_MS el ESP32 consulta   GET  /dashboard/api/commands
-    2. Si llega {"accion":"alimentar","gramos":X} mueve el servo
-    3. Confirma el resultado con                 POST /dashboard/api/commands/{id}/ack
-       -> el servidor lo registra en el historial de alimentaciones.
-  Los horarios programados en la pagina los genera el servidor: llegan por la misma cola.
+  Hardware:
+    - DS18B20 (temperatura)    -> GPIO 18 (resistencia pull-up de 4.7k a 3.3V)
+    - Servo SG90 (alimentador) -> GPIO 19 (rojo a 5V/VIN, marron a GND)
 
-  La API key se genera en la pagina: Dispositivos > "Generar key".
-  El dispositivo debe ser de tipo Actuador, Controlador, Kit IoT u Otro (los "Sensor" no reciben ordenes).
+  Configuracion: copiar secrets.example.h como secrets.h y completar WiFi,
+  IP del servidor y API key (secrets.h no se sube a GitHub).
+  La red WiFi tiene que ser de 2.4 GHz (el ESP32 no se conecta a 5 GHz).
+
+  Librerias: OneWire, DallasTemperature, ESP32Servo, ArduinoJson (v7).
+  Placa: "ESP32 Dev Module".
 */
 
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <ESP32Servo.h>
+#include "secrets.h"
 
-// ---------- Configuracion ----------
-const char* WIFI_SSID     = "RioTel_MEDINA_5847";
-const char* WIFI_PASSWORD = "6672503295";
+// ---------- Pines ----------
+#define PIN_DS18B20 18
+#define PIN_SERVO   19
 
-// IP de la PC donde corre `php spark serve --host 0.0.0.0` (no uses localhost: es el propio ESP32).
-const char* SERVER_URL = "http://192.168.0.10:8080";
-const char* DEVICE_KEY = "aqk_PEGA_AQUI_LA_API_KEY";
+// ---------- Alimentador: un solo giro (ida y vuelta) por orden ----------
+const int SERVO_CERRADO = 0;    // grados con la compuerta cerrada
+const int SERVO_ABIERTO = 90;   // grados con la compuerta abierta
+const int MS_ABIERTO = 1000;    // tiempo abierto antes de volver
 
-const int SERVO_PIN = 19;           // mismo pin que el modo USB
-const int SERVO_REPOSO = 0;          // grados con la compuerta cerrada
-const int SERVO_ABIERTO = 90;        // grados con la compuerta abierta
-const int MS_ABIERTO = 1000;         // tiempo abierto antes de volver
+// ---------- Tiempos ----------
+const unsigned long INTERVALO_TEMP_MS = 5000;     // envio de temperatura
+const unsigned long INTERVALO_ORDENES_MS = 2000;  // consulta de ordenes
+const unsigned long MS_CONVERSION = 800;          // DS18B20 a 12 bits tarda ~750 ms
+const uint16_t HTTP_TIMEOUT_MS = 4000;
 
-const unsigned long POLL_INTERVAL_MS = 5000;     // consulta de ordenes
-const unsigned long READING_INTERVAL_MS = 60000; // envio de lecturas
-// -----------------------------------
+OneWire oneWire(PIN_DS18B20);
+DallasTemperature sensorTemperatura(&oneWire);
+Servo alimentador;
 
-Servo feederServo;
-unsigned long lastPoll = 0;
-unsigned long lastReading = 0;
+unsigned long ultimoPedidoTemp = 0;
+unsigned long ultimaConsulta = 0;
+unsigned long ultimoIntentoWifi = 0;
+bool convirtiendo = false;
+bool avisoWifi = false;
 
-void connectWifi() {
-  if (WiFi.status() == WL_CONNECTED) return;
+// ---------------------------------------------------------------- WiFi
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Conectando WiFi");
-  for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
-    delay(500);
-    Serial.print(".");
+bool wifiListo() {
+  if (WiFi.status() == WL_CONNECTED) {
+    if (avisoWifi) {
+      Serial.printf("WiFi conectado. IP del ESP32: %s\n", WiFi.localIP().toString().c_str());
+      avisoWifi = false;
+    }
+    return true;
   }
-  Serial.println(WiFi.status() == WL_CONNECTED ? " OK" : " sin conexion");
+
+  // Reintenta cada 10 s sin bloquear el resto del programa.
+  if (millis() - ultimoIntentoWifi >= 10000 || ultimoIntentoWifi == 0) {
+    ultimoIntentoWifi = millis();
+    Serial.printf("Conectando a la red WiFi \"%s\"...\n", WIFI_SSID);
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    avisoWifi = true;
+  }
+  return false;
 }
 
-bool beginRequest(HTTPClient& http, const String& path) {
-  if (!http.begin(String(SERVER_URL) + path)) return false;
+// ---------------------------------------------------------------- HTTP
+
+bool iniciarPedido(HTTPClient& http, const String& ruta) {
+  if (!http.begin(String(SERVER_URL) + ruta)) return false;
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  http.setConnectTimeout(HTTP_TIMEOUT_MS);
   http.addHeader("X-Device-Key", DEVICE_KEY);
   http.addHeader("Content-Type", "application/json");
-  http.setTimeout(8000);
   return true;
 }
 
-// Un solo giro por orden (ida y vuelta), igual que el firmware USB.
-bool dispensar(float gramos) {
-  Serial.printf("Alimentando (racion de %.2f g): un giro de ida y vuelta\n", gramos);
-
-  feederServo.write(SERVO_ABIERTO);
-  delay(MS_ABIERTO);
-  feederServo.write(SERVO_REPOSO);
-  delay(500);
-  return true; // si tenes un sensor de fin de carrera, devolve false cuando falle
+void avisarErrorHttp(const char* que, int codigo) {
+  if (codigo == 401) {
+    Serial.printf("%s: la pagina rechazo la API key (401). Revisa DEVICE_KEY en secrets.h.\n", que);
+  } else if (codigo < 0) {
+    Serial.printf("%s: no se pudo conectar con %s (%s). La PC y la pagina estan prendidas?\n",
+                  que, SERVER_URL, HTTPClient::errorToString(codigo).c_str());
+  } else {
+    Serial.printf("%s: respuesta HTTP %d\n", que, codigo);
+  }
 }
 
-void confirmarComando(int id, bool ok, const char* mensaje) {
+// ---------------------------------------------------------------- Alimentador
+
+void confirmarOrden(long id, bool ok, const char* mensaje) {
   HTTPClient http;
-  if (!beginRequest(http, "/dashboard/api/commands/" + String(id) + "/ack")) return;
+  if (!iniciarPedido(http, "/dashboard/api/commands/" + String(id) + "/ack")) return;
 
   JsonDocument body;
   body["estado"] = ok ? "ejecutado" : "fallido";
@@ -84,78 +108,125 @@ void confirmarComando(int id, bool ok, const char* mensaje) {
   String payload;
   serializeJson(body, payload);
 
-  int code = http.POST(payload);
-  Serial.printf("ACK comando %d -> HTTP %d\n", id, code);
+  int codigo = http.POST(payload);
+  if (codigo == 200) {
+    Serial.printf("Orden #%ld confirmada a la pagina (%s).\n", id, ok ? "ejecutada" : "fallida");
+  } else {
+    avisarErrorHttp("Confirmando orden", codigo);
+  }
   http.end();
 }
 
-void consultarComandos() {
-  HTTPClient http;
-  if (!beginRequest(http, "/dashboard/api/commands")) return;
+// Un solo giro por orden: abre, espera y cierra.
+void alimentar(long id, float gramos) {
+  Serial.printf("Orden #%ld: alimentar (racion de %.2f g) -> un giro de ida y vuelta\n", id, gramos);
+  alimentador.write(SERVO_ABIERTO);
+  delay(MS_ABIERTO);
+  alimentador.write(SERVO_CERRADO);
+  delay(500);
+  confirmarOrden(id, true, nullptr);
+}
 
-  int code = http.GET();
-  if (code != 200) {
-    Serial.printf("Consulta de comandos -> HTTP %d\n", code);
+void consultarOrdenes() {
+  HTTPClient http;
+  if (!iniciarPedido(http, "/dashboard/api/commands")) return;
+
+  int codigo = http.GET();
+  if (codigo != 200) {
+    avisarErrorHttp("Consultando ordenes", codigo);
     http.end();
     return;
   }
 
   JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, http.getString());
+  DeserializationError error = deserializeJson(doc, http.getString());
   http.end();
-  if (err) return;
+  if (error) {
+    Serial.printf("Respuesta de ordenes invalida: %s\n", error.c_str());
+    return;
+  }
 
-  for (JsonObject cmd : doc["comandos"].as<JsonArray>()) {
-    int id = cmd["id"];
-    const char* accion = cmd["accion"] | "";
+  for (JsonObject orden : doc["comandos"].as<JsonArray>()) {
+    long id = orden["id"] | 0L;
+    const char* accion = orden["accion"] | "";
+    if (id <= 0) continue;
 
     if (strcmp(accion, "alimentar") == 0) {
-      bool ok = dispensar(cmd["gramos"] | 1.0f);
-      confirmarComando(id, ok, ok ? nullptr : "Fallo el servo");
+      alimentar(id, orden["gramos"] | 0.0f);
     } else {
-      confirmarComando(id, false, "Accion no soportada");
+      confirmarOrden(id, false, "Accion no soportada");
     }
   }
 }
 
-void enviarLectura() {
+// ---------------------------------------------------------------- Temperatura
+
+void enviarTemperatura(float t) {
   HTTPClient http;
-  if (!beginRequest(http, "/dashboard/api/data")) return;
+  if (!iniciarPedido(http, "/dashboard/api/data")) return;
 
   JsonDocument body;
-  body["temperatura"] = 25.0; // TODO: reemplazar por la lectura real (DS18B20)
-  body["ph"] = 7.0;           // TODO: sensor de pH
-  body["nivel_agua"] = 1;     // TODO: sensor de nivel (1 = OK, 0 = bajo)
-  body["calefactor"] = 0;
+  body["temperatura"] = roundf(t * 100) / 100.0f;
   String payload;
   serializeJson(body, payload);
 
-  int code = http.POST(payload);
-  Serial.printf("Lectura enviada -> HTTP %d\n", code);
+  int codigo = http.POST(payload);
+  if (codigo == 201) {
+    Serial.printf("Temperatura %.2f C enviada a la pagina\n", t);
+  } else {
+    avisarErrorHttp("Enviando temperatura", codigo);
+  }
   http.end();
 }
 
+// Lectura no bloqueante: pide la conversion y la lee ~800 ms despues.
+void actualizarTemperatura() {
+  unsigned long ahora = millis();
+
+  if (!convirtiendo && ahora - ultimoPedidoTemp >= INTERVALO_TEMP_MS) {
+    sensorTemperatura.requestTemperatures();
+    ultimoPedidoTemp = ahora;
+    convirtiendo = true;
+  }
+
+  if (convirtiendo && ahora - ultimoPedidoTemp >= MS_CONVERSION) {
+    convirtiendo = false;
+    float t = sensorTemperatura.getTempCByIndex(0);
+    if (t == DEVICE_DISCONNECTED_C || t < -20 || t > 80) {
+      Serial.println("Sensor DS18B20 sin lectura (revisar cables y resistencia de 4.7k)");
+    } else {
+      enviarTemperatura(t);
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Programa
+
 void setup() {
   Serial.begin(115200);
-  feederServo.attach(SERVO_PIN);
-  feederServo.write(SERVO_REPOSO);
-  connectWifi();
+  delay(300);
+  Serial.println("AquaControl ESP32 (WiFi) - DS18B20 en GPIO18, servo en GPIO19");
+
+  sensorTemperatura.begin();
+  sensorTemperatura.setWaitForConversion(false);
+
+  alimentador.setPeriodHertz(50);
+  alimentador.attach(PIN_SERVO, 500, 2400);
+  alimentador.write(SERVO_CERRADO);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  wifiListo();
 }
 
 void loop() {
-  connectWifi();
-  if (WiFi.status() != WL_CONNECTED) {
-    delay(2000);
-    return;
-  }
+  if (wifiListo()) {
+    actualizarTemperatura();
 
-  unsigned long now = millis();
-  if (now - lastPoll >= POLL_INTERVAL_MS) {
-    lastPoll = now;
-    consultarComandos();
+    if (millis() - ultimaConsulta >= INTERVALO_ORDENES_MS) {
+      ultimaConsulta = millis();
+      consultarOrdenes();
+    }
   }
-  if (now - lastReading >= READING_INTERVAL_MS) {
-    lastReading = now;
-    enviarLectura();
-  }
+  delay(10);
 }
