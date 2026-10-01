@@ -88,6 +88,16 @@ class Filters extends BaseFilters
         ],
     ];
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // La barra de depuracion solo se agrega si esta activada (ver Config\Toolbar::$activo).
+        if (! config(Toolbar::class)->activo) {
+            $this->required['after'] = array_values(array_diff($this->required['after'], ['toolbar']));
+        }
+    }
+
     /**
      * List of filter aliases that works on a
      * particular HTTP method (GET, POST, etc.).

@@ -31,6 +31,22 @@ class App extends BaseConfig
      */
     public array $allowedHostnames = [];
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // AquaControl: si la pagina se abre desde otro equipo de la red (celular, otra PC)
+        // con la IP de esta PC, los links y los estilos usan esa misma direccion en vez de
+        // "localhost" (que en el celular no existe). Solo se aceptan nombres de esta PC.
+        $host = strtolower(explode(':', (string) ($_SERVER['HTTP_HOST'] ?? ''))[0]);
+        if ($host === '' || in_array($host, $this->allowedHostnames, true)) {
+            return;
+        }
+        if ($host === '127.0.0.1' || $host === 'localhost' || in_array($host, gethostbynamel(gethostname()) ?: [], true)) {
+            $this->allowedHostnames[] = $host;
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Index File

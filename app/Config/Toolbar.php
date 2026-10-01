@@ -24,6 +24,13 @@ use CodeIgniter\Debug\Toolbar\Collectors\Views;
 class Toolbar extends BaseConfig
 {
     /**
+     * AquaControl: la barra esta apagada por defecto porque hace mas lenta cada
+     * pagina (en el panel agregaba unos 10.000 elementos ocultos). Para usarla
+     * mientras programas, agrega en .env la linea:  toolbar.activo = true
+     */
+    public bool $activo = false;
+
+    /**
      * --------------------------------------------------------------------------
      * Toolbar Collectors
      * --------------------------------------------------------------------------

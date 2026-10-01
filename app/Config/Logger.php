@@ -39,7 +39,9 @@ class Logger extends BaseConfig
      *
      * @var int|list<int>
      */
-    public $threshold = (ENVIRONMENT === 'production') ? 4 : 9;
+    // AquaControl: en desarrollo se guardan errores y advertencias (nivel 5). Con 9 se
+    // escribian varias lineas de "debug" en el disco en cada pedido.
+    public $threshold = (ENVIRONMENT === 'production') ? 4 : 5;
 
     /**
      * --------------------------------------------------------------------------

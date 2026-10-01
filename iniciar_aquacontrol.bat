@@ -12,9 +12,8 @@ set "MODO=wifi"
 set "PROJ=%~dp0"
 cd /d "%PROJ%"
 
-echo [1/4] Cerrando instancias anteriores (libera el puerto COM y el 8080)...
+echo [1/4] Cerrando el puente USB anterior (libera el puerto COM)...
 powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'powershell.exe' -and $_.CommandLine -like '*puente_usb*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
-powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'php.exe' -and $_.CommandLine -like '*spark serve*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
 
 echo [2/4] Verificando MySQL...
 netstat -ano | findstr ":3306" | findstr "LISTENING" >nul
@@ -31,7 +30,8 @@ if errorlevel 1 (
 )
 
 echo [3/4] Iniciando la pagina en http://localhost:8080 ...
-start "AquaControl - Servidor" cmd /k php spark serve --host 0.0.0.0 --port 8080
+REM "spark servir" cierra solo los servidores viejos de esta pagina y atiende por IPv4 e IPv6.
+start "AquaControl - Servidor" cmd /k php spark servir
 timeout /t 3 >nul
 
 if /i "%MODO%"=="usb" (
