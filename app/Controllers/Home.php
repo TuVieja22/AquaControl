@@ -2,36 +2,46 @@
 
 namespace App\Controllers;
 
+use Config\Commerce;
+use Config\MercadoPago;
+
 /**
- * Home Controller
- * app/Controllers/Home.php
+ * Portada (landing) con la compra del kit.
  */
 class Home extends BaseController
 {
     public function index(): string
     {
-        $unitPrice = env('commerce.unitPrice');
+        $tienda = config(Commerce::class);
+        $mp = config(MercadoPago::class);
+        $precio = $tienda->precio();
 
         return view('home/index', [
             'title'    => 'Inicio',
-            'extraCss' => ['css/components/payment-button.css', 'css/purchase.css'],
-            'extraJs'  => ['js/purchase.js'],
-            'purchase' => [
+            'producto' => [
+                'sku'             => $tienda->productSku,
+                'nombre'          => $tienda->productName,
+                'descripcion'     => $tienda->productDescription,
+                'precio'          => $precio,
+                'moneda'          => $tienda->moneda(),
+                'cantidadMaxima'  => $tienda->cantidadMaxima(),
+                'mensajeEntrega'  => $tienda->deliveryMessage,
+                'precioTarjeta'   => $precio !== null ? $tienda->moneda() . ' ' . number_format($precio, 0, ',', '.') : 'Consultar',
+                'precioResumen'   => $precio !== null ? $tienda->moneda() . ' ' . number_format($precio, 2, ',', '.') : null,
+            ],
+            // Lo que necesita purchase.js para calcular el total y abrir Mercado Pago.
+            'compra'   => [
                 'product' => [
-                    'sku'             => env('commerce.productSku', 'aquacontrol'),
-                    'name'            => env('commerce.productName', 'AquaControl'),
-                    'headline'        => env('commerce.productHeadline', 'Monitoreo inteligente para peceras en una sola compra.'),
-                    'description'     => env('commerce.productDescription', 'Elegi la cantidad, revisa tu pedido y continua con el medio de pago que prefieras sin salir de la experiencia AquaControl.'),
-                    'unitPrice'       => is_numeric($unitPrice) ? (float) $unitPrice : null,
-                    'currency'        => strtoupper((string) env('commerce.currency', 'ARS')),
-                    'maxQuantity'     => max(1, (int) env('commerce.maxQuantity', 6)),
-                    'deliveryMessage' => env('commerce.deliveryMessage', 'La entrega y activacion se coordinan al confirmar el pago.'),
+                    'sku'         => $tienda->productSku,
+                    'name'        => $tienda->productName,
+                    'unitPrice'   => $precio,
+                    'currency'    => $tienda->moneda(),
+                    'maxQuantity' => $tienda->cantidadMaxima(),
                 ],
                 'payment' => [
-                    'locale'                 => env('commerce.locale', 'es-AR'),
-                    'checkoutOrderUrl'         => env('commerce.checkoutOrderUrl', ''),
-                    'mercadoPagoPublicKey'     => env('mercadopago.publicKey', ''),
-                    'mercadoPagoPreferenceUrl' => env('mercadopago.preferenceUrl', base_url('checkout/mercadopago/preference')),
+                    'locale'                   => $tienda->locale,
+                    'mercadoPagoPublicKey'     => $mp->publicKey,
+                    'mercadoPagoPreferenceUrl' => $mp->preferenceUrl ?: base_url('checkout/mercadopago/preference'),
                 ],
             ],
         ]);

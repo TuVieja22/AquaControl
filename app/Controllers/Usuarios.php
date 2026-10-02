@@ -5,14 +5,11 @@ namespace App\Controllers;
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
+/**
+ * Administracion de cuentas (solo administradores): nombre, rol y contrasena.
+ */
 class Usuarios extends BaseController
 {
-    private const ASSETS = [
-        'extraCss' => ['css/dashboard.css', 'css/management.css'],
-    ];
-
-    private const PASSWORD_RULE = 'permit_empty|min_length[8]|regex_match[/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/]';
-
     private UserModel $userModel;
 
     public function __construct()
@@ -22,130 +19,80 @@ class Usuarios extends BaseController
 
     public function index(): string
     {
-        return view('users/index', array_merge(self::ASSETS, [
+        return view('users/index', [
             'title'     => 'Usuarios',
             'users'     => $this->userModel->orderBy('created_at', 'DESC')->findAll(),
             'roleNames' => UserModel::ROLES,
-        ]));
+        ]);
     }
 
     public function edit(int $id): string|RedirectResponse
     {
         $user = $this->userModel->find($id);
         if (! $user) {
-            return redirect()
-                ->to(base_url('usuarios'))
-                ->with('error', 'El usuario solicitado no existe.');
+            return redirect()->to(base_url('usuarios'))->with('error', 'El usuario solicitado no existe.');
         }
 
-        if ($this->request->getMethod() === 'POST') {
-            return $this->updateUser($id, $user);
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->formulario($user);
         }
 
-        return $this->renderEdit($user);
-    }
+        $valido = $this->validate([
+            'nombre'           => 'required|min_length[2]|max_length[100]',
+            'rol'              => 'required|in_list[administrador,usuario,tecnico]',
+            'password'         => 'permit_empty|' . UserModel::PASSWORD_RULE,
+            'password_confirm' => 'matches[password]',
+        ], [
+            'nombre' => [
+                'required'   => 'El nombre y apellido es obligatorio.',
+                'min_length' => 'El nombre debe tener al menos 2 caracteres.',
+            ],
+            'rol' => [
+                'required' => 'Selecciona un rol.',
+                'in_list'  => 'Selecciona un rol valido.',
+            ],
+            'password'         => UserModel::PASSWORD_MESSAGES,
+            'password_confirm' => ['matches' => 'Las contrasenas no coinciden.'],
+        ]);
 
-    private function updateUser(int $id, array $user): string|RedirectResponse
-    {
-        ['rules' => $rules, 'messages' => $messages] = $this->validationConfig($id);
-
-        if (! $this->validate($rules, $messages)) {
-            return $this->renderEdit($user, $this->validator->getErrors());
+        if (! $valido) {
+            return $this->formulario($user, $this->validator->getErrors());
         }
 
-        $nextRole = (string) $this->request->getPost('rol');
-        if ($this->wouldRemoveLastAdmin($id, $nextRole)) {
-            return $this->renderEdit($user, [
-                'rol' => 'Debe quedar al menos un administrador activo.',
-            ]);
+        $rol = (string) $this->request->getPost('rol');
+        if ($user['rol'] === UserModel::ROLE_ADMIN && $rol !== UserModel::ROLE_ADMIN && $this->userModel->administradoresActivos() <= 1) {
+            return $this->formulario($user, ['rol' => 'Debe quedar al menos un administrador activo.']);
         }
 
-        $payload = [
-            'id'     => $id,
-            'nombre' => trim((string) $this->request->getPost('nombre')),
-            'rol'    => $nextRole,
-        ];
-
+        $datos = ['id' => $id, 'nombre' => trim((string) $this->request->getPost('nombre')), 'rol' => $rol];
         $password = (string) $this->request->getPost('password');
         if ($password !== '') {
-            $payload['password'] = $password;
+            $datos['password'] = $password;
         }
 
-        if (! $this->userModel->update($id, $payload)) {
-            return $this->renderEdit($user, $this->userModel->errors());
+        if (! $this->userModel->update($id, $datos)) {
+            return $this->formulario($user, $this->userModel->errors());
         }
 
-        if ((int) session()->get('user_id') === $id) {
-            session()->set([
-                'user_nombre' => $payload['nombre'],
-                'user_role'   => $payload['rol'],
-            ]);
+        // Si el administrador se edito a si mismo, se actualiza su sesion.
+        if ($this->userId() === $id) {
+            session()->set(['user_nombre' => $datos['nombre'], 'user_role' => $rol]);
         }
 
-        return redirect()
-            ->to(base_url('usuarios'))
-            ->with('success', 'Usuario actualizado correctamente.');
+        return redirect()->to(base_url('usuarios'))->with('success', 'Usuario actualizado correctamente.');
     }
 
-    private function renderEdit(array $user, array $errors = []): string
+    private function formulario(array $user, array $errores = []): string
     {
-        return view('users/edit', array_merge(self::ASSETS, [
+        return view('users/edit', [
             'title'     => 'Editar usuario',
             'user'      => $user,
             'roleNames' => UserModel::ROLES,
-            'errors'    => $errors,
+            'errors'    => $errores,
             'form'      => [
-                'nombre' => $this->request->getPost('nombre') ?? ($user['nombre'] ?? ''),
-                'rol'    => $this->request->getPost('rol') ?? ($user['rol'] ?? UserModel::DEFAULT_ROLE),
+                'nombre' => $this->request->getPost('nombre') ?? $user['nombre'],
+                'rol'    => $this->request->getPost('rol') ?? $user['rol'],
             ],
-        ]));
-    }
-
-    private function validationConfig(int $id): array
-    {
-        return [
-            'rules' => [
-                'nombre'           => 'required|min_length[2]|max_length[100]',
-                'rol'              => 'required|in_list[administrador,usuario,tecnico]',
-                'password'         => self::PASSWORD_RULE,
-                'password_confirm' => 'matches[password]',
-            ],
-            'messages' => [
-                'nombre' => [
-                    'required'   => 'El nombre y apellido es obligatorio.',
-                    'min_length' => 'El nombre debe tener al menos 2 caracteres.',
-                ],
-                'rol' => [
-                    'required' => 'Selecciona un rol.',
-                    'in_list'  => 'Selecciona un rol valido.',
-                ],
-                'password' => [
-                    'min_length'  => 'La contrasena debe tener al menos 8 caracteres.',
-                    'regex_match' => 'Debe incluir mayusculas, minusculas, numeros y caracteres especiales.',
-                ],
-                'password_confirm' => [
-                    'matches' => 'Las contrasenas no coinciden.',
-                ],
-            ],
-        ];
-    }
-
-    private function wouldRemoveLastAdmin(int $userId, string $nextRole): bool
-    {
-        if ($nextRole === UserModel::ROLE_ADMIN) {
-            return false;
-        }
-
-        $user = $this->userModel->find($userId);
-        if (! $user || ($user['rol'] ?? '') !== UserModel::ROLE_ADMIN) {
-            return false;
-        }
-
-        $activeAdmins = $this->userModel
-            ->where('rol', UserModel::ROLE_ADMIN)
-            ->where('activo', 1)
-            ->countAllResults();
-
-        return $activeAdmins <= 1;
+        ]);
     }
 }

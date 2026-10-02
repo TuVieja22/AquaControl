@@ -1,52 +1,32 @@
+/* ===================================================
+   AquaControl — dashboard.js
+   Panel de la pecera: dibuja los datos que manda el servidor y los vuelve a pedir
+   cada 5 s (cada 2 s mientras el alimentador tiene una orden en curso). Los textos
+   ya vienen armados desde PanelPecera.php: aca solo se ponen en su lugar.
+   =================================================== */
+
 'use strict';
 
 (function () {
   const dataNode = document.getElementById('dashboard-data');
-  if (!dataNode) {
-    return;
-  }
+  if (!dataNode) return;
 
   const state = JSON.parse(dataNode.textContent || '{}');
-  const charts = {};
-  const statusLabels = {
-    ok: 'OK',
-    warn: 'Advertencia',
-    danger: 'Critico',
-    neutral: 'Info'
-  };
-  const statusDotClasses = ['status-ok', 'status-info', 'status-warn', 'status-danger'];
-  const statusScores = {
-    ok: 98,
-    neutral: 96,
-    warn: 78,
-    danger: 44
-  };
-  const cardStatusClasses = ['sensor-status-ok', 'sensor-status-warn', 'sensor-status-danger', 'sensor-status-neutral'];
-  const chartDefinitions = {
-    ecosystem: {
-      canvasId: 'ecosystemChart'
-    }
-  };
+  const CHART_JS = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
+  const REFRESH_MS = 5000;
+  const REFRESH_FEEDING_MS = 2000;
+  const STATUS_DOTS = { ok: 'status-ok', neutral: 'status-info', warn: 'status-warn', danger: 'status-danger' };
 
-  const nodes = {
-    latestTimestamp: document.getElementById('latestTimestamp'),
-    vacationStateLabel: document.getElementById('vacationStateLabel'),
-    alertsList: document.getElementById('alertsList'),
-    feedingsTableBody: document.getElementById('feedingsTableBody'),
-    alertsMetric: document.getElementById('alertsMetric'),
-    alertsMetricMeta: document.getElementById('alertsMetricMeta'),
-    ecosystemHealth: document.getElementById('ecosystemHealth'),
-    ecosystemHealthMeta: document.getElementById('ecosystemHealthMeta'),
-    waterStatusDot: document.getElementById('waterStatusDot'),
-    waterStatusTitle: document.getElementById('waterStatusTitle'),
-    waterStatusMeta: document.getElementById('waterStatusMeta'),
-    feedingStatusDot: document.getElementById('feedingStatusDot'),
-    feedingStatusTitle: document.getElementById('feedingStatusTitle'),
-    feedingStatusMeta: document.getElementById('feedingStatusMeta'),
-    vacationStatusDot: document.getElementById('vacationStatusDot'),
-    vacationStatusTitle: document.getElementById('vacationStatusTitle'),
-    vacationStatusMeta: document.getElementById('vacationStatusMeta')
-  };
+  let chart = null;
+  let chartKey = '';
+  let refreshTimer = null;
+
+  const $ = id => document.getElementById(id);
+
+  function setText(id, value) {
+    const node = $(id);
+    if (node) node.textContent = value ?? '';
+  }
 
   function escapeHtml(value) {
     const div = document.createElement('div');
@@ -54,429 +34,226 @@
     return div.innerHTML;
   }
 
-  function formatDateTime(value, fallback = '--') {
-    if (!value) {
-      return fallback;
-    }
+  function setStatusDot(id, status) {
+    const node = $(id);
+    if (node) node.className = STATUS_DOTS[status] || 'status-info';
+  }
+
+  /* "hace 12 s", "hace 3 min" o dd/mm/aaaa hh:mm (igual que PanelPecera::haceCuanto) */
+  function haceCuanto(value) {
+    if (!value) return 'Sin lecturas';
 
     const date = new Date(String(value).replace(' ', 'T'));
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-AR');
+    if (Number.isNaN(date.getTime())) return value;
+
+    const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (seconds < 60) return `hace ${seconds} s`;
+    if (seconds < 3600) return `hace ${Math.floor(seconds / 60)} min`;
+
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   }
 
-  function formatRelativeTime(value, fallback = 'Sin lecturas') {
-    if (!value) {
-      return fallback;
-    }
+  /* ── Grafico (Chart.js se descarga aparte: si no carga, el resto del panel igual anda) ── */
+  function renderChart() {
+    const canvas = $('ecosystemChart');
+    if (!canvas || typeof window.Chart === 'undefined') return;
 
-    const date = new Date(String(value).replace(' ', 'T'));
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
+    const charts = state.charts || {};
+    // Si los datos no cambiaron desde el ultimo dibujo, no se toca el grafico.
+    const key = `${charts.count}|${(charts.labels || []).at(-1)}|${(charts.temperature || []).at(-1)}|${(charts.ph || []).at(-1)}`;
+    if (chart && key === chartKey) return;
+    chartKey = key;
 
-    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
-    if (elapsedSeconds < 60) {
-      return `hace ${elapsedSeconds} s`;
-    }
-
-    if (elapsedSeconds < 3600) {
-      return `hace ${Math.floor(elapsedSeconds / 60)} min`;
-    }
-
-    return formatDateTime(value, fallback);
-  }
-
-  function formatCardStatus(status) {
-    return statusLabels[status] || status || 'Info';
-  }
-
-  function metricMeta(count) {
-    if (count === 0) {
-      return 'Sin eventos criticos';
-    }
-
-    return count === 1 ? '1 evento pendiente' : `${count} eventos pendientes`;
-  }
-
-  function ecosystemHealth() {
-    const cards = state.cards || {};
-    const statuses = [
-      cards.temperature?.status,
-      cards.ph?.status,
-      cards.waterLevel?.status,
-      cards.heater?.status,
-      cards.vacationMode?.status
-    ];
-    const total = statuses.reduce(function (sum, status) {
-      return sum + (statusScores[status] || statusScores.neutral);
-    }, 0);
-    const score = Math.round(total / statuses.length) - ((state.alerts?.length || 0) * 6);
-
-    return Math.max(0, Math.min(100, score));
-  }
-
-  function setText(node, value) {
-    if (node) {
-      node.textContent = value;
-    }
-  }
-
-  function setStatusDot(node, status) {
-    if (!node) {
+    if (chart) {
+      chart.data.labels = charts.labels || [];
+      chart.data.datasets[0].data = charts.temperature || [];
+      chart.data.datasets[1].data = charts.ph || [];
+      chart.update('none');
       return;
     }
 
-    node.classList.remove(...statusDotClasses);
-    node.classList.add({
-      ok: 'status-ok',
-      neutral: 'status-info',
-      warn: 'status-warn',
-      danger: 'status-danger'
-    }[status] || 'status-info');
-  }
-
-  function feedingMeta(card) {
-    if (!card || card.value === '--') {
-      return card?.meta || 'Sin registros';
-    }
-
-    return `${card.value} - ${card.meta || 'Registrada'}`;
-  }
-
-  function mergePayload(payload) {
-    ['config', 'cards', 'alerts', 'feedings', 'charts', 'latestTimestamp', 'feeder'].forEach(function (key) {
-      if (payload[key] !== undefined) {
-        state[key] = payload[key];
+    chart = new window.Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: charts.labels || [],
+        datasets: [
+          { label: 'Temperatura', data: charts.temperature || [], yAxisID: 'temperature', borderColor: '#00d4ff', backgroundColor: 'rgba(0, 212, 255, 0.18)', tension: 0.42, fill: true },
+          { label: 'pH', data: charts.ph || [], yAxisID: 'ph', borderColor: '#40f2bf', backgroundColor: 'rgba(64, 242, 191, 0.04)', tension: 0.42, fill: false }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        elements: {
+          point: { radius: 0, hitRadius: 10 },
+          line: { borderWidth: 4, borderCapStyle: 'round', borderJoinStyle: 'round' }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(8, 14, 27, 0.92)',
+            borderColor: 'rgba(0, 212, 255, 0.24)',
+            borderWidth: 1,
+            titleColor: '#ffffff',
+            bodyColor: 'rgba(159, 225, 203, 0.75)',
+            displayColors: false
+          }
+        },
+        scales: {
+          x: { display: false },
+          temperature: { display: false, position: 'left' },
+          ph: { display: false, position: 'right', grid: { drawOnChartArea: false } }
+        }
       }
     });
   }
 
-  function chartTheme() {
-    const styles = getComputedStyle(document.documentElement);
+  function loadChartJs() {
+    if (window.Chart) return Promise.resolve();
 
-    return {
-      label: styles.getPropertyValue('--chart-label').trim() || 'rgba(159,225,203,0.75)',
-      grid: styles.getPropertyValue('--chart-grid').trim() || 'rgba(93,202,165,0.08)'
-    };
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = CHART_JS;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
   }
 
-  function chartOptions() {
-    const theme = chartTheme();
-
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      elements: {
-        point: { radius: 0, hitRadius: 10 },
-        line: { borderWidth: 4, borderCapStyle: 'round', borderJoinStyle: 'round' }
-      },
-      plugins: {
-        legend: {
-          display: false,
-          labels: { color: theme.label }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(8, 14, 27, 0.92)',
-          borderColor: 'rgba(0, 212, 255, 0.24)',
-          borderWidth: 1,
-          titleColor: '#ffffff',
-          bodyColor: theme.label,
-          displayColors: false
-        }
-      },
-      scales: {
-        x: {
-          display: false,
-          ticks: { color: theme.label },
-          grid: { color: theme.grid, drawBorder: false }
-        },
-        temperature: {
-          display: false,
-          position: 'left',
-          ticks: { color: theme.label },
-          grid: { color: theme.grid, drawBorder: false }
-        },
-        ph: {
-          display: false,
-          position: 'right',
-          ticks: { color: theme.label },
-          grid: { drawOnChartArea: false, drawBorder: false }
-        }
-      }
-    };
-  }
-
-  function datasetsFor(definition, labels) {
-    return [
-      {
-        label: 'Temperatura',
-        data: state.charts?.temperature || [],
-        yAxisID: 'temperature',
-        borderColor: '#00d4ff',
-        backgroundColor: 'rgba(0, 212, 255, 0.18)',
-        tension: 0.42,
-        fill: true
-      },
-      {
-        label: 'pH',
-        data: state.charts?.ph || [],
-        yAxisID: 'ph',
-        borderColor: '#40f2bf',
-        backgroundColor: 'rgba(64, 242, 191, 0.04)',
-        tension: 0.42,
-        fill: false
-      }
-    ];
-  }
-
-  function renderChart(key) {
-    if (typeof Chart === 'undefined') {
-      return;
-    }
-
-    const definition = chartDefinitions[key];
-    const canvas = document.getElementById(definition.canvasId);
-    const labels = state.charts?.labels || [];
-
-    if (!canvas) {
-      return;
-    }
-
-    if (!charts[key]) {
-      charts[key] = new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: datasetsFor(definition, labels)
-        },
-        options: chartOptions()
-      });
-      return;
-    }
-
-    charts[key].data.labels = labels;
-    charts[key].data.datasets = datasetsFor(definition, labels);
-    charts[key].options = chartOptions();
-    charts[key].update();
-  }
-
-  function renderCharts() {
-    Object.keys(chartDefinitions).forEach(renderChart);
-  }
-
+  /* ── Tarjetas, resumen y listas ── */
   function renderCards() {
-    document.querySelectorAll('[data-card]').forEach(function (cardNode) {
-      const card = state.cards?.[cardNode.dataset.card];
-      if (!card) {
-        return;
-      }
+    document.querySelectorAll('[data-card]').forEach(node => {
+      const card = state.cards?.[node.dataset.card];
+      if (!card) return;
 
-      cardNode.classList.remove(...cardStatusClasses);
-      cardNode.classList.add(`sensor-status-${card.status}`);
-
-      const valueNode = cardNode.querySelector('[data-field="value"]');
-      const statusNode = cardNode.querySelector('[data-field="status"]');
-      const metaNode = cardNode.querySelector('[data-field="meta"]');
-
-      if (valueNode) {
-        valueNode.textContent = card.value ?? '--';
-      }
-
-      if (statusNode) {
-        statusNode.textContent = formatCardStatus(card.status);
-      }
-
-      if (metaNode) {
-        let statMeta = card.meta;
-        if (cardNode.matches('.dashboard-stat-grid [data-card="temperature"]')) {
-          statMeta = String(card.meta || '').replace('Optimo:', 'Rango ideal');
-        }
-        if (cardNode.matches('.dashboard-stat-grid [data-card="ph"]') && card.status === 'ok') {
-          statMeta = 'Agua estable';
-        }
-        metaNode.textContent = statMeta ?? '';
-      }
+      node.classList.remove('sensor-status-ok', 'sensor-status-warn', 'sensor-status-danger', 'sensor-status-neutral');
+      node.classList.add(`sensor-status-${card.status}`);
+      node.querySelector('[data-field="value"]').textContent = card.value ?? '--';
+      node.querySelector('[data-field="meta"]').textContent = card.meta ?? '';
     });
 
-    if (nodes.vacationStateLabel && state.cards?.vacationMode?.value) {
-      nodes.vacationStateLabel.textContent = state.cards.vacationMode.value;
-    }
+    setText('vacationStateLabel', state.cards?.vacationMode?.value);
   }
 
-  function renderLiveSummary() {
-    const alertsCount = state.alerts?.length || 0;
-    const alertsMeta = metricMeta(alertsCount);
-    const health = ecosystemHealth();
-    const water = state.cards?.waterLevel || {};
-    const feeding = state.cards?.lastFeeding || {};
-    const vacation = state.cards?.vacationMode || {};
+  function renderSummary() {
+    const summary = state.summary || {};
+    const cards = state.cards || {};
 
-    setText(nodes.alertsMetric, String(alertsCount));
-    setText(nodes.alertsMetricMeta, alertsMeta);
-    setText(nodes.ecosystemHealth, `${health}%`);
-    setText(nodes.ecosystemHealthMeta, alertsMeta);
+    setText('latestTimestamp', haceCuanto(state.latestTimestamp));
+    setText('alertsMetric', String(summary.alertsCount ?? 0));
+    setText('alertsMetricMeta', summary.alertsMeta);
+    setText('ecosystemHealth', `${summary.health ?? 0}%`);
+    setText('ecosystemHealthMeta', summary.alertsMeta);
 
-    setStatusDot(nodes.waterStatusDot, water.status);
-    setText(nodes.waterStatusTitle, water.status === 'ok' ? 'Agua clara' : 'Revisar nivel');
-    setText(nodes.waterStatusMeta, water.meta || 'Sin lecturas');
+    setStatusDot('waterStatusDot', cards.waterLevel?.status);
+    setText('waterStatusTitle', summary.waterTitle);
+    setText('waterStatusMeta', cards.waterLevel?.meta);
 
-    setStatusDot(nodes.feedingStatusDot, feeding.status);
-    setText(nodes.feedingStatusTitle, feeding.value === '--' ? 'Alimentacion pendiente' : 'Ultima alimentacion');
-    setText(nodes.feedingStatusMeta, feedingMeta(feeding));
+    setStatusDot('feedingStatusDot', cards.lastFeeding?.status);
+    setText('feedingStatusTitle', summary.feedingTitle);
+    setText('feedingStatusMeta', summary.feedingMeta);
 
-    setStatusDot(nodes.vacationStatusDot, vacation.status);
-    setText(nodes.vacationStatusTitle, vacation.value === 'Activo' ? 'Modo Ausencia listo' : 'Modo manual activo');
-    setText(nodes.vacationStatusMeta, vacation.meta || '');
+    setStatusDot('vacationStatusDot', cards.vacationMode?.status);
+    setText('vacationStatusTitle', summary.vacationTitle);
+    setText('vacationStatusMeta', cards.vacationMode?.meta);
   }
 
   function renderAlerts() {
-    if (!nodes.alertsList) {
-      return;
-    }
+    const list = $('alertsList');
+    if (!list) return;
 
-    if (!state.alerts?.length) {
-      nodes.alertsList.innerHTML = '<p class="empty-state">No hay alertas pendientes.</p>';
-      return;
-    }
-
-    nodes.alertsList.innerHTML = state.alerts.map(function (alert) {
-      return `
+    list.innerHTML = state.alerts?.length
+      ? state.alerts.map(alert => `
         <article class="alert-item">
-          <span class="alert-badge level-${escapeHtml(String(alert.nivel))}">Nivel ${escapeHtml(String(alert.nivel))}</span>
+          <span class="alert-badge level-${Number(alert.nivel)}">Nivel ${Number(alert.nivel)}</span>
           <div class="alert-copy">
             <strong>${escapeHtml(alert.mensaje)}</strong>
             <span>${escapeHtml(alert.time)}</span>
           </div>
-          <button class="btn btn-outline mark-alert-btn" data-alert-id="${escapeHtml(String(alert.id))}" type="button">Marcar leida</button>
-        </article>
-      `;
-    }).join('');
+          <button class="btn btn-outline mark-alert-btn" data-alert-id="${Number(alert.id)}" type="button">Marcar leida</button>
+        </article>`).join('')
+      : '<p class="empty-state">No hay alertas pendientes.</p>';
   }
 
   function renderFeedings() {
-    if (!nodes.feedingsTableBody) {
-      return;
-    }
+    const body = $('feedingsTableBody');
+    if (!body) return;
 
-    if (!state.feedings?.length) {
-      nodes.feedingsTableBody.innerHTML = '<tr><td colspan="3" class="table-empty">Sin registros.</td></tr>';
-      return;
-    }
-
-    nodes.feedingsTableBody.innerHTML = state.feedings.map(function (feeding) {
-      const grams = feeding.grams !== null ? `${Number(feeding.grams).toFixed(2)} g` : '--';
-      const type = feeding.type ? feeding.type.charAt(0).toUpperCase() + feeding.type.slice(1) : '--';
-
-      return `
+    body.innerHTML = state.feedings?.length
+      ? state.feedings.map(feeding => `
         <tr>
-          <td>${escapeHtml(formatDateTime(feeding.created_at))}</td>
-          <td>${escapeHtml(grams)}</td>
-          <td>${escapeHtml(type)}</td>
-        </tr>
-      `;
-    }).join('');
+          <td>${escapeHtml(feeding.fecha)}</td>
+          <td>${Number(feeding.grams).toFixed(2)} g</td>
+          <td>${escapeHtml(feeding.tipoTexto)}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" class="table-empty">Sin registros.</td></tr>';
   }
 
   function renderConfig() {
     const config = state.config || {};
-    const configMap = {
-      configTempMin: `${Number(config.temp_min).toFixed(1)} °C`,
-      configTempMax: `${Number(config.temp_max).toFixed(1)} °C`,
-      configPhMin: Number(config.ph_min).toFixed(2),
-      configPhMax: Number(config.ph_max).toFixed(2),
-      configTargetTemp: `${Number(config.temp_objetivo).toFixed(1)} °C`
-    };
+    setText('configTempMin', `${Number(config.temp_min).toFixed(1)} °C`);
+    setText('configTempMax', `${Number(config.temp_max).toFixed(1)} °C`);
+    setText('configPhMin', Number(config.ph_min).toFixed(2));
+    setText('configPhMax', Number(config.ph_max).toFixed(2));
+    setText('configTargetTemp', `${Number(config.temp_objetivo).toFixed(1)} °C`);
 
-    Object.entries(configMap).forEach(function ([id, value]) {
-      const node = document.getElementById(id);
-      if (node) {
-        node.textContent = value;
-      }
-    });
-
-    const targetInput = document.getElementById('temp_objetivo');
-    if (targetInput && Number.isFinite(Number(config.temp_objetivo))) {
+    const targetInput = $('temp_objetivo');
+    // No se pisa lo que el usuario esta escribiendo.
+    if (targetInput && document.activeElement !== targetInput && Number.isFinite(Number(config.temp_objetivo))) {
       targetInput.value = Number(config.temp_objetivo).toFixed(1);
     }
   }
 
-  function renderLatestTimestamp() {
-    if (!nodes.latestTimestamp) {
-      return;
-    }
-
-    nodes.latestTimestamp.textContent = formatRelativeTime(state.latestTimestamp, 'Sin lecturas');
-  }
-
   function renderFeeder() {
     const feeder = state.feeder;
-    const statusNode = document.getElementById('feederStatus');
-    if (!feeder || !statusNode) {
-      return;
-    }
+    const statusNode = $('feederStatus');
+    if (!feeder || !statusNode) return;
 
-    statusNode.classList.remove('feeder-status-ok', 'feeder-status-warn', 'feeder-status-danger');
-    statusNode.classList.add(`feeder-status-${feeder.statusLevel}`);
-    setText(document.getElementById('feederStatusText'), feeder.statusText || '');
-    setText(document.getElementById('feederLastText'), feeder.lastText || '');
-    setText(document.getElementById('feederScheduleText'), feeder.scheduleText || '');
+    statusNode.className = `feeder-status feeder-status-${feeder.statusLevel}`;
+    setText('feederStatusText', feeder.statusText);
+    setText('feederLastText', feeder.lastText);
+    setText('feederScheduleText', feeder.scheduleText);
 
-    const feedButton = document.getElementById('feedNowBtn');
-    if (feedButton) {
-      feedButton.disabled = !feeder.hasDevice || !feeder.online || feeder.pending;
-    }
-  }
-
-  function showFeedback(id, payload) {
-    const node = document.getElementById(id);
-    if (!node) {
-      return;
-    }
-
-    if (!payload?.message) {
-      node.hidden = true;
-      return;
-    }
-
-    node.hidden = false;
-    node.textContent = payload.message;
-    node.classList.toggle('is-error', payload.success === false);
+    const feedButton = $('feedNowBtn');
+    if (feedButton) feedButton.disabled = !feeder.hasDevice || !feeder.online || feeder.pending;
   }
 
   function renderAll() {
     renderFeeder();
     renderCards();
-    renderLiveSummary();
+    renderSummary();
     renderAlerts();
     renderFeedings();
     renderConfig();
-    renderLatestTimestamp();
-    renderCharts();
+    renderChart();
   }
 
-  function csrfHeaders(headers) {
-    return window.AquaCsrf ? window.AquaCsrf.headers(headers) : headers;
+  function showFeedback(id, payload) {
+    const node = $(id);
+    if (!node) return;
+
+    node.hidden = !payload?.message;
+    node.textContent = payload?.message || '';
+    node.classList.toggle('is-error', payload?.success === false);
   }
 
+  /* ── Pedidos al servidor ── */
   async function requestJson(url, options = {}) {
     const response = await fetch(url, options);
     window.AquaCsrf?.refresh(response);
-    const payload = await response.json().catch(function () {
-      return null;
-    });
+    const payload = await response.json().catch(() => null);
 
-    // Los errores del backend (422/409) tambien traen el estado del dashboard y un mensaje.
-    if (!response.ok && !payload?.message) {
-      return null;
-    }
-
-    return payload;
+    // Los errores (422/409) tambien traen los datos del panel y un mensaje.
+    return response.ok || payload?.message ? payload : null;
   }
 
-  async function postForm(url, data = {}) {
+  function postForm(url, data = {}) {
     return requestJson(url, {
       method: 'POST',
-      headers: csrfHeaders({
+      headers: window.AquaCsrf.headers({
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'X-Requested-With': 'XMLHttpRequest'
       }),
@@ -485,31 +262,21 @@
   }
 
   async function applyRequest(promise) {
-    const payload = await promise;
-    if (!payload) {
-      return null;
+    const payload = await promise.catch(() => null);
+    if (payload) {
+      ['config', 'cards', 'summary', 'alerts', 'feedings', 'charts', 'feeder', 'latestTimestamp'].forEach(key => {
+        if (payload[key] !== undefined) state[key] = payload[key];
+      });
+      renderAll();
     }
-
-    mergePayload(payload);
-    renderAll();
     scheduleRefresh();
-
     return payload;
   }
 
-  // Refresco periodico: la temperatura llega del ESP32 cada ~5 s, asi que se consulta
-  // a ese ritmo; mientras el alimentador tiene una orden en curso, cada 2 s.
-  const REFRESH_MS = 5000;
-  const REFRESH_FEEDING_MS = 2000;
-  let refreshTimer = null;
-
   function refreshLatest() {
-    applyRequest(requestJson(state.endpoints.latest, {
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-Skip-Loader': 'true'
-      }
-    }));
+    // Con la pestana oculta no se pregunta nada: se retoma al volver (ver visibilitychange).
+    if (document.hidden) return;
+    applyRequest(requestJson(state.endpoints.latest, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }));
   }
 
   function scheduleRefresh() {
@@ -517,52 +284,50 @@
     refreshTimer = window.setTimeout(refreshLatest, state.feeder?.pending ? REFRESH_FEEDING_MS : REFRESH_MS);
   }
 
-  document.addEventListener('click', function (event) {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshLatest();
+  });
+
+  /* ── Botones y formularios ── */
+  document.addEventListener('click', event => {
     const alertButton = event.target.closest('.mark-alert-btn');
     if (alertButton) {
       applyRequest(postForm(state.endpoints.markAlertTemplate.replace('__id__', alertButton.dataset.alertId)));
       return;
     }
 
-    const vacationButton = event.target.closest('#vacationToggleBtn, #vacationQuickToggle');
-    if (vacationButton) {
+    if (event.target.closest('#vacationToggleBtn')) {
       applyRequest(postForm(state.endpoints.vacationToggle));
     }
   });
 
-  document.getElementById('feedNowForm')?.addEventListener('submit', async function (event) {
+  $('feedNowForm')?.addEventListener('submit', async event => {
     event.preventDefault();
-    const feedButton = document.getElementById('feedNowBtn');
-    if (feedButton) {
-      feedButton.disabled = true;
-    }
+    $('feedNowBtn').disabled = true;
 
     const payload = await applyRequest(postForm(state.endpoints.feed, {
-      cantidad_gramos: document.getElementById('cantidad_gramos')?.value || ''
+      cantidad_gramos: $('cantidad_gramos')?.value || ''
     }));
     showFeedback('feedNowFeedback', payload || { success: false, message: 'No se pudo enviar la orden.' });
     renderFeeder();
   });
 
-  document.getElementById('feedingScheduleForm')?.addEventListener('submit', async function (event) {
+  $('feedingScheduleForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     const payload = await applyRequest(postForm(state.endpoints.feedingSchedule, {
-      hora_alim_1: document.getElementById('hora_alim_1')?.value || '',
-      hora_alim_2: document.getElementById('hora_alim_2')?.value || '',
-      cantidad_alim_gramos: document.getElementById('cantidad_alim_gramos')?.value || ''
+      hora_alim_1: $('hora_alim_1')?.value || '',
+      hora_alim_2: $('hora_alim_2')?.value || '',
+      cantidad_alim_gramos: $('cantidad_alim_gramos')?.value || ''
     }));
     showFeedback('feedingScheduleFeedback', payload || { success: false, message: 'No se pudieron guardar los horarios.' });
   });
 
-  document.getElementById('targetTemperatureForm')?.addEventListener('submit', function (event) {
+  $('targetTemperatureForm')?.addEventListener('submit', event => {
     event.preventDefault();
-    applyRequest(postForm(state.endpoints.targetTemperature, {
-      temp_objetivo: document.getElementById('temp_objetivo')?.value || ''
-    }));
+    applyRequest(postForm(state.endpoints.targetTemperature, { temp_objetivo: $('temp_objetivo')?.value || '' }));
   });
-
-  window.addEventListener('themechange', renderCharts);
 
   renderAll();
   scheduleRefresh();
+  loadChartJs().then(renderChart).catch(() => {});
 }());

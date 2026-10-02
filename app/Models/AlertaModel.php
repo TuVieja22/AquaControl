@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Avisos para el usuario (temperatura fuera de rango, nivel de agua bajo...).
+ */
 class AlertaModel extends Model
 {
     protected $table            = 'alertas';
@@ -26,5 +29,14 @@ class AlertaModel extends Model
             ->where('leida', 0)
             ->orderBy('created_at', 'DESC')
             ->findAll($limit);
+    }
+
+    /** Marca la alerta como leida solo si pertenece al usuario. */
+    public function marcarLeida(int $alertId, int $userId): void
+    {
+        $this->builder()
+            ->where('id', $alertId)
+            ->where('usuario_id', $userId)
+            ->update(['leida' => 1]);
     }
 }

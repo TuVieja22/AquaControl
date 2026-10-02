@@ -5,23 +5,22 @@ namespace App\Controllers;
 use App\Models\PedidoModel;
 
 /**
- * Panel de pedidos de la tienda (solo administradores).
+ * Pedidos de la tienda (solo administradores), con filtro por estado.
  */
 class Pedidos extends BaseController
 {
     public function index(): string
     {
         $pedidoModel = new PedidoModel();
-        $status = (string) $this->request->getGet('estado');
-        $status = array_key_exists($status, PedidoModel::ESTADOS) ? $status : null;
+        $estado = (string) $this->request->getGet('estado');
+        $estado = array_key_exists($estado, PedidoModel::ESTADOS) ? $estado : null;
 
         return view('orders/index', [
-            'extraCss'     => ['css/dashboard.css', 'css/management.css'],
             'title'        => 'Pedidos',
-            'orders'       => $pedidoModel->listado($status),
+            'orders'       => $pedidoModel->listado($estado),
             'summary'      => $pedidoModel->resumen(),
             'statusNames'  => PedidoModel::ESTADOS,
-            'activeStatus' => $status,
+            'activeStatus' => $estado,
         ]);
     }
 }

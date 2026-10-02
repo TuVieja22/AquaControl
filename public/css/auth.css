@@ -1,3 +1,8 @@
+/* ===================================================
+   AquaControl — auth.css
+   Paginas de cuenta: login, registro, recuperar y nueva contrasena.
+   =================================================== */
+
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -9,58 +14,56 @@
 .auth-card {
   width: 100%;
   max-width: 440px;
-  background: rgba(13,43,36,0.85);
+  padding: 48px 44px;
   border: 1px solid rgba(93,202,165,0.18);
   border-radius: var(--radius-xl);
-  padding: 48px 44px;
-  backdrop-filter: blur(20px);
+  background: rgba(13,43,36,0.85);
   box-shadow: var(--shadow-card), 0 0 60px rgba(4,52,44,0.5);
   animation: fadeInUp 0.5s ease both;
 }
 
 .auth-logo {
-  text-align: center;
   margin-bottom: 36px;
+  text-align: center;
 }
 
 .auth-logo .logo-mark {
   width: 64px;
   height: 64px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--teal-500), var(--teal-900));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
   margin: 0 auto 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--aqua-cyan), var(--teal-900));
+  font-size: 28px;
   box-shadow: 0 4px 20px rgba(29,158,117,0.3);
 }
 
-.auth-divider {
-  text-align: center;
-  margin: 24px 0;
-  position: relative;
-  color: rgba(159,225,203,0.3);
-  font-size: 0.8rem;
+.auth-logo h2 {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 42%;
-  height: 1px;
-  background: rgba(93,202,165,0.12);
+.auth-logo p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
-.auth-divider::before {
-  left: 0;
+/* Renglon con la etiqueta "Contrasena" y el link "Olvidaste tu contrasena?". */
+.auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.auth-divider::after {
-  right: 0;
-}
+.auth-label-row .form-label { margin: 0; }
+.auth-label-row .auth-link { font-size: 0.8rem; }
 
 .auth-link {
   color: var(--teal-300);
@@ -73,16 +76,60 @@
 }
 
 .auth-footer {
-  text-align: center;
   margin-top: 24px;
-  font-size: 0.85rem;
   color: rgba(159,225,203,0.45);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Contrasena con el boton del ojito. */
+.input-group { position: relative; }
+.input-group .form-control { padding-right: 44px; }
+
+.input-toggle {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(159,225,203,0.45);
+  font-size: 16px;
+  transform: translateY(-50%);
+  transition: var(--transition);
+}
+
+.input-toggle:hover { color: var(--teal-300); }
+
+/* Barra de seguridad de la contrasena (la pinta auth.js). */
+.strength-bar {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.strength-seg {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  transition: background 0.3s ease;
+}
+
+.strength-text {
+  height: 14px;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 768px) {
-  .auth-card {
-    padding: 36px 28px;
-  }
+  .auth-card { padding: 36px 28px; }
 }
 
 @media (max-width: 480px) {

@@ -5,118 +5,144 @@ namespace App\Controllers;
 use App\Models\AlimentacionModel;
 use App\Models\ComandoDispositivoModel;
 use App\Models\ConfiguracionPeceraModel;
+use App\Models\SensorModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
 /**
- * Endpoints que consume el ESP32 (autenticados con el filtro `deviceauth`).
+ * Endpoints que usa el ESP32. Todos pasan por el filtro `deviceauth`, que identifica al
+ * dispositivo por su API key (no usan la sesion web ni el token CSRF).
  *
- *   GET  dashboard/api/commands           -> comandos pendientes (p. ej. mover el servo)
+ *   POST dashboard/api/data               -> manda una lectura {"temperatura": 25.4, ...}
+ *   GET  dashboard/api/commands           -> ordenes pendientes (p. ej. mover el servo)
  *   POST dashboard/api/commands/{id}/ack  -> {"estado": "ejecutado" | "fallido", "mensaje": "..."}
  */
 class DeviceApi extends BaseController
 {
-    /** Los sensores puros no tienen servo: no reciben comandos de alimentacion. */
-    private const TIPOS_SIN_ACTUADOR = ['sensor'];
-
-    private ComandoDispositivoModel $comandoModel;
-
-    public function __construct()
+    public function data(): ResponseInterface
     {
-        $this->comandoModel = new ComandoDispositivoModel();
+        $device = service('deviceAuth')->device();
+        $userId = (int) $device['usuario_id'];
+        $input = $this->entrada();
+
+        $valido = is_array($input) && $input !== [] && $this->validateData($input, [
+            'temperatura'     => 'permit_empty|decimal|greater_than[-10]|less_than[60]',
+            'ph'              => 'permit_empty|decimal|greater_than_equal_to[0]|less_than_equal_to[14]',
+            'turbidez'        => 'permit_empty|decimal',
+            'nivel_agua'      => 'permit_empty|in_list[0,1]',
+            'calefactor'      => 'permit_empty|in_list[0,1]',
+            'modo_vacaciones' => 'permit_empty|in_list[0,1]',
+        ]);
+
+        if (! $valido) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'errors'  => $this->validator?->getErrors() ?? ['body' => 'Se esperaba un objeto JSON con las lecturas.'],
+            ]);
+        }
+
+        $readingId = (new SensorModel())->insert([
+            'usuario_id'      => $userId,
+            'dispositivo_id'  => (int) $device['id'],
+            'temperatura'     => $input['temperatura'] ?? null,
+            'ph'              => $input['ph'] ?? null,
+            'turbidez'        => $input['turbidez'] ?? null,
+            'nivel_agua'      => (int) ($input['nivel_agua'] ?? 1),
+            'calefactor'      => (int) ($input['calefactor'] ?? 0),
+            'modo_vacaciones' => (int) ($input['modo_vacaciones'] ?? 0),
+            'created_at'      => date('Y-m-d H:i:s'),
+        ]);
+
+        // Respuesta corta para el microcontrolador: confirma y devuelve la config vigente.
+        $config = (new ConfiguracionPeceraModel())->deUsuario($userId);
+
+        return $this->response->setStatusCode(201)->setJSON([
+            'success'    => true,
+            'lectura_id' => $readingId,
+            'config'     => [
+                'temp_objetivo'   => (float) $config['temp_objetivo'],
+                'modo_vacaciones' => (int) $config['modo_vacaciones'],
+            ],
+        ]);
     }
 
     public function commands(): ResponseInterface
     {
         $device = service('deviceAuth')->device();
-        if ($device === null) {
-            return $this->unauthorized();
-        }
 
-        if (in_array($device['tipo'], self::TIPOS_SIN_ACTUADOR, true)) {
+        // Los sensores puros no tienen servo: no reciben ordenes del alimentador.
+        if ($device['tipo'] === 'sensor') {
             return $this->response->setJSON(['success' => true, 'comandos' => []]);
         }
 
         $userId = (int) $device['usuario_id'];
-        $config = (new ConfiguracionPeceraModel())->porUsuario($userId) ?? [];
-        $this->comandoModel->programarAlimentaciones($userId, $config);
+        $comandoModel = new ComandoDispositivoModel();
+        $comandoModel->programarAlimentaciones($userId, (new ConfiguracionPeceraModel())->porUsuario($userId) ?? []);
 
-        $commands = array_map(static function (array $command): array {
-            return array_merge([
-                'id'     => (int) $command['id'],
-                'accion' => $command['accion'],
-                'origen' => $command['origen'],
-            ], ComandoDispositivoModel::parametros($command));
-        }, $this->comandoModel->reclamarPendientes($device));
+        $comandos = array_map(static fn (array $comando): array => [
+            'id'     => (int) $comando['id'],
+            'accion' => $comando['accion'],
+            'origen' => $comando['origen'],
+        ] + ComandoDispositivoModel::parametros($comando), $comandoModel->reclamarPendientes($device));
 
-        return $this->response->setJSON([
-            'success'  => true,
-            'comandos' => $commands,
-        ]);
+        return $this->response->setJSON(['success' => true, 'comandos' => $comandos]);
     }
 
     public function ack(int $commandId): ResponseInterface
     {
         $device = service('deviceAuth')->device();
-        if ($device === null) {
-            return $this->unauthorized();
+        $input = $this->entrada();
+        $estado = is_array($input) ? (string) ($input['estado'] ?? 'ejecutado') : '';
+
+        if (! in_array($estado, ['ejecutado', 'fallido'], true)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'message' => 'El estado debe ser "ejecutado" o "fallido".',
+            ]);
         }
 
-        try {
-            $input = $this->request->is('json') ? $this->request->getJSON(true) : $this->request->getPost();
-        } catch (Throwable) {
-            $input = null;
+        $comandoModel = new ComandoDispositivoModel();
+        $comando = $comandoModel->finalizar($commandId, (int) $device['id'], $estado, isset($input['mensaje']) ? (string) $input['mensaje'] : null);
+
+        if ($comando === null) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'message' => 'Comando inexistente o ya finalizado.',
+            ]);
         }
 
-        $status = is_array($input) ? (string) ($input['estado'] ?? 'ejecutado') : '';
-        if (! in_array($status, ['ejecutado', 'fallido'], true)) {
-            return $this->response
-                ->setStatusCode(422)
-                ->setJSON(['success' => false, 'message' => 'El estado debe ser "ejecutado" o "fallido".']);
-        }
-
-        $command = $this->comandoModel->finalizar(
-            $commandId,
-            (int) $device['id'],
-            $status,
-            isset($input['mensaje']) ? (string) $input['mensaje'] : null
-        );
-
-        if ($command === null) {
-            return $this->response
-                ->setStatusCode(404)
-                ->setJSON(['success' => false, 'message' => 'Comando inexistente o ya finalizado.']);
-        }
-
-        if ($status === 'ejecutado' && $command['accion'] === ComandoDispositivoModel::ACCION_ALIMENTAR) {
-            $this->registrarAlimentacion($command);
+        if ($estado === 'ejecutado' && $comando['accion'] === ComandoDispositivoModel::ACCION_ALIMENTAR) {
+            $this->registrarAlimentacion($comando);
         }
 
         return $this->response->setJSON(['success' => true]);
     }
 
-    private function registrarAlimentacion(array $command): void
+    /** Cuerpo del pedido: JSON o formulario. Null si el JSON vino mal formado. */
+    private function entrada(): ?array
     {
-        $userId = (int) $command['usuario_id'];
-        $type = 'manual';
+        try {
+            return $this->request->is('json') ? $this->request->getJSON(true) : $this->request->getPost();
+        } catch (Throwable) {
+            return null;
+        }
+    }
 
-        if ($command['origen'] === 'programado') {
-            $config = (new ConfiguracionPeceraModel())->porUsuario($userId) ?? [];
-            $type = (int) ($config['modo_vacaciones'] ?? 0) === 1 ? 'vacaciones' : 'automatica';
+    private function registrarAlimentacion(array $comando): void
+    {
+        $userId = (int) $comando['usuario_id'];
+        $tipo = 'manual';
+
+        if ($comando['origen'] === 'programado') {
+            $vacaciones = (int) ((new ConfiguracionPeceraModel())->porUsuario($userId)['modo_vacaciones'] ?? 0) === 1;
+            $tipo = $vacaciones ? 'vacaciones' : 'automatica';
         }
 
         (new AlimentacionModel())->insert([
             'usuario_id'      => $userId,
-            'cantidad_gramos' => (float) (ComandoDispositivoModel::parametros($command)['gramos'] ?? 0),
-            'tipo'            => $type,
+            'cantidad_gramos' => (float) (ComandoDispositivoModel::parametros($comando)['gramos'] ?? 0),
+            'tipo'            => $tipo,
             'created_at'      => date('Y-m-d H:i:s'),
         ]);
-    }
-
-    private function unauthorized(): ResponseInterface
-    {
-        return $this->response
-            ->setStatusCode(401)
-            ->setJSON(['success' => false, 'message' => 'Dispositivo no autenticado.']);
     }
 }

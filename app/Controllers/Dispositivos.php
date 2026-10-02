@@ -5,20 +5,11 @@ namespace App\Controllers;
 use App\Models\DispositivoModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
+/**
+ * Alta, edicion y baja de los equipos del usuario, y sus API keys.
+ */
 class Dispositivos extends BaseController
 {
-    private const ASSETS = [
-        'extraCss' => ['css/dashboard.css', 'css/management.css'],
-    ];
-
-    private const TYPE_OPTIONS = [
-        'sensor'      => 'Sensor',
-        'actuador'   => 'Actuador',
-        'controlador' => 'Controlador',
-        'kit_iot'    => 'Kit IoT',
-        'otro'       => 'Otro',
-    ];
-
     private DispositivoModel $dispositivoModel;
 
     public function __construct()
@@ -28,61 +19,52 @@ class Dispositivos extends BaseController
 
     public function index(): string
     {
-        return $this->renderIndex();
+        return $this->listado();
     }
 
     public function create(): string|RedirectResponse
     {
-        if ($this->request->getMethod() !== 'POST') {
-            return redirect()->to(base_url('dispositivos'));
+        if (! $this->dispositivoModel->insert($this->datosDelFormulario())) {
+            return $this->listado($this->dispositivoModel->errors());
         }
 
-        $payload = $this->devicePayload();
-
-        if (! $this->dispositivoModel->insert($payload)) {
-            return $this->renderIndex($this->dispositivoModel->errors());
-        }
-
-        return redirect()
-            ->to(base_url('dispositivos'))
-            ->with('success', 'Dispositivo registrado correctamente.');
+        return $this->volver('success', 'Dispositivo registrado correctamente.');
     }
 
     public function edit(int $id): string|RedirectResponse
     {
         $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
         if (! $device) {
-            return redirect()
-                ->to(base_url('dispositivos'))
-                ->with('error', 'El dispositivo no existe o no tienes permisos para editarlo.');
+            return $this->volver('error', 'El dispositivo no existe o no tienes permisos para editarlo.');
         }
 
+        $errores = [];
         if ($this->request->getMethod() === 'POST') {
-            return $this->updateDevice($id, $device);
+            $datos = $this->datosDelFormulario();
+            if ($this->dispositivoModel->update($id, ['id' => $id] + $datos)) {
+                return $this->volver('success', 'Dispositivo actualizado correctamente.');
+            }
+            $errores = $this->dispositivoModel->errors();
+            $device = array_merge($device, $datos);
         }
 
-        return view('devices/edit', array_merge(self::ASSETS, [
+        return view('devices/edit', [
             'title'       => 'Editar dispositivo',
             'device'      => $device,
-            'typeOptions' => self::TYPE_OPTIONS,
-            'errors'      => [],
-        ]));
+            'typeOptions' => DispositivoModel::TIPOS,
+            'errors'      => $errores,
+        ]);
     }
 
     public function delete(int $id): RedirectResponse
     {
-        $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
-        if (! $device) {
-            return redirect()
-                ->to(base_url('dispositivos'))
-                ->with('error', 'No se pudo eliminar el dispositivo solicitado.');
+        if (! $this->dispositivoModel->buscarParaUsuario($id, $this->userId())) {
+            return $this->volver('error', 'No se pudo eliminar el dispositivo solicitado.');
         }
 
         $this->dispositivoModel->delete($id);
 
-        return redirect()
-            ->to(base_url('dispositivos'))
-            ->with('success', 'Dispositivo eliminado correctamente.');
+        return $this->volver('success', 'Dispositivo eliminado correctamente.');
     }
 
     /**
@@ -93,20 +75,14 @@ class Dispositivos extends BaseController
     {
         $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
         if (! $device) {
-            return redirect()
-                ->to(base_url('dispositivos'))
-                ->with('error', 'El dispositivo no existe o no tienes permisos sobre el.');
+            return $this->volver('error', 'El dispositivo no existe o no tienes permisos sobre el.');
         }
 
         $apiKey = $this->dispositivoModel->generarApiKey($id);
 
         return redirect()
             ->to(base_url('dispositivos') . '#api-key-nueva')
-            ->with('device_api_key', [
-                'id'     => $id,
-                'nombre' => $device['nombre'],
-                'key'    => $apiKey,
-            ])
+            ->with('device_api_key', ['id' => $id, 'nombre' => $device['nombre'], 'key' => $apiKey])
             ->with('success', empty($device['api_key_hash'])
                 ? 'API key generada. Copiala ahora: no se volvera a mostrar.'
                 : 'API key regenerada. La anterior dejo de funcionar.');
@@ -114,46 +90,22 @@ class Dispositivos extends BaseController
 
     public function revokeApiKey(int $id): RedirectResponse
     {
-        $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
-        if (! $device) {
-            return redirect()
-                ->to(base_url('dispositivos'))
-                ->with('error', 'El dispositivo no existe o no tienes permisos sobre el.');
+        if (! $this->dispositivoModel->buscarParaUsuario($id, $this->userId())) {
+            return $this->volver('error', 'El dispositivo no existe o no tienes permisos sobre el.');
         }
 
         $this->dispositivoModel->revocarApiKey($id);
 
-        return redirect()
-            ->to(base_url('dispositivos'))
-            ->with('success', 'API key revocada. El dispositivo ya no podra enviar lecturas.');
+        return $this->volver('success', 'API key revocada. El dispositivo ya no podra enviar lecturas.');
     }
 
-    private function updateDevice(int $id, array $device): string|RedirectResponse
+    private function listado(array $errores = []): string
     {
-        $payload = $this->devicePayload();
-        $payload['id'] = $id;
-
-        if (! $this->dispositivoModel->update($id, $payload)) {
-            return view('devices/edit', array_merge(self::ASSETS, [
-                'title'       => 'Editar dispositivo',
-                'device'      => array_merge($device, $payload),
-                'typeOptions' => self::TYPE_OPTIONS,
-                'errors'      => $this->dispositivoModel->errors(),
-            ]));
-        }
-
-        return redirect()
-            ->to(base_url('dispositivos'))
-            ->with('success', 'Dispositivo actualizado correctamente.');
-    }
-
-    private function renderIndex(array $errors = []): string
-    {
-        return view('devices/index', array_merge(self::ASSETS, [
+        return view('devices/index', [
             'title'       => 'Dispositivos',
             'devices'     => $this->dispositivoModel->porUsuario($this->userId()),
-            'typeOptions' => self::TYPE_OPTIONS,
-            'errors'      => $errors,
+            'typeOptions' => DispositivoModel::TIPOS,
+            'errors'      => $errores,
             'newApiKey'   => session()->getFlashdata('device_api_key'),
             'apiEndpoint' => base_url('dashboard/api/data'),
             'form'        => [
@@ -161,10 +113,10 @@ class Dispositivos extends BaseController
                 'tipo'      => $this->request->getPost('tipo') ?? '',
                 'ubicacion' => $this->request->getPost('ubicacion') ?? '',
             ],
-        ]));
+        ]);
     }
 
-    private function devicePayload(): array
+    private function datosDelFormulario(): array
     {
         return [
             'usuario_id' => $this->userId(),
@@ -174,8 +126,8 @@ class Dispositivos extends BaseController
         ];
     }
 
-    private function userId(): int
+    private function volver(string $tipo, string $mensaje): RedirectResponse
     {
-        return (int) session()->get('user_id');
+        return redirect()->to(base_url('dispositivos'))->with($tipo, $mensaje);
     }
 }

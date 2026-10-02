@@ -1,18 +1,9 @@
 <?php
-$flashMap = [
-    'error' => ['class' => 'flash-error', 'icon' => '&#9888;'],
-    'success' => ['class' => 'flash-success', 'icon' => '&#10003;'],
-    'info' => ['class' => 'flash-info', 'icon' => '&#8505;'],
-];
-
-$flashTypes = $types ?? array_keys($flashMap);
+// Mensajes de un solo uso que deja el controlador con ->with('success'|'error'|'info', '...').
+$iconos = ['error' => '&#9888;', 'success' => '&#10003;', 'info' => '&#8505;'];
 ?>
-<?php foreach ($flashTypes as $type): ?>
-  <?php $message = session()->getFlashdata($type); ?>
-  <?php if (! $message || ! isset($flashMap[$type])): ?>
-    <?php continue; ?>
+<?php foreach ($iconos as $tipo => $icono): ?>
+  <?php if ($mensaje = session()->getFlashdata($tipo)): ?>
+    <div class="flash flash-<?= $tipo ?>"><?= $icono ?> <?= esc($mensaje) ?></div>
   <?php endif; ?>
-  <div class="flash <?= esc($flashMap[$type]['class']) ?>">
-    <?= $flashMap[$type]['icon'] ?> <?= esc($message) ?>
-  </div>
 <?php endforeach; ?>

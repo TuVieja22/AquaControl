@@ -1,5 +1,10 @@
-<?= view('layouts/header') ?>
+<?= $this->extend('layouts/main') ?>
 
+<?= $this->section('estilos') ?>
+  <link rel="stylesheet" href="<?= base_url('css/auth.css') ?>">
+<?= $this->endSection() ?>
+
+<?= $this->section('contenido') ?>
 <div class="auth-page">
   <div class="auth-card">
     <div class="auth-logo">
@@ -8,26 +13,16 @@
       <p>Te enviaremos un enlace para restablecerla</p>
     </div>
 
-    <?= view('components/flash_messages', ['types' => ['success', 'error']]) ?>
+    <?= view('components/flash_messages') ?>
 
     <form id="recoverForm" action="<?= base_url('auth/recover') ?>" method="POST" novalidate data-auth-form="recover">
       <?= csrf_field() ?>
 
       <div class="form-group">
         <label class="form-label" for="email">Correo electronico</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
-          placeholder="correo@ejemplo.com"
-          value="<?= old('email') ?>"
-          autocomplete="email"
-          required
-        >
-        <div class="invalid-feedback" <?= isset($errors['email']) ? '' : 'style="display:none"' ?>>
-          <?= isset($errors['email']) ? '<span>&#9888;</span> ' . esc($errors['email']) : '' ?>
-        </div>
+        <input type="email" id="email" name="email" class="form-control<?= clase_error($errors ?? [], 'email') ?>"
+          placeholder="correo@ejemplo.com" value="<?= set_value('email') ?>" autocomplete="email" required>
+        <?= error_campo($errors ?? [], 'email') ?>
       </div>
 
       <button type="submit" class="btn btn-primary">Enviar enlace de recuperacion &rarr;</button>
@@ -38,5 +33,8 @@
     </div>
   </div>
 </div>
+<?= $this->endSection() ?>
 
-<?= view('layouts/footer') ?>
+<?= $this->section('scripts') ?>
+  <script src="<?= base_url('js/auth.js') ?>"></script>
+<?= $this->endSection() ?>

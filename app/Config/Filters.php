@@ -15,6 +15,9 @@ use CodeIgniter\Filters\SecureHeaders;
 
 class Filters extends BaseFilters
 {
+    /** Rutas sin token CSRF: las usan el ESP32 (con su API key) y Mercado Pago (desde sus servidores). */
+    private const SIN_CSRF = ['dashboard/api/data', 'dashboard/api/commands*', 'checkout/mercadopago/webhook'];
+
     /**
      * Configures aliases for Filter classes to
      * make reading things nicer and simpler.
@@ -26,7 +29,6 @@ class Filters extends BaseFilters
      */
     public array $aliases = [
         'auth'          => \App\Filters\AuthFilter::class,
-        'role'          => \App\Filters\RoleFilter::class,
         'csrf'          => CSRF::class,
         'csrfheader'    => \App\Filters\CsrfTokenHeaderFilter::class,
         'deviceauth'    => \App\Filters\DeviceAuthFilter::class,
@@ -77,14 +79,13 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            // La API de dispositivos IoT se autentica por API key, no por sesion/cookie.
-            'csrf' => ['except' => ['dashboard/api/data', 'dashboard/api/commands*', 'checkout/mercadopago/webhook']],
+            'csrf' => ['except' => self::SIN_CSRF],
             // 'invalidchars',
         ],
         'after' => [
             // 'honeypot',
             // 'secureheaders',
-            'csrfheader' => ['except' => ['dashboard/api/data', 'dashboard/api/commands*', 'checkout/mercadopago/webhook']],
+            'csrfheader' => ['except' => self::SIN_CSRF],
         ],
     ];
 

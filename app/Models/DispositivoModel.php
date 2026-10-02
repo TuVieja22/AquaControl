@@ -4,9 +4,24 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Equipos de cada usuario (el ESP32, sensores...). Los que tienen API key pueden
+ * mandar lecturas y recibir ordenes del alimentador.
+ */
 class DispositivoModel extends Model
 {
     public const API_KEY_PREFIX = 'aqk_';
+
+    public const TIPOS = [
+        'sensor'      => 'Sensor',
+        'actuador'    => 'Actuador',
+        'controlador' => 'Controlador',
+        'kit_iot'     => 'Kit IoT',
+        'otro'        => 'Otro',
+    ];
+
+    /** Cada cuantos segundos como maximo se actualiza `ultima_conexion` (el ESP32 consulta cada 2 s). */
+    private const SEGUNDOS_ENTRE_REGISTROS = 10;
 
     protected $table            = 'dispositivos';
     protected $primaryKey       = 'id';
@@ -65,6 +80,12 @@ class DispositivoModel extends Model
             ->first();
     }
 
+    /** Puede recibir ordenes del alimentador: tiene API key y no es un sensor puro. */
+    public static function esAlimentador(array $device): bool
+    {
+        return ! empty($device['api_key_hash']) && $device['tipo'] !== 'sensor';
+    }
+
     /**
      * Genera (o rota) la API key del dispositivo. Solo se guarda el hash SHA-256:
      * la key en texto plano se devuelve una unica vez para mostrarsela al usuario.
@@ -104,10 +125,19 @@ class DispositivoModel extends Model
         return $this->where('api_key_hash', self::hashApiKey($apiKey))->first();
     }
 
-    public function registrarConexion(int $deviceId): void
+    /**
+     * Anota que el dispositivo se comunico. Como consulta cada pocos segundos, se escribe
+     * como mucho cada SEGUNDOS_ENTRE_REGISTROS (para "en linea" alcanza de sobra).
+     */
+    public function registrarConexion(array $device): void
     {
+        $ultima = strtotime((string) ($device['ultima_conexion'] ?? '')) ?: 0;
+        if (time() - $ultima < self::SEGUNDOS_ENTRE_REGISTROS) {
+            return;
+        }
+
         $this->builder()
-            ->where('id', $deviceId)
+            ->where('id', $device['id'])
             ->update(['ultima_conexion' => date('Y-m-d H:i:s')]);
     }
 

@@ -4,8 +4,17 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Registro de cada vez que se alimento a los peces (manual, automatica o en vacaciones).
+ */
 class AlimentacionModel extends Model
 {
+    public const TIPOS = [
+        'manual'     => 'Manual',
+        'automatica' => 'Automatica',
+        'vacaciones' => 'Vacaciones',
+    ];
+
     protected $table            = 'alimentaciones';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -23,12 +32,5 @@ class AlimentacionModel extends Model
         return $this->where('usuario_id', $userId)
             ->orderBy('created_at', 'DESC')
             ->findAll($limit);
-    }
-
-    public function ultimaPorUsuario(int $userId): ?array
-    {
-        return $this->where('usuario_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->first();
     }
 }

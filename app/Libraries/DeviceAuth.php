@@ -24,7 +24,7 @@ class DeviceAuth
         $this->device = $apiKey === '' ? null : $this->dispositivoModel->buscarPorApiKey($apiKey);
 
         if ($this->device !== null) {
-            $this->dispositivoModel->registrarConexion((int) $this->device['id']);
+            $this->dispositivoModel->registrarConexion($this->device);
         }
 
         return $this->device;
@@ -43,10 +43,7 @@ class DeviceAuth
         }
 
         $authorization = trim($request->getHeaderLine('Authorization'));
-        if (stripos($authorization, 'Bearer ') === 0) {
-            return trim(substr($authorization, 7));
-        }
 
-        return '';
+        return stripos($authorization, 'Bearer ') === 0 ? trim(substr($authorization, 7)) : '';
     }
 }

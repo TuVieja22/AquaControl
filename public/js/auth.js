@@ -1,3 +1,10 @@
+/* ===================================================
+   AquaControl — auth.js
+   Paginas de cuenta (login, registro, recuperar y nueva contrasena): revisa los
+   formularios antes de enviarlos, barra de seguridad de la contrasena y boton para
+   mostrarla. El servidor vuelve a validar todo: esto solo avisa antes.
+   =================================================== */
+
 'use strict';
 
 (function () {
@@ -248,6 +255,20 @@
   document.querySelectorAll('[data-auth-form]').forEach(function (form) {
     bindForm(form, validators[form.dataset.authForm]);
     bindPasswordStrength(form);
+  });
+
+  // Boton del ojito: muestra u oculta la contrasena.
+  const EYE_OPEN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_CLOSED = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+  document.querySelectorAll('.input-toggle').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const input = button.closest('.input-group').querySelector('input');
+      const mostrar = input.type === 'password';
+      input.type = mostrar ? 'text' : 'password';
+      button.innerHTML = mostrar ? EYE_CLOSED : EYE_OPEN;
+      button.setAttribute('aria-label', mostrar ? 'Ocultar contrasena' : 'Mostrar contrasena');
+    });
   });
 
   const registerEmail = document.querySelector('#registerForm #email');
