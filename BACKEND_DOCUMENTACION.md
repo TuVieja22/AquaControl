@@ -15,7 +15,12 @@ La aplicacion combina:
 - Administracion de usuarios y pedidos por rol.
 - Integracion de checkout con Mercado Pago, con registro de pedidos y webhook.
 
-No existe una capa formal de servicios de dominio. La logica de negocio vive principalmente en controladores y modelos, usando servicios nativos de CodeIgniter como `session`, `cache`, `email`, `response` y `db_connect()`.
+Como se reparte el trabajo:
+
+- **Controladores**: reciben el pedido, validan lo que llega y deciden que responder. Son cortos.
+- **Modelos**: una clase por tabla, con las consultas a la base.
+- **`App\Libraries\PanelPecera`**: arma todo lo que muestra el panel (tarjetas, grafico, alertas, estado del alimentador). Lo usan la pagina y las respuestas JSON, asi los textos se calculan en un solo lugar.
+- **Config propia** (`Commerce`, `MercadoPago`, `Feeding`): valores que se leen de `.env`.
 
 ## Tecnologias y dependencias backend
 
@@ -23,21 +28,22 @@ No existe una capa formal de servicios de dominio. La logica de negocio vive pri
 | --- | --- | --- |
 | PHP | `^8.2` | Runtime requerido. |
 | CodeIgniter 4 | `^4.7` | Framework MVC, routing, filtros, modelos, migraciones, sesiones. |
-| MySQLi | Configuracion default | Base de datos principal. |
+| MySQLi | Configuracion default | Base de datos principal (MariaDB 10.4 de XAMPP). |
 | `mercadopago/dx-php` | `3.10.0` | SDK PHP para crear preferencias de Mercado Pago. |
 | SMTP | Config `Email.php` / `.env` | Envio de recuperacion de contrasena. |
-| PHPUnit | `^10.5.16` | Tests. Actualmente hay tests starter. |
-| Faker / vfsStream | dev | Soporte de tests starter. |
+| PHPUnit | `^10.5.16` | Tests. Actualmente solo estan los de ejemplo del starter. |
 
 ## Arquitectura
 
 ```mermaid
 flowchart TD
-    Client[Navegador / SDK externo] --> Front[public/index.php]
-    Front --> Router[CodeIgniter Router]
-    Router --> Filters[AuthFilter / RoleFilter]
+    Client[Navegador / ESP32 / Mercado Pago] --> Front[public/index.php]
+    Front --> Router[Routes.php]
+    Router --> Filters[auth / deviceauth / csrf]
     Filters --> Controller[Controlador]
-    Controller --> Model[Modelo CodeIgniter]
+    Controller --> Panel[PanelPecera]
+    Controller --> Model[Modelos]
+    Panel --> Model
     Model --> DB[(MySQL)]
     Controller --> View[Vista PHP]
     Controller --> JSON[Respuesta JSON]
@@ -50,39 +56,43 @@ Patrones usados:
 - MVC server-side: controladores preparan datos y renderizan vistas.
 - Active Record / Query Builder via modelos de CodeIgniter.
 - Sesiones server-side con cookie `ci_session`.
-- Respuestas mixtas: HTML para navegacion normal y JSON para dashboard/checkout.
+- Respuestas mixtas: HTML para navegacion normal y JSON para dashboard/checkout/ESP32.
 - Configuracion sensible y comercial mediante `.env`.
 
 ## Estructura de carpetas backend
 
 ```text
 app/
+  Commands/
+    Servidor.php              (php spark servir)
   Config/
-    Routes.php
-    Filters.php
-    Database.php
-    Email.php
-    Security.php
-    Session.php
-    App.php
-    ...
+    Routes.php                (que controlador atiende cada direccion)
+    Filters.php               (filtros globales y alias)
+    Commerce.php              (producto y precio: commerce.* del .env)
+    MercadoPago.php           (credenciales: mercadopago.* del .env)
+    Feeding.php               (reglas del alimentador)
+    Toolbar.php               (barra de depuracion: apagada salvo toolbar.activo = true)
+    App.php, Database.php, Email.php, Security.php, Session.php, ...
   Controllers/
-    BaseController.php
-    Home.php
-    Auth.php
-    Dashboard.php
-    Checkout.php
-    DeviceApi.php
-    Dispositivos.php
-    Pedidos.php
-    Usuarios.php
+    BaseController.php        (userId())
+    Home.php                  (portada)
+    Auth.php                  (registro, login, logout, recuperar contrasena)
+    Dashboard.php             (panel de la pecera y sus acciones)
+    Perfil.php                (formulario "Mi cuenta")
+    DeviceApi.php             (API del ESP32)
+    Dispositivos.php          (ABM de dispositivos y API keys)
+    Usuarios.php              (administracion de cuentas)
+    Pedidos.php               (listado de pedidos)
+    Checkout.php              (Mercado Pago)
   Filters/
-    AuthFilter.php
-    RoleFilter.php
-    DeviceAuthFilter.php
-    CsrfTokenHeaderFilter.php
+    AuthFilter.php            (sesion iniciada y, opcionalmente, rol)
+    DeviceAuthFilter.php      (API key del ESP32)
+    CsrfTokenHeaderFilter.php (devuelve el token CSRF nuevo en un header)
+  Helpers/
+    formulario_helper.php     (error_campo() y clase_error() para las vistas)
   Libraries/
-    DeviceAuth.php
+    PanelPecera.php           (datos del panel)
+    DeviceAuth.php            (busca el dispositivo por su API key)
   Models/
     UserModel.php
     SensorModel.php
@@ -102,7 +112,8 @@ app/
       2026-09-24-000006_CreateComandosDispositivoTable.php
       2026-09-24-000007_ConvertirFechasAHoraArgentina.php
       2026-09-24-000008_CreatePedidosTable.php
-  Views/
+      2026-10-01-000009_TablasDeLecturasEIndices.php
+  Views/                      (ver FRONTEND_DOCUMENTACION.md)
 firmware/
   aquacontrol_esp32/aquacontrol_esp32.ino           (modo WiFi: el que se usa hoy)
   aquacontrol_esp32/secrets.example.h               (copiar como secrets.h con WiFi, IP y API key; no se versiona)
@@ -120,6 +131,19 @@ writable/
   session/
 vendor/
 ```
+
+## Servidor de desarrollo
+
+### `php spark servir` (`app/Commands/Servidor.php`)
+
+Es el comando para levantar la pagina (lo usa `iniciar_aquacontrol.bat`). Reemplaza a `php spark serve` por dos motivos de rendimiento:
+
+- **IPv4 + IPv6.** Arranca dos procesos `php -S`, uno en `0.0.0.0:8080` y otro en `[::]:8080`. En Windows, `localhost` prueba primero IPv6; con un servidor solo IPv4 cada pedido esperaba unos 0,2 s antes de conectar. Ademas el navegador y el ESP32 dejan de hacer fila en un unico proceso.
+- **OPcache.** PHP guarda el codigo ya compilado entre pedidos (`opcache.enable_cli=1`). Con `opcache.revalidate_freq=0` revisa los archivos en cada pedido, asi que los cambios se ven al recargar.
+
+Antes de arrancar cierra los servidores anteriores de este mismo proyecto. Acepta `--puerto 8081`.
+
+Al escuchar en `0.0.0.0` la pagina se puede abrir desde otro equipo de la red con la IP de la PC. `Config\App::__construct()` agrega ese nombre a `allowedHostnames` (solo si es `localhost`, `127.0.0.1` o una IP de esta PC) para que los links y los estilos usen la misma direccion.
 
 ## Punto de entrada y configuracion
 
@@ -149,11 +173,22 @@ Define:
 Config base:
 
 - `baseURL` por defecto `http://localhost:8080/`, sobreescribible en `.env`.
-- `indexPage = index.php`.
-- `defaultLocale = en`.
+- `indexPage = ''`: las direcciones no llevan `index.php` (lo resuelven `spark servir` y el `.htaccess`).
 - `appTimezone = America/Argentina/Buenos_Aires`. Todas las fechas se guardan y muestran en hora Argentina (la migracion `ConvertirFechasAHoraArgentina` corrigio los datos que estaban en UTC).
 - `forceGlobalSecureRequests = false`.
 - `CSPEnabled = false`.
+
+### `app/Config/Autoload.php`
+
+Carga en todas las paginas los helpers `form` (para `set_value()` y `set_checkbox()`) y `formulario` (propio: `error_campo()` y `clase_error()`).
+
+### `app/Config/Toolbar.php`
+
+`public bool $activo = false`. La barra de depuracion de CodeIgniter agregaba unos 10.000 elementos ocultos a cada pagina del panel; ahora solo se carga si `.env` tiene `toolbar.activo = true` (lo miran `Config\Filters` y `Config\Events`).
+
+### `app/Config/Logger.php`
+
+En desarrollo registra hasta nivel 5 (avisos); en produccion hasta 4 (errores).
 
 ### `app/Config/Database.php`
 
@@ -201,6 +236,21 @@ Config CSRF:
 
 El filtro `csrf` esta activo globalmente (ver `Filters.php`). Los formularios envian `csrf_field()` y las llamadas AJAX mandan el header `X-CSRF-TOKEN` leido de `<meta name="csrf-token">`. Como el token se regenera en cada POST, el filtro `csrfheader` devuelve el token nuevo en el header de respuesta y `window.AquaCsrf` (en `aqua.js`) lo actualiza en la pagina.
 
+### `app/Config/Commerce.php`
+
+Datos de la tienda, leidos de las lineas `commerce.*` del `.env`: `productSku`, `productName`, `productDescription`, `unitPrice`, `currency`, `maxQuantity`, `deliveryMessage`, `locale`.
+
+- `precio()`: el precio como numero, o `null` si no esta configurado (la portada muestra "Consultar").
+- `moneda()`: codigo de moneda en mayusculas.
+- `cantidadMaxima()`: maximo de unidades por pedido (minimo 1).
+
+### `app/Config/MercadoPago.php`
+
+Credenciales y opciones, leidas de `mercadopago.*`: `accessToken`, `publicKey`, `webhookSecret`, `runtime`, `notificationUrl`, `installments`, `autoReturn`, `statementDescriptor`, `preferenceUrl`.
+
+- `esLocal()`: `runtime = local` (desarrollo).
+- `usarAutoReturn()`: si Mercado Pago debe volver solo a la pagina al aprobar el pago. Si `autoReturn` no esta en `.env`, se usa en produccion y no en `local`.
+
 ### `app/Config/Feeding.php`
 
 Configuracion del alimentador automatico:
@@ -208,7 +258,7 @@ Configuracion del alimentador automatico:
 - `timezone`: zona en la que se interpretan los horarios (`America/Argentina/Buenos_Aires`).
 - `scheduleWindowMinutes` (30): margen despues de la hora programada para disparar la racion si el ESP32 estuvo offline.
 - `manualCommandTtlMinutes` (1): tiempo que espera un "Alimentar ahora" antes de expirar. Ademas, "Alimentar ahora" se rechaza si el ESP32 no esta en linea.
-- `onlineThresholdSeconds` (30): sin contacto por mas tiempo, el dispositivo se muestra offline (el puente USB consulta cada 2 s).
+- `onlineThresholdSeconds` (30): sin contacto por mas tiempo, el dispositivo se muestra offline.
 - `minGrams` / `maxGrams`: limites de gramos por racion.
 
 ## Rutas y endpoints
@@ -229,15 +279,15 @@ Definidas en `app/Config/Routes.php`.
 | GET/POST | `/auth/recover` | `Auth::recover` | publico | Solicitud de recuperacion. |
 | GET/POST | `/auth/reset/{token}` | `Auth::reset` | publico | Reset por token en URL. |
 | GET/POST | `/auth/reset` | `Auth::reset` | publico | Reset por token POST/GET. |
+| POST | `/dashboard/api/data` | `DeviceApi::data` | `deviceauth`, sin CSRF | El ESP32 envia lecturas con su API key. |
+| GET | `/dashboard/api/commands` | `DeviceApi::commands` | `deviceauth` | El ESP32 retira comandos pendientes (alimentar). |
+| POST | `/dashboard/api/commands/{id}/ack` | `DeviceApi::ack` | `deviceauth`, sin CSRF | El ESP32 confirma `ejecutado` o `fallido`. |
 | GET | `/dashboard` | `Dashboard::index` | `auth` | Panel principal. |
 | GET | `/dashboard/history` | `Dashboard::history` | `auth` | Misma vista con historial activo. Acepta `?desde=AAAA-MM-DD&hasta=AAAA-MM-DD&dispositivo={id}`. |
 | GET | `/dashboard/settings` | `Dashboard::settings` | `auth` | Misma vista con configuracion activa. |
 | GET | `/dashboard/profile` | `Dashboard::profile` | `auth` | Misma vista con perfil activo. |
+| POST | `/dashboard/profile` | `Perfil::actualizar` | `auth` | Actualiza nombre/email. |
 | GET | `/dashboard/api/latest` | `Dashboard::latest` | `auth` | Payload JSON actualizado (respeta los filtros del historial). |
-| POST | `/dashboard/api/data` | `Dashboard::receiveData` | `deviceauth`, sin CSRF | El ESP32 envia lecturas con su API key. |
-| GET | `/dashboard/api/commands` | `DeviceApi::commands` | `deviceauth` | El ESP32 retira comandos pendientes (alimentar). |
-| POST | `/dashboard/api/commands/{id}/ack` | `DeviceApi::ack` | `deviceauth`, sin CSRF | El ESP32 confirma `ejecutado` o `fallido`. |
-| POST | `/dashboard/profile` | `Dashboard::updateProfile` | `auth` | Actualiza nombre/email. |
 | POST | `/dashboard/alerts/{id}/read` | `Dashboard::markAlertRead` | `auth` | Marca alerta leida. |
 | POST | `/dashboard/control/feed` | `Dashboard::feedNow` | `auth` | Encola la orden de alimentar para el ESP32. |
 | POST | `/dashboard/control/vacation-toggle` | `Dashboard::toggleVacation` | `auth` | Alterna modo vacaciones. |
@@ -249,33 +299,24 @@ Definidas en `app/Config/Routes.php`.
 | POST | `/dispositivos/eliminar/{id}` | `Dispositivos::delete` | `auth` | Elimina dispositivo. |
 | POST | `/dispositivos/api-key/{id}` | `Dispositivos::generateApiKey` | `auth` | Genera o regenera la API key (se muestra una sola vez). |
 | POST | `/dispositivos/api-key/{id}/revocar` | `Dispositivos::revokeApiKey` | `auth` | Revoca la API key. |
-| GET | `/usuarios` | `Usuarios::index` | `role:administrador` | Lista usuarios. |
-| GET/POST | `/usuarios/editar/{id}` | `Usuarios::edit` | `role:administrador` | Edita usuario. |
-| GET | `/pedidos` | `Pedidos::index` | `role:administrador` | Lista pedidos de la tienda (`?estado=` filtra). |
+| GET | `/usuarios` | `Usuarios::index` | `auth:administrador` | Lista usuarios. |
+| GET/POST | `/usuarios/editar/{id}` | `Usuarios::edit` | `auth:administrador` | Edita usuario. |
+| GET | `/pedidos` | `Pedidos::index` | `auth:administrador` | Lista pedidos de la tienda (`?estado=` filtra). |
 
 Existe override 404 que renderiza `app/Views/errors/404.php`.
+
+Ojo con dos direcciones parecidas: `dashboard/api/latest` es del panel (sesion web), mientras que `dashboard/api/data` y `dashboard/api/commands` son del ESP32 (API key).
 
 ## Filtros / middlewares
 
 ### `app/Filters/AuthFilter.php`
 
-Protege rutas autenticadas:
+Protege las paginas que requieren iniciar sesion:
 
-- Verifica `session()->get('logged_in')`.
-- Si falta, setea flash `error` y redirige a `auth/login`.
+- Verifica `session()->get('logged_in')`. Si falta, setea flash `error` y redirige a `auth/login`.
+- Si la ruta indica roles (`auth:administrador`, o varios: `auth:administrador,tecnico`), compara con `session()->get('user_role')`. Si no coincide, redirige al panel con un mensaje de error.
 
-Se aplica a grupos `dashboard` y `dispositivos`.
-
-### `app/Filters/RoleFilter.php`
-
-Protege rutas por rol:
-
-- Primero exige `logged_in`.
-- Lee roles permitidos desde argumentos, por ejemplo `role:administrador`.
-- Compara con `session()->get('user_role')`.
-- Si no coincide, redirige a dashboard con flash de error.
-
-Se aplica a los grupos `usuarios` y `pedidos`.
+Se aplica a los grupos `dashboard` y `dispositivos` (cualquier usuario) y a `usuarios` y `pedidos` (solo administradores).
 
 ### `app/Filters/DeviceAuthFilter.php`
 
@@ -291,47 +332,30 @@ Filtro `after` global: agrega el header `X-CSRF-TOKEN` con el token vigente para
 
 ### `app/Config/Filters.php`
 
-Aliases relevantes:
+Aliases propios:
 
 - `auth` -> `App\Filters\AuthFilter`.
-- `role` -> `App\Filters\RoleFilter`.
 - `deviceauth` -> `App\Filters\DeviceAuthFilter`.
 - `csrfheader` -> `App\Filters\CsrfTokenHeaderFilter`.
-- `csrf`, `toolbar`, `honeypot`, `secureheaders`, `cors`, etc.
 
-Globales activos: `csrf` (before) y `csrfheader` (after), excepto en `dashboard/api/data`, `dashboard/api/commands*` y `checkout/mercadopago/webhook`, que no usan sesion de navegador. `honeypot`, `invalidchars` y `secureheaders` siguen inactivos.
+Globales activos: `csrf` (before) y `csrfheader` (after), excepto en las rutas de la constante `SIN_CSRF` (`dashboard/api/data`, `dashboard/api/commands*` y `checkout/mercadopago/webhook`), que no usan sesion de navegador. El filtro `toolbar` solo se agrega si la barra esta activada. `honeypot`, `invalidchars` y `secureheaders` siguen inactivos.
 
 ## Controladores
 
 ### `BaseController.php`
 
-Extiende `CodeIgniter\Controller`. Actualmente no precarga helpers, modelos ni servicios. Sirve como base comun para todos los controladores.
+Extiende `CodeIgniter\Controller`. Solo agrega `userId()`: el id del usuario con sesion iniciada.
 
 ### `Home.php`
 
-Responsabilidad: renderizar landing y preparar configuracion de compra.
+Responsabilidad: renderizar la portada con el formulario de compra.
 
-`index()`:
+`index()` lee `Config\Commerce` y `Config\MercadoPago` y pasa dos cosas a la vista `home/index`:
 
-- Lee variables `commerce.*` y `mercadopago.*` desde `.env`.
-- Calcula datos de producto:
-  - sku,
-  - nombre,
-  - headline,
-  - descripcion,
-  - precio unitario,
-  - moneda,
-  - maximo de cantidad,
-  - mensaje de entrega.
-- Calcula datos de pago:
-  - locale,
-  - URL de preferencia Mercado Pago,
-  - public key Mercado Pago.
+- `producto`: sku, nombre, descripcion, precio, moneda, cantidad maxima, mensaje de entrega y el precio ya formateado para la tarjeta y el resumen.
+- `compra`: lo que necesita `purchase.js` (producto, locale, public key y URL para crear la preferencia). Se imprime como JSON en la pagina.
 
-Mercado Pago es el unico medio de pago (PayPal fue retirado).
-- Renderiza `home/index` con assets de compra.
-
-La logica de negocio es comercial: permite que el producto y el checkout se configuren sin tocar la vista.
+Mercado Pago es el unico medio de pago.
 
 ### `Auth.php`
 
@@ -341,7 +365,8 @@ Constantes:
 
 - `MAX_LOGIN_ATTEMPTS = 5`.
 - `LOGIN_LOCK_MINUTES = 15`.
-- `PASSWORD_RULE`: minimo 8, minuscula, mayuscula, numero y caracter especial.
+
+La regla de contrasena segura esta en `UserModel::PASSWORD_RULE` (minimo 8, minuscula, mayuscula, numero y caracter especial) y la comparten registro, reset y la edicion de usuarios.
 
 Metodos publicos:
 
@@ -350,6 +375,8 @@ Metodos publicos:
 - `logout()`: solo POST con token CSRF; destruye sesion y redirige a login.
 - `recover()`: GET muestra formulario; POST genera token y envia mail si el usuario existe.
 - `reset($token)`: valida token, muestra formulario o actualiza password.
+
+Privados: `demasiadosIntentos()`, `anotarIntentoFallido()` y `claveIntentos()` (freno por email + IP en la cache), `volverAlLogin()` y `enviarEmailRecuperacion()` (usa la vista `emails/recuperar_contrasena`).
 
 Flujo de registro:
 
@@ -400,94 +427,81 @@ Flujo de recuperacion:
 
 ### `Dashboard.php`
 
-Responsabilidad: panel IoT, APIs del dashboard, perfil y acciones de control.
+Responsabilidad: las cuatro paginas del panel y sus acciones. Todo el calculo de datos esta en `PanelPecera`; el controlador solo valida y responde.
 
-Modelos usados:
+Paginas (las cuatro llaman a `pagina($seccion)` y usan la misma vista):
 
-- `SensorModel`.
-- `AlimentacionModel`.
-- `AlertaModel`.
-- `ComandoDispositivoModel`.
-- `ConfiguracionPeceraModel`.
-- `DispositivoModel`.
-- `UserModel`.
+- `index()`: panel principal.
+- `history()`: historial.
+- `settings()`: configuracion.
+- `profile()`: mi cuenta.
 
-Tambien usa `db_connect()` para verificar si existen tablas antes de consultar.
+Acciones (responden el JSON del panel actualizado, para que `dashboard.js` redibuje sin recargar):
 
-Constante `DEFAULT_CONFIG`:
-
-- temperatura minima y maxima,
-- pH minimo y maximo,
-- temperatura objetivo,
-- modo vacaciones,
-- horarios de alimentacion (`hora_alim_1`, `hora_alim_2`) y gramos por racion.
-
-Metodos de navegacion:
-
-- `index()`: overview.
-- `history()`: misma vista con historial activo.
-- `settings()`: misma vista con configuracion activa.
-- `profile()`: misma vista con perfil activo.
-
-Metodos JSON / acciones:
-
-- `latest()`: devuelve payload actualizado (con los filtros del historial de la query string).
-- `receiveData()`: inserta una lectura del ESP32. El usuario y el dispositivo salen de la API key (filtro `deviceauth`), no de la sesion. Acepta JSON o form-urlencoded, valida rangos (pH 0-14, etc.) y responde `201` con `temp_objetivo` y `modo_vacaciones` vigentes, o `422` si los datos son invalidos.
-- `markAlertRead($alertId)`: marca alerta no leida del usuario.
-- `feedNow()`: encola un comando `alimentar` para el ESP32 (no registra la alimentacion: eso ocurre cuando el dispositivo confirma). Rechaza si no hay alimentador con API key, si ya hay una orden en curso o si los gramos estan fuera de rango.
+- `latest()`: datos actualizados (con los filtros del historial de la query string).
+- `markAlertRead($alertId)`: marca una alerta del usuario como leida.
+- `feedNow()`: encola un comando `alimentar` para el ESP32 (no registra la alimentacion: eso ocurre cuando el dispositivo confirma). Responde `422` si los gramos estan fuera de rango y `409` si no hay alimentador con API key, si esta desconectado o si ya hay una orden en curso.
 - `updateFeedingSchedule()`: guarda `hora_alim_1`, `hora_alim_2` (vacios = desactivado) y `cantidad_alim_gramos`.
 - `toggleVacation()`: cambia `modo_vacaciones`.
 - `updateTargetTemperature()`: guarda `temp_objetivo`.
-- `updateProfile()`: actualiza nombre/email del usuario.
 
-Payload principal:
+Privados: `panel()` (crea `PanelPecera` una sola vez), `filtros()`, `pagina()`, `endpoints()`, `respuesta()` y `error()`.
+
+### `Perfil.php`
+
+`actualizar()` atiende el formulario "Mi cuenta" (`POST dashboard/profile`): cambia nombre y email. Para cambiar el email exige la contrasena actual; al cambiarlo se anulan los enlaces de recuperacion pendientes y los bloqueos por intentos. Si hay errores vuelve al formulario con los datos que se habian escrito.
+
+### `App\Libraries\PanelPecera`
+
+Se crea con el id del usuario (`new PanelPecera($userId)`).
+
+Metodos publicos:
+
+- `config()` / `guardarConfig($cambios)`: configuracion de la pecera (con valores por defecto si el usuario todavia no guardo nada).
+- `dispositivos()`, `alimentadores()`, `alimentadorEnLinea()`, `alimentacionPendiente()`.
+- `filtrosHistorial($desde, $hasta, $deviceId)`: valida los filtros de la URL. Sin rango se muestran las ultimas 24 h.
+- `textoRango($filtros)`: texto del rango, por ejemplo `24 h` o `29/09 - 01/10/2026 · ESP32 Pecera`.
+- `datos($filtros)`: todo lo que muestra el panel.
+
+`datos()` devuelve:
 
 ```text
-config
-cards
-alerts
-feedings
-charts            (labels, temperature, ph, count)
-feeder            (hasDevice, online, pending, statusLevel, statusText, lastText, scheduleText)
-latestTimestamp
-endpoints
-userName
+config            configuracion de la pecera
+cards             temperature, ph, waterLevel, heater, lastFeeding, vacationMode
+                  (cada una con value, status y meta)
+summary           alertsCount, alertsMeta, health, waterTitle, feedingTitle,
+                  feedingMeta, vacationTitle, syncText
+alerts            hasta 5 alertas sin leer
+feedings          ultimas 10 alimentaciones (con fecha y tipoTexto listos para mostrar)
+charts            labels, temperature, ph, count
+feeder            hasDevice, online, pending, statusLevel, statusText, lastText, scheduleText
+latestTimestamp   fecha de la ultima lectura
 ```
 
-Filtros del historial (`resolveHistoryFilters()`): `desde`/`hasta` en formato `AAAA-MM-DD` y `dispositivo` (solo propios). Sin rango se muestran las ultimas 24 h. Las series de mas de 500 puntos se promedian por tramos (`downsample()`). Las lecturas anteriores a la API key no tienen `dispositivo_id` y solo aparecen con "Todos los dispositivos".
+El controlador le suma `userName` y `endpoints` (las direcciones que usa `dashboard.js`).
 
-Logica de negocio central:
+Logica central:
 
-- `ensureConfig()` garantiza una configuracion por usuario o usa defaults si no hay tabla/registro.
-- `buildCards()` convierte datos crudos en tarjetas legibles para UI:
-  - temperatura con estado segun rango,
-  - pH con estado segun rango,
-  - nivel de agua OK/Bajo,
-  - calefactor Encendido/Apagado,
-  - ultima alimentacion,
-  - modo vacaciones.
-- `rangeStatus()` clasifica valores como `ok`, `warn`, `danger` o `neutral`.
-- `fetchSensorHistory()` aplica el rango y dispositivo elegidos (por defecto ultimas 24 horas).
-- `buildFeederState()` arma el estado del alimentador para la UI.
-- `fetchAlerts()` trae hasta 5 alertas no leidas.
-- `fetchFeedings()` trae ultimas 10 alimentaciones.
-
-Ejemplo de procesamiento de `latest()`:
+- `tarjetas()` convierte la ultima lectura en textos legibles; `estadoSegunRango()` clasifica cada valor como `ok`, `warn`, `danger` o `neutral`.
+- `resumen()` calcula el "Estado del ecosistema" (%) promediando el puntaje de cada tarjeta y restando 6 puntos por alerta sin leer.
+- `grafico()` pide la serie a `SensorModel::serieParaGrafico()` con un maximo de 500 puntos.
+- `estadoAlimentador()` arma el estado del alimentador (conectado, offline, orden en curso, ultima orden, horarios).
 
 ```mermaid
 flowchart TD
-    A[GET dashboard/api/latest] --> B[userId desde sesion]
-    B --> C[ensureConfig]
-    B --> D[ultima lectura sensores]
-    B --> E[alertas no leidas]
-    B --> F[ultimas alimentaciones]
-    B --> G[historial 24h]
-    C --> H[buildCards]
-    D --> H
-    E --> I[JSON payload]
+    A[GET dashboard/api/latest] --> B[Dashboard::latest]
+    B --> C[PanelPecera::datos]
+    C --> D[ultima lectura]
+    C --> E[alertas no leidas]
+    C --> F[ultimas alimentaciones]
+    C --> G[serie del grafico: max 500 puntos]
+    C --> H[estado del alimentador]
+    D --> I[tarjetas + resumen]
+    E --> I
     F --> I
-    G --> I
-    H --> I
+    I --> J[JSON]
+    G --> J
+    H --> J
 ```
 
 ### `Checkout.php`
@@ -497,27 +511,26 @@ Responsabilidad: integracion de compra con Mercado Pago.
 `mercadoPagoPreference()`:
 
 - Lee JSON del request.
-- Valida forma del pedido:
+- Valida forma del pedido (`validarPedido()`):
   - metodo `mercadopago`,
   - precio configurado,
   - sku correcto,
   - cantidad dentro del maximo,
   - email valido.
-- Lee access token de `.env`.
-- Configura SDK Mercado Pago.
-- Crea preferencia con item, payer, back URLs, referencia externa, descriptor y metadata.
+- Configura el SDK con el access token (`configurarSdk()`).
+- Crea preferencia con item, payer, back URLs, referencia externa, descriptor y metadata (`preferencia()`).
 - Guarda el pedido en `pedidos` con estado `pendiente`, la referencia externa y el id de preferencia.
 - Devuelve `preferenceId`, `initPoint` y `sandboxInitPoint`.
 
-Callbacks (`mercadoPagoSuccess()`, `mercadoPagoFailure()`, `mercadoPagoPending()`):
+Callbacks (`mercadoPagoSuccess()`, `mercadoPagoFailure()`, `mercadoPagoPending()`, los tres usan `regresoDeMercadoPago()`):
 
-- No confian en los parametros de la URL: toman `payment_id`, consultan el pago real a la API (`PaymentClient::get`) y actualizan el pedido.
+- No confian en los parametros de la URL: toman `payment_id`, consultan el pago real a la API (`sincronizarPago()`) y actualizan el pedido.
 - El mensaje flash se arma con el estado verificado y redirige a `/#checkout`.
 
 `mercadoPagoWebhook()`:
 
 - Recibe notificaciones `type=payment` (JSON o query `data.id`) y vuelve a consultar el pago a la API.
-- Si esta definido `mercadopago.webhookSecret`, valida la firma `x-signature` (HMAC SHA-256 de `id`, `request-id` y `ts`).
+- Si esta definido `mercadopago.webhookSecret`, valida la firma `x-signature` (HMAC SHA-256 de `id`, `request-id` y `ts`) en `firmaValida()`.
 - Responde `500` si la API de Mercado Pago falla, para que Mercado Pago reintente.
 - La `notification_url` se toma de `mercadopago.notificationUrl`; si no esta definida y el sitio corre con HTTPS se usa `/checkout/mercadopago/webhook`. En `localhost` Mercado Pago no puede notificar: hace falta una URL publica (por ejemplo ngrok).
 
@@ -525,14 +538,15 @@ Callbacks (`mercadoPagoSuccess()`, `mercadoPagoFailure()`, `mercadoPagoPending()
 
 ### `DeviceApi.php`
 
-Endpoints que consume el ESP32 (filtro `deviceauth`):
+Endpoints que consume el ESP32 (filtro `deviceauth`). **Las direcciones, los campos JSON y los codigos de respuesta no deben cambiar: el firmware ya cargado depende de ellos.**
 
+- `data()`: inserta una lectura. El usuario y el dispositivo salen de la API key, no de la sesion. Acepta JSON o form-urlencoded, valida rangos (temperatura entre -10 y 60, pH 0-14, etc.) y responde `201` con `lectura_id` y la `config` vigente (`temp_objetivo`, `modo_vacaciones`), o `422` si los datos son invalidos.
 - `commands()`: genera los comandos programados que correspondan (`ComandoDispositivoModel::programarAlimentaciones`) y entrega los pendientes, marcandolos `enviado`. Los dispositivos tipo `sensor` no reciben comandos.
-- `ack($id)`: recibe `{"estado": "ejecutado" | "fallido", "mensaje": "..."}`. Si fue `ejecutado`, registra la alimentacion (`manual`, `automatica` o `vacaciones` segun origen y modo).
+- `ack($id)`: recibe `{"estado": "ejecutado" | "fallido", "mensaje": "..."}`. Si fue `ejecutado`, registra la alimentacion (`manual`, `automatica` o `vacaciones` segun origen y modo). Responde `404` si el comando no existe o ya estaba finalizado.
 
 ### `Pedidos.php`
 
-Panel de administracion (`role:administrador`) con el listado de pedidos, resumen por estado y filtro `?estado=`.
+Panel de administracion (`auth:administrador`) con el listado de pedidos, resumen por estado y filtro `?estado=`.
 
 ### `Dispositivos.php`
 
@@ -547,26 +561,17 @@ Logica:
 - `generateApiKey($id)` crea una key `aqk_` + 48 hex. Solo se guarda su hash SHA-256 y un prefijo visible; la key completa se muestra una unica vez (flash). Regenerarla invalida la anterior.
 - `revokeApiKey($id)` borra la key: el dispositivo deja de poder enviar datos.
 
-Tipos permitidos:
-
-- `sensor`,
-- `actuador`,
-- `controlador`,
-- `kit_iot`,
-- `otro`.
+Los tipos permitidos estan en `DispositivoModel::TIPOS`: `sensor`, `actuador`, `controlador`, `kit_iot`, `otro`.
 
 ### `Usuarios.php`
 
-Responsabilidad: administracion de usuarios.
-
-Solo accesible a administradores por `RoleFilter`.
+Responsabilidad: administracion de usuarios. Solo accesible a administradores (`auth:administrador`).
 
 Logica:
 
 - `index()` lista usuarios por fecha de creacion descendente.
-- `edit($id)` muestra formulario o procesa POST.
-- `updateUser()` valida nombre, rol y password opcional.
-- `wouldRemoveLastAdmin()` impide que el ultimo admin activo pierda su rol.
+- `edit($id)` muestra el formulario o procesa el POST: valida nombre, rol y password opcional.
+- Impide que el ultimo administrador activo pierda su rol (`UserModel::administradoresActivos()`).
 - Si el admin edita su propia cuenta, actualiza `user_nombre` y `user_role` en sesion.
 
 ## Modelos
@@ -584,37 +589,32 @@ login_intentos, bloqueado_hasta,
 activo, created_at, updated_at
 ```
 
-Roles:
+Roles (`UserModel::ROLES`): `administrador`, `usuario`, `tecnico`.
 
-- `administrador`,
-- `usuario`,
-- `tecnico`.
+Constantes: `PASSWORD_RULE` (se le antepone `required|` o `permit_empty|`) y `PASSWORD_MESSAGES`.
 
 Reglas:
 
 - nombre requerido,
-- email valido y unico,
+- email valido y unico (la regla usa `{id}` para no contar al propio usuario, por eso el `id` tiene su propia regla),
 - password fuerte,
 - rol dentro de lista permitida.
 
-Callbacks:
-
-- `normalizeEmail`: lowercase + trim.
-- `hashPassword`: bcrypt cost 12 en insert.
-- `hashPasswordOnUpdate`: bcrypt cost 12 si cambia password.
+Callback `normalizarDatos` (antes de insertar y de actualizar): email en minusculas y password con bcrypt cost 12.
 
 Metodos de negocio:
 
 - `findByEmail($email)`: solo usuarios activos.
 - `verifyPassword($plain, $hash)`.
 - `generarTokenRecuperacion($userId)`: token aleatorio, guarda hash y expiracion.
-- `findByTokenValido($token)`: busca hash valido y activo; tambien tolera token plano legacy.
+- `findByTokenValido($token)`: busca por el hash del token, sin vencer y de un usuario activo.
 - `restablecerPassword($userId, $nuevaPassword)`.
 - `registrar($datos)`: primer usuario queda admin; siguientes quedan usuario comun.
 - `registrarIntentoFallido()`: contador DB y bloqueo temporal.
 - `resetearSeguridadLogin()`.
-- `estaBloqueado()` y `segundosBloqueoRestantes()`.
-- `roleLabel()` e `isValidRole()`.
+- `segundosBloqueoRestantes($user)`.
+- `roleLabel($role)`.
+- `administradoresActivos()`.
 
 ### `SensorModel.php`
 
@@ -630,10 +630,7 @@ calefactor, modo_vacaciones, created_at
 Metodos:
 
 - `ultimaLectura($userId)`: ultima por fecha.
-- `historial($userId, $hours = 24)`: lecturas de las ultimas horas.
-- `historialRango($userId, $desde, $hasta, $deviceId = null)`: lecturas entre dos fechas, opcionalmente de un dispositivo.
-
-Representa la telemetria IoT del acuario.
+- `serieParaGrafico($userId, $desde, $hasta, $deviceId, $maxPuntos)`: devuelve `puntos` y `total`. Si hay mas lecturas que `$maxPuntos`, las agrupa en tandas consecutivas y las promedia dentro de MySQL (`ROW_NUMBER() OVER (ORDER BY created_at)` agrupado por `FLOOR(fila / tanda)`). PHP recibe como mucho 500 filas aunque el rango tenga decenas de miles de lecturas.
 
 ### `AlimentacionModel.php`
 
@@ -645,16 +642,9 @@ Campos:
 usuario_id, cantidad_gramos, tipo, created_at
 ```
 
-Tipos segun migracion:
+Tipos (`AlimentacionModel::TIPOS`): `manual`, `automatica`, `vacaciones`.
 
-- `manual`,
-- `automatica`,
-- `vacaciones`.
-
-Metodos:
-
-- `ultimasPorUsuario($userId, $limit = 10)`.
-- `ultimaPorUsuario($userId)`.
+Metodo: `ultimasPorUsuario($userId, $limit = 10)`.
 
 ### `AlertaModel.php`
 
@@ -669,6 +659,7 @@ usuario_id, nivel, tipo, mensaje, leida, created_at
 Metodos:
 
 - `noLeidasPorUsuario($userId, $limit = 5)`.
+- `marcarLeida($alertId, $userId)`.
 
 Niveles:
 
@@ -690,9 +681,13 @@ created_at, updated_at
 
 `hora_alim_1` y `hora_alim_2` (TIME, hora Argentina) son los horarios del alimentador; `NULL` desactiva ese horario.
 
-Metodo:
+`VALORES_POR_DEFECTO`: lo que se usa mientras el usuario no guardo su propia configuracion.
 
-- `porUsuario($userId)`.
+Metodos:
+
+- `porUsuario($userId)`: la fila guardada, o `null`.
+- `deUsuario($userId)`: la fila guardada completada con los valores por defecto.
+- `guardar($userId, $cambios)`: actualiza la configuracion (la crea si todavia no existia).
 
 Relacionalmente es 1 a 1 con `usuarios` por unique key `usuario_id`.
 
@@ -711,14 +706,16 @@ Validaciones:
 
 - usuario requerido,
 - nombre requerido,
-- tipo dentro de lista,
+- tipo dentro de `TIPOS`,
 - ubicacion requerida.
 
 Metodos:
 
 - `porUsuario($userId)`.
 - `buscarParaUsuario($deviceId, $userId)`.
-- `generarApiKey($deviceId)`, `revocarApiKey($deviceId)`, `buscarPorApiKey($key)`, `registrarConexion($deviceId)`.
+- `esAlimentador($device)`: tiene API key y no es un sensor puro.
+- `generarApiKey($deviceId)`, `revocarApiKey($deviceId)`, `buscarPorApiKey($key)`.
+- `registrarConexion($device)`: anota `ultima_conexion`. Como el ESP32 consulta cada 2 s, se escribe como mucho una vez cada 10 s.
 
 ### `ComandoDispositivoModel.php`
 
@@ -730,10 +727,11 @@ Ciclo de vida: `pendiente` -> `enviado` (el ESP32 lo tomo) -> `ejecutado` | `fal
 - `programarAlimentaciones($userId, $config)`: crea los comandos de los horarios vencidos dentro del margen. Se ejecuta cada vez que el ESP32 consulta, sin cron. El indice unico `(usuario_id, accion, programado_para)` evita duplicados.
 - `reclamarPendientes($device)`: entrega y marca `enviado` con un UPDATE condicionado, para que dos dispositivos no tomen el mismo comando.
 - `finalizar($id, $deviceId, $estado, $mensaje)`.
+- `alimentacionPendiente($userId)`, `ultimaAlimentacion($userId)`, `proximoHorario($config)`, `horasConfiguradas($config)`.
 
 ### `PedidoModel.php`
 
-Tabla: `pedidos`. Estados: `pendiente`, `en_proceso`, `aprobado`, `rechazado`, `cancelado`, `reembolsado`.
+Tabla: `pedidos`. Estados (`PedidoModel::ESTADOS`): `pendiente`, `en_proceso`, `aprobado`, `rechazado`, `cancelado`, `reembolsado`.
 
 - `porReferencia($ref)`, `listado($estado)`, `resumen()`.
 - `aplicarPagoMercadoPago($pago)`: actualiza el pedido con un pago consultado a la API.
@@ -772,6 +770,7 @@ erDiagram
     LECTURAS_SENSORES {
         int id PK
         int usuario_id FK
+        int dispositivo_id FK
         decimal temperatura
         decimal ph
         decimal turbidez
@@ -860,7 +859,20 @@ erDiagram
     }
 ```
 
+### Indices que usa el panel
+
+| Tabla | Indice | Para que |
+| --- | --- | --- |
+| `lecturas_sensores` | `idx_usuario_fecha (usuario_id, created_at)` | Ultima lectura y serie del grafico de un usuario. |
+| `lecturas_sensores` | `idx_dispositivo_fecha (dispositivo_id, created_at)` | Historial filtrado por dispositivo. |
+| `alimentaciones` | `idx_usuario_fecha (usuario_id, created_at)` | Ultimas alimentaciones. |
+| `alertas` | `idx_usuario_leida_fecha (usuario_id, leida, created_at)` | Alertas sin leer. |
+
+Con un indice solo por `usuario_id` MySQL tenia que recorrer y ordenar todas las lecturas del usuario en cada consulta (el ESP32 manda unas 17.000 por dia).
+
 ### Migraciones
+
+`php spark migrate` sobre una base vacia crea todas las tablas y deja la aplicacion lista para usar.
 
 #### `2024-01-01-000001_CreateUsuariosTable.php`
 
@@ -911,6 +923,15 @@ Resta 3 horas a todas las columnas `DATETIME` (UTC -> hora Argentina) al pasar `
 
 Crea `pedidos`.
 
+#### `2026-10-01-000009_TablasDeLecturasEIndices.php`
+
+Deja la base igual sin importar como se instalo (con la copia `.sql` o con migraciones):
+
+- Agrega a `configuracion_pecera` las columnas `hora_alim_1`, `hora_alim_2` y `cantidad_alim_gramos` si faltan (solo venian en la copia `.sql`).
+- Reemplaza los indices por usuario de `lecturas_sensores`, `alimentaciones` y `alertas` por los indices (usuario, fecha) de la tabla de arriba.
+
+`down()` solo deshace los indices: las columnas tienen datos y no se borran.
+
 ## Flujos de procesamiento
 
 ### Render inicial del dashboard
@@ -920,15 +941,14 @@ sequenceDiagram
     participant N as Navegador
     participant F as AuthFilter
     participant D as Dashboard::index
-    participant M as Modelos
+    participant P as PanelPecera
     participant V as dashboard/index.php
     N->>F: GET /dashboard con cookie de sesion
     F->>F: valida logged_in
     F->>D: request autorizado
-    D->>M: obtiene config, lectura, historial, alertas, alimentaciones
-    M-->>D: arrays
-    D->>D: buildDashboardPayload + endpoints
-    D->>V: render con dashboardData
+    D->>P: datos(filtros)
+    P-->>D: config, cards, summary, alerts, feedings, charts, feeder
+    D->>V: render con dashboardData + endpoints
     V-->>N: HTML + JSON hidratado
 ```
 
@@ -938,7 +958,7 @@ sequenceDiagram
 sequenceDiagram
     participant C as ESP32
     participant F as DeviceAuthFilter
-    participant D as Dashboard::receiveData
+    participant D as DeviceApi::data
     participant S as SensorModel
     participant DB as lecturas_sensores
     C->>F: POST /dashboard/api/data + X-Device-Key
@@ -961,7 +981,7 @@ sequenceDiagram
     participant A as DeviceApi
     U->>W: POST control/feed (o llega un horario programado)
     W->>Q: INSERT comando alimentar (pendiente)
-    loop cada 5 s
+    loop cada 2 s
         E->>A: GET api/commands + X-Device-Key
         A->>Q: programa horarios vencidos y marca pendientes como enviados
         A-->>E: [{id, accion: alimentar, gramos}]
@@ -979,7 +999,7 @@ En los dos modos el hardware es el mismo (DS18B20 en GPIO 18, servo SG90 en GPIO
 **Modo WiFi (el que se usa hoy).** `firmware/aquacontrol_esp32` habla directo con la API: envia la temperatura cada 5 s, consulta ordenes cada 2 s y confirma cada giro. No hace falta el puente ni que el ESP32 este cerca de la PC.
 
 - Requiere `firmware/aquacontrol_esp32/secrets.h` (copiar de `secrets.example.h`, ignorado por git) con `WIFI_SSID`, `WIFI_PASSWORD`, `SERVER_URL` y `DEVICE_KEY`.
-- La red WiFi debe ser de 2.4 GHz. El servidor debe escuchar en la red (`php spark serve --host 0.0.0.0`, ya incluido en `iniciar_aquacontrol.bat`) y conviene reservar la IP de la PC en el router para que `SERVER_URL` no cambie.
+- La red WiFi debe ser de 2.4 GHz. El servidor debe escuchar en la red (`php spark servir` ya lo hace, y es lo que usa `iniciar_aquacontrol.bat`) y conviene reservar la IP de la PC en el router para que `SERVER_URL` no cambie.
 - Libreria extra: ArduinoJson v7.
 - Si la pagina se publica en un hosting, basta con cambiar `SERVER_URL`: el ESP32 funciona sin la PC.
 
@@ -993,7 +1013,7 @@ En los dos modos el hardware es el mismo (DS18B20 en GPIO 18, servo SG90 en GPIO
 
 ```mermaid
 flowchart TD
-    A[POST dashboard/profile] --> B[Buscar usuario por session user_id]
+    A[POST dashboard/profile] --> B[Perfil::actualizar: buscar usuario por session user_id]
     B --> C[Validar nombre y email unico]
     C --> D{Cambio email?}
     D -->|si| E[Exigir password actual]
@@ -1010,17 +1030,16 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[POST checkout/mercadopago/preference] --> B[Leer JSON]
-    B --> C[Validar metodo, sku, cantidad, email, precio]
-    C --> D[Leer access token .env]
-    D --> E[Configurar MercadoPagoConfig]
-    E --> F[buildPreferenceRequest]
+    B --> C[validarPedido: metodo, sku, cantidad, email, precio]
+    C --> D[configurarSdk: access token del .env]
+    D --> F[preferencia]
     F --> G[PreferenceClient create]
     G --> P[Guardar pedido pendiente]
     P --> H[Responder preferenceId/initPoint]
     H --> I[Comprador paga en Mercado Pago]
     I --> J[back_url success/failure/pending con payment_id]
     I --> K[webhook POST checkout/mercadopago/webhook]
-    J --> L[PaymentClient get: estado real del pago]
+    J --> L[sincronizarPago: estado real del pago]
     K --> L
     L --> M[Actualizar pedido: aprobado / rechazado / pendiente]
 ```
@@ -1055,7 +1074,7 @@ Si el usuario no existe, igual se registra throttle en cache por email+IP.
 - Genera token aleatorio de 32 bytes.
 - Guarda SHA-256 del token.
 - Expira en 1 hora.
-- Email HTML con link `auth/reset/{token}`.
+- Email HTML (`app/Views/emails/recuperar_contrasena.php`) con link `auth/reset/{token}`.
 - Al resetear, limpia token, expiracion, intentos y bloqueo.
 
 ### Autorizacion
@@ -1075,10 +1094,11 @@ Si el usuario no existe, igual se registra throttle en cache por email+IP.
 | Regeneracion de sesion | Al login y al actualizar perfil. |
 | Roles | `administrador`, `usuario`, `tecnico`. |
 | Lockout login | Cache por email/IP y campos DB por usuario. |
-| Tokens recovery | Token aleatorio, hash en DB, expiracion 1 hora. |
+| Tokens recovery | Token aleatorio, solo se guarda el hash, expiracion 1 hora. |
 | CSRF | Filtro global activo; formularios con `csrf_field()` y AJAX con header `X-CSRF-TOKEN`. |
 | API de dispositivos | API key por dispositivo, guardada solo como hash SHA-256; revocable. |
 | Webhook Mercado Pago | Re-consulta el pago a la API; firma `x-signature` opcional con `mercadopago.webhookSecret`. |
+| Acceso desde la red | Solo se aceptan como nombre del sitio `localhost`, `127.0.0.1` y las IP de la propia PC. |
 | CORS | Sin origen permitido por defecto; filtro no activo. |
 | CSP | Desactivado en `App.php`. |
 | Secure cookies | `secure = false`, apto local pero no ideal produccion. |
@@ -1088,32 +1108,35 @@ Si el usuario no existe, igual se registra throttle en cache por email+IP.
 
 ```mermaid
 flowchart LR
-    Home --> Checkout
-    Auth --> UserModel
-    Dashboard --> UserModel
-    Dashboard --> SensorModel
-    Dashboard --> AlimentacionModel
-    Dashboard --> AlertaModel
-    Dashboard --> ConfiguracionPeceraModel
-    Dashboard --> ComandoDispositivoModel
-    DeviceApi --> ComandoDispositivoModel
-    DeviceApi --> AlimentacionModel
+    Home --> Commerce[Config Commerce / MercadoPago]
+    Checkout --> Commerce
     Checkout --> PedidoModel
     Pedidos --> PedidoModel
-    Dispositivos --> DispositivoModel
+    Auth --> UserModel
+    Perfil --> UserModel
     Usuarios --> UserModel
-    AuthFilter --> Dashboard
-    AuthFilter --> Dispositivos
-    DeviceAuthFilter --> DeviceApi
-    DeviceAuthFilter --> Dashboard
-    RoleFilter --> Usuarios
-    RoleFilter --> Pedidos
+    Dashboard --> PanelPecera
+    Dashboard --> ComandoDispositivoModel
+    Dashboard --> AlertaModel
+    PanelPecera --> SensorModel
+    PanelPecera --> AlimentacionModel
+    PanelPecera --> AlertaModel
+    PanelPecera --> ConfiguracionPeceraModel
+    PanelPecera --> DispositivoModel
+    PanelPecera --> ComandoDispositivoModel
+    DeviceApi --> SensorModel
+    DeviceApi --> ComandoDispositivoModel
+    DeviceApi --> AlimentacionModel
+    DeviceApi --> ConfiguracionPeceraModel
+    Dispositivos --> DispositivoModel
+    DeviceAuthFilter --> DeviceAuth
+    DeviceAuth --> DispositivoModel
 ```
 
 ## Dependencias criticas y puntos de fallo
 
 - Base de datos MySQL:
-  - Si no corren migraciones, dashboard usa fallbacks en algunas lecturas, pero `receiveData()` devuelve 503 si falta `lecturas_sensores`.
+  - Tiene que estar encendida y con las migraciones corridas (`php spark migrate`).
 - `.env`:
   - Define DB, SMTP, comercio y Mercado Pago. Credenciales incorrectas rompen login recovery, checkout o conexion DB.
 - Mercado Pago:
@@ -1121,7 +1144,7 @@ flowchart LR
   - Fallos de API devuelven 502 (preferencia) o 500 (webhook, para que Mercado Pago reintente).
   - El webhook necesita una URL publica; en `localhost` los pedidos solo se actualizan al volver del pago.
 - ESP32:
-  - Debe alcanzar el servidor por red (IP de la PC, `spark serve --host 0.0.0.0`).
+  - Debe alcanzar el servidor por red (IP de la PC; `php spark servir` escucha en toda la red).
   - Si esta offline mas de 30 min despues de un horario, esa racion se omite.
 - SMTP:
   - Recovery depende de SMTP configurado.
@@ -1138,28 +1161,18 @@ flowchart LR
 Existen tests starter:
 
 - `tests/unit/HealthTest.php`: valida `APPPATH` y `baseURL`.
-- `tests/database/ExampleDatabaseTest.php`: prueba modelo ejemplo del starter.
+- `tests/database/ExampleDatabaseTest.php`: prueba modelo ejemplo del starter (necesita la extension `sqlite3` de PHP, que XAMPP trae desactivada).
 - `tests/session/ExampleSessionTest.php`: prueba basica de sesion.
 
-No hay cobertura actual para:
-
-- registro/login,
-- lockout,
-- recuperacion,
-- dashboard payload,
-- CRUD dispositivos,
-- roles/admin,
-- checkout Mercado Pago.
+No hay tests automaticos propios de AquaControl (registro/login, panel, dispositivos, roles, checkout).
 
 ## Observaciones y mejoras posibles
 
 - Validar rango de la temperatura objetivo en backend (sensores y gramos ya se validan).
 - Enviar un email de confirmacion al comprador cuando un pedido pasa a `aprobado`.
 - Limitar intentos fallidos contra la API de dispositivos (rate limit por IP) para frenar fuerza bruta de API keys.
-- Revisar secretos en `.env` y rotarlos si fueron compartidos o quedaron versionados. La documentacion no debe incluir valores de credenciales.
 - Activar `secureheaders` y CSP en produccion, ajustando fuentes externas necesarias: Chart.js, Mercado Pago y Google Fonts.
 - Usar cookies `secure = true` y `forceGlobalSecureRequests = true` en HTTPS productivo.
-- `Auth::findByTokenValido()` acepta token plano ademas de hash, util para compatibilidad pero menos estricto.
-- `Dashboard::fromTable()` captura excepciones y devuelve fallback; mejora la UX pero puede ocultar errores de datos o migraciones.
-- `welcome_message.php` y tests ejemplo son remanentes del starter.
-- Hay caracteres con mojibake en comentarios y textos visibles; conviene normalizar a UTF-8.
+- El checkbox "Recordarme" del login no tiene implementacion: la sesion dura lo que dice `Session.php`.
+- Las lecturas se guardan para siempre (unas 17.000 por dia); con el tiempo convendra borrar o resumir las muy viejas.
+- Con una cuenta sin lecturas el panel muestra el nivel de agua como "Bajo" (no distingue "sin datos").

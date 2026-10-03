@@ -1,81 +1,76 @@
-# CodeIgniter 4 Application Starter
+# AquaControl
 
-## What is CodeIgniter?
+Pagina web para controlar una pecera con un ESP32: muestra la temperatura en vivo,
+mueve el alimentador (servo) a mano o por horario, avisa alertas y vende el kit con
+Mercado Pago.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Hecha con **CodeIgniter 4** (PHP 8.2), **MySQL/MariaDB** (XAMPP) y JavaScript sin
+frameworks. El firmware del ESP32 esta en `firmware/`.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
-
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
-
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
-
-## Installation & updates
-
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
-
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
-
-## Setup (AquaControl)
+## Instalacion
 
 1. `composer install`
-2. Copiar `.env.example` como `.env` y completar los valores vacios (base de datos, Gmail, Mercado Pago).
-   El `.env` real nunca se sube a GitHub.
-3. Con MySQL (XAMPP) encendido: `php spark migrate`
-4. Iniciar todo con doble clic en `iniciar_aquacontrol.bat` (MySQL + pagina en `http://localhost:8080`).
+2. Copiar `.env.example` como `.env` y completar los valores vacios (base de datos, Gmail,
+   Mercado Pago). El `.env` real nunca se sube a GitHub.
+3. Con MySQL (XAMPP) encendido, crear la base `aquacare` y correr `php spark migrate`.
+4. Doble clic en `iniciar_aquacontrol.bat`: enciende MySQL, levanta la pagina y abre
+   `http://localhost:8080`.
 
-ESP32 (DS18B20 en GPIO 18, servo SG90 en GPIO 19):
+La primera cuenta que se registra queda como administrador.
 
-- WiFi (recomendado): copiar `firmware/aquacontrol_esp32/secrets.example.h` como `secrets.h`,
-  completar red WiFi de 2.4 GHz, IP de la PC y la API key (se genera en la pagina, *Dispositivos*).
-- Cargar el firmware: `powershell -ExecutionPolicy Bypass -File firmware\cargar_firmware.ps1`
+## Levantar la pagina a mano
+
+```bash
+php spark servir
+```
+
+Es el servidor de este proyecto (`app/Commands/Servidor.php`). Usarlo en lugar de
+`php spark serve`: atiende por IPv4 e IPv6 a la vez y activa OPcache, que es lo que hace
+que la pagina cargue rapido. Tambien deja entrar desde el celular u otra PC de la misma
+red con `http://IP-DE-ESTA-PC:8080`.
+
+## Donde esta cada cosa
+
+| Quiero cambiar... | Archivo |
+| --- | --- |
+| Los textos de la portada | `app/Views/home/secciones/` (un archivo por seccion) |
+| La barra de arriba y el pie | `app/Views/layouts/main.php` |
+| El menu lateral del panel | `app/Views/layouts/panel.php` |
+| Las partes del panel de la pecera | `app/Views/dashboard/partes/` |
+| Colores y tipografias | arriba de todo en `public/css/aqua.css` (`:root`) |
+| Estilos de la portada / del panel / del login | `public/css/home.css`, `dashboard.css`, `auth.css` |
+| Que direccion abre que pagina | `app/Config/Routes.php` |
+| Que hace cada pagina | `app/Controllers/` |
+| Como se calcula lo que muestra el panel | `app/Libraries/PanelPecera.php` |
+| Consultas a la base de datos | `app/Models/` |
+| Las tablas de la base | `app/Database/Migrations/` |
+| Precio y datos del producto | `.env` (lineas `commerce.*`) |
+| Horarios y limites del alimentador | `app/Config/Feeding.php` |
+
+Los archivos de `app/Config/` que no se nombran aca son los que trae CodeIgniter.
+
+## ESP32
+
+Hardware: sensor DS18B20 en GPIO 18 y servo SG90 en GPIO 19.
+
+- **WiFi (recomendado):** copiar `firmware/aquacontrol_esp32/secrets.example.h` como
+  `secrets.h` y completar la red WiFi (2.4 GHz), la IP de la PC y la API key, que se
+  genera en la pagina, en *Dispositivos*.
+- **Cargar el firmware:** `powershell -ExecutionPolicy Bypass -File firmware\cargar_firmware.ps1`
   (con `-Modo usb` para la version por cable, que ademas usa `firmware\puente_usb.ps1`).
 
-Mas detalle en `BACKEND_DOCUMENTACION.md` y `FRONTEND_DOCUMENTACION.md`.
+## Comandos utiles
 
-## Important Change with index.php
+| Comando | Para que |
+| --- | --- |
+| `php spark servir` | Levanta la pagina. |
+| `php spark migrate` | Crea o actualiza las tablas de la base. |
+| `php spark routes` | Lista todas las direcciones de la pagina. |
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+Para ver la barra de depuracion de CodeIgniter mientras se busca un error, agregar
+`toolbar.activo = true` en `.env` (hace las paginas mas pesadas: sacarla al terminar).
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## Mas detalle
 
-**Please** read the user guide for a better explanation of how CI4 works!
-
-## Repository Management
-
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
-
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
-
-## Server Requirements
-
-PHP version 8.2 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+- `BACKEND_DOCUMENTACION.md`: rutas, controladores, modelos, base de datos y API del ESP32.
+- `FRONTEND_DOCUMENTACION.md`: vistas, estilos y JavaScript.

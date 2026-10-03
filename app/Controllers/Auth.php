@@ -139,7 +139,9 @@ class Auth extends BaseController
 
     public function logout(): RedirectResponse
     {
-        session()->destroy();
+        // Se vacia la sesion (en vez de destruirla) para que llegue el mensaje de despedida.
+        session()->remove(['user_id', 'user_email', 'user_nombre', 'user_role', 'logged_in']);
+        session()->regenerate(true);
 
         return redirect()->to(base_url('auth/login'))->with('info', 'Sesion cerrada correctamente.');
     }

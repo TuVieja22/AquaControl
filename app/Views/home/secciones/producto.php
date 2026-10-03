@@ -1,5 +1,5 @@
 <?php
-// "Producto en accion": galeria de 4 tarjetas (2 con foto y 2 dibujadas con CSS).
+// "Producto en accion": galeria de 4 tarjetas (2 con foto y 2 dibujadas con CSS). Para que una tarjeta use otra foto, sumale 'image' => base_url('img/otra.webp').
 $imagen = base_url('img/aquacontrol-product.webp');
 $tarjetas = [
     ['class' => 'gallery-product', 'label' => 'Producto completo', 'title' => 'Kit AquaControl IoT', 'copy' => 'Modulo central, sensores y alimentador en una pieza visualmente integrada.', 'type' => 'image'],
@@ -19,7 +19,7 @@ $tarjetas = [
       <?php foreach ($tarjetas as $item): ?>
         <article class="gallery-card <?= esc($item['class']) ?>" data-reveal>
           <?php if ($item['type'] === 'image'): ?>
-            <img src="<?= $imagen ?>" alt="<?= esc($item['title']) ?>" width="1448" height="1086" loading="lazy" decoding="async">
+            <img src="<?= $item['image'] ?? $imagen ?>" alt="<?= esc($item['title']) ?>" width="1448" height="1086" loading="lazy" decoding="async">
           <?php elseif ($item['type'] === 'dashboard'): ?>
             <div class="mini-dashboard" aria-hidden="true">
               <div class="mini-dashboard-top"></div>

@@ -54,6 +54,9 @@ class UserModel extends Model
     protected $updatedField  = 'updated_at';
 
     protected $validationRules = [
+        // El "id" necesita su propia regla porque la del email lo usa ({id}) para no
+        // contar al propio usuario como "correo repetido".
+        'id'       => 'permit_empty|is_natural_no_zero',
         'nombre'   => 'required|min_length[2]|max_length[100]',
         'email'    => 'required|valid_email|max_length[150]|is_unique[usuarios.email,id,{id}]',
         'password' => 'required|' . self::PASSWORD_RULE,
