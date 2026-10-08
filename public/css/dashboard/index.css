@@ -1,0 +1,51 @@
+/* ===================================================
+   AquaControl — dashboard/index.css
+   Estilos de la vista app/Views/dashboard/index.php (panel de la pecera): lo que comparten
+   varias de sus partes. Cada parte tiene su hoja en dashboard/partes/.
+   =================================================== */
+
+/* Grilla de dos tarjetas lado a lado. */
+.dashboard-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-grid > * { min-width: 0; }
+
+.control-grid { grid-template-columns: 1.1fr 1fr; }
+
+/* Tarjetas de "Control manual" y del alimentador. */
+.control-card { padding: 24px; }
+
+.control-actions {
+  display: grid;
+  gap: 22px;
+}
+
+.control-inline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.control-inline .form-control { flex: 1; }
+.control-form .btn { width: auto; }
+
+.toggle-copy { color: var(--text-muted); }
+.toggle-copy strong { color: var(--text-primary); }
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 768px) {
+  .control-grid { grid-template-columns: 1fr; }
+
+  .control-inline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .control-inline .btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .control-card { padding: 20px; }
+}

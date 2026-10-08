@@ -1,0 +1,31 @@
+/* ===================================================
+   AquaControl — components/flash_messages.css
+   Estilos del componente app/Views/components/flash_messages.php: los mensajes de un solo
+   uso (exito, error o aviso) que aparecen arriba de los formularios.
+   =================================================== */
+
+.flash {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  animation: fadeInDown 0.3s ease;
+}
+
+.flash-success { background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.3); color: #5DCAA5; }
+.flash-error   { background: rgba(226,75,74,0.1);  border: 1px solid rgba(226,75,74,0.3);  color: #F09595; }
+.flash-info    { background: rgba(55,138,221,0.1); border: 1px solid rgba(55,138,221,0.3); color: #85B7EB; }
+
+/* A los 5 segundos animaciones/generales.js le pone .is-leaving y el mensaje se desvanece. */
+.flash.is-leaving {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

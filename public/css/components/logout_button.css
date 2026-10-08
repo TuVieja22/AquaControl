@@ -1,0 +1,61 @@
+/* ===================================================
+   AquaControl — components/logout_button.css
+   Estilos del componente app/Views/components/logout_button.php: el boton "Salir", un
+   circulo que se estira y muestra el texto al pasar el mouse. El componente va dentro de
+   un elemento con la clase logout-button-wrap (ver la barra en layouts/main.php).
+   =================================================== */
+
+.logout-button-wrap { display: inline-flex; }
+.logout-button-wrap .logout-form { display: inline-flex; margin: 0; }
+
+.logout-button-wrap .Btn {
+  position: relative;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal-900), var(--aqua-cyan));
+  box-shadow: 2px 2px 10px rgba(4, 52, 44, 0.24);
+  font: inherit;
+  appearance: none;
+  cursor: pointer;
+  transition-duration: .3s;
+}
+
+.logout-button-wrap .sign {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition-duration: .3s;
+}
+
+.logout-button-wrap .sign svg { width: 17px; }
+.logout-button-wrap .sign svg path { fill: white; }
+
+.logout-button-wrap .text {
+  position: absolute;
+  right: 0%;
+  width: 0%;
+  opacity: 0;
+  color: white;
+  font-size: 1.2em;
+  font-weight: 600;
+  white-space: nowrap;
+  transition-duration: .3s;
+}
+
+.logout-button-wrap .Btn:hover {
+  width: 125px;
+  border-radius: 40px;
+  box-shadow: 0 10px 24px rgba(29, 158, 117, 0.28);
+}
+
+.logout-button-wrap .Btn:hover .sign { width: 30%; padding-left: 20px; }
+.logout-button-wrap .Btn:hover .text { width: 70%; opacity: 1; padding-right: 10px; }
+.logout-button-wrap .Btn:active { transform: translate(2px, 2px); }

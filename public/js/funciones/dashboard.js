@@ -1,8 +1,9 @@
 /* ===================================================
-   AquaControl — dashboard.js
-   Panel de la pecera: dibuja los datos que manda el servidor y los vuelve a pedir
-   cada 5 s (cada 2 s mientras el alimentador tiene una orden en curso). Los textos
-   ya vienen armados desde PanelPecera.php: aca solo se ponen en su lugar.
+   AquaControl — funciones/dashboard.js
+   Panel de la pecera: pone en su lugar los datos que manda el servidor y los vuelve a
+   pedir cada 5 s (cada 2 s mientras el alimentador tiene una orden en curso). Los
+   textos ya vienen armados desde PanelPecera.php: aca solo se ponen en su lugar.
+   El dibujo del grafico (colores, lineas) esta aparte, en js/animaciones/grafico.js.
    =================================================== */
 
 'use strict';
@@ -12,13 +13,10 @@
   if (!dataNode) return;
 
   const state = JSON.parse(dataNode.textContent || '{}');
-  const CHART_JS = 'https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js';
   const REFRESH_MS = 5000;
   const REFRESH_FEEDING_MS = 2000;
   const STATUS_DOTS = { ok: 'status-ok', neutral: 'status-info', warn: 'status-warn', danger: 'status-danger' };
 
-  let chart = null;
-  let chartKey = '';
   let refreshTimer = null;
 
   const $ = id => document.getElementById(id);
@@ -52,75 +50,6 @@
 
     const pad = n => String(n).padStart(2, '0');
     return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  }
-
-  /* ── Grafico (Chart.js se descarga aparte: si no carga, el resto del panel igual anda) ── */
-  function renderChart() {
-    const canvas = $('ecosystemChart');
-    if (!canvas || typeof window.Chart === 'undefined') return;
-
-    const charts = state.charts || {};
-    // Si los datos no cambiaron desde el ultimo dibujo, no se toca el grafico.
-    const key = `${charts.count}|${(charts.labels || []).at(-1)}|${(charts.temperature || []).at(-1)}|${(charts.ph || []).at(-1)}`;
-    if (chart && key === chartKey) return;
-    chartKey = key;
-
-    if (chart) {
-      chart.data.labels = charts.labels || [];
-      chart.data.datasets[0].data = charts.temperature || [];
-      chart.data.datasets[1].data = charts.ph || [];
-      chart.update('none');
-      return;
-    }
-
-    chart = new window.Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: charts.labels || [],
-        datasets: [
-          { label: 'Temperatura', data: charts.temperature || [], yAxisID: 'temperature', borderColor: '#00d4ff', backgroundColor: 'rgba(0, 212, 255, 0.18)', tension: 0.42, fill: true },
-          { label: 'pH', data: charts.ph || [], yAxisID: 'ph', borderColor: '#40f2bf', backgroundColor: 'rgba(64, 242, 191, 0.04)', tension: 0.42, fill: false }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        elements: {
-          point: { radius: 0, hitRadius: 10 },
-          line: { borderWidth: 4, borderCapStyle: 'round', borderJoinStyle: 'round' }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(8, 14, 27, 0.92)',
-            borderColor: 'rgba(0, 212, 255, 0.24)',
-            borderWidth: 1,
-            titleColor: '#ffffff',
-            bodyColor: 'rgba(159, 225, 203, 0.75)',
-            displayColors: false
-          }
-        },
-        scales: {
-          x: { display: false },
-          temperature: { display: false, position: 'left' },
-          ph: { display: false, position: 'right', grid: { drawOnChartArea: false } }
-        }
-      }
-    });
-  }
-
-  function loadChartJs() {
-    if (window.Chart) return Promise.resolve();
-
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = CHART_JS;
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
   }
 
   /* ── Tarjetas, resumen y listas ── */
@@ -228,7 +157,8 @@
     renderAlerts();
     renderFeedings();
     renderConfig();
-    renderChart();
+    // El grafico lo dibuja animaciones/grafico.js: aca solo se le pasan los numeros.
+    window.AquaGrafico?.dibujar(state.charts);
   }
 
   function showFeedback(id, payload) {
@@ -329,5 +259,4 @@
 
   renderAll();
   scheduleRefresh();
-  loadChartJs().then(renderChart).catch(() => {});
 }());

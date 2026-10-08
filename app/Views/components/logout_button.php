@@ -1,3 +1,4 @@
+<?php usar_css('css/components/logout_button.css') ?>
 <?php // Boton "Salir": cierra la sesion con un POST que lleva el token CSRF. ?>
 <form action="<?= base_url('auth/logout') ?>" method="POST" class="logout-form">
   <?= csrf_field() ?>

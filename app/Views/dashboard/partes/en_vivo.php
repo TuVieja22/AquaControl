@@ -1,6 +1,7 @@
+<?php usar_css('css/dashboard/partes/en_vivo.css') ?>
 <?php
 // Panel "En vivo": temperatura, pH, alertas, estado del ecosistema, grafico y tarjetas de estado.
-// Los ids (temperatura, alertsMetric, etc.) los usa dashboard.js para actualizar sin recargar.
+// Los ids (temperatura, alertsMetric, etc.) los usa funciones/dashboard.js para actualizar sin recargar.
 $cards = $dashboardData['cards'];
 $resumen = $dashboardData['summary'];
 $puntos = ['ok' => 'status-ok', 'neutral' => 'status-info', 'warn' => 'status-warn', 'danger' => 'status-danger'];

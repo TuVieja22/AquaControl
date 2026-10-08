@@ -1,3 +1,4 @@
+<?php usar_css('css/home/secciones/como_funciona.css') ?>
 <?php // "Como funciona": los 3 pasos. El dibujo de cada paso sale de su clase CSS (sensor-visual, etc.). ?>
 <section class="landing-section process-section" id="funciona">
   <div class="container">

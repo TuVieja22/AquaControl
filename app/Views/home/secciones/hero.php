@@ -1,5 +1,6 @@
-<?php // Portada: titulo grande, botones y la imagen del producto de fondo. ?>
-<section class="landing-hero" style="--hero-image: url('<?= base_url('img/aquacontrol-product.webp') ?>');">
+<?php usar_css('css/home/secciones/hero.css') ?>
+<?php // Portada: titulo grande, botones y la imagen del producto de fondo (la foto se elige en hero.css). ?>
+<section class="landing-hero">
   <div class="hero-content container">
     <p class="eyebrow hero-eyebrow" data-reveal> Sistema Inteligente AquaControl IoT</p>
     <h1 data-reveal>Mantén tu acuario bajo control, aunque no estés en casa</h1>

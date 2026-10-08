@@ -1,0 +1,57 @@
+/* ===================================================
+   AquaControl — home/secciones/comparacion.css
+   Estilos de la vista app/Views/home/secciones/comparacion.php: la tabla comparativa.
+   =================================================== */
+
+.comparison-table {
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  box-shadow: var(--shadow-card);
+}
+
+.comparison-row {
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(120px, 0.6fr) minmax(120px, 0.6fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.comparison-row:last-child { border-bottom: 0; }
+
+.comparison-head {
+  background: linear-gradient(90deg, rgba(0,212,255,0.14), rgba(255,255,255,0.04));
+  color: var(--text-primary);
+  font-weight: 900;
+}
+
+.comparison-row span { color: var(--text-muted); }
+
+.comparison-row > strong:nth-child(2) {
+  width: fit-content;
+  min-width: 112px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(0,212,255,0.09);
+  color: var(--aqua-cyan);
+  box-shadow: 0 0 24px rgba(0,212,255,0.12);
+  text-align: center;
+}
+
+.check-cell,
+.check-muted {
+  color: var(--aqua-green);
+  font-weight: 900;
+}
+
+.empty-muted { color: rgba(255,255,255,0.28); }
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 768px) {
+  .comparison-table { overflow-x: auto; }
+  .comparison-row { min-width: 620px; }
+}

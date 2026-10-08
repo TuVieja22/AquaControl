@@ -37,8 +37,11 @@ red con `http://IP-DE-ESTA-PC:8080`.
 | La barra de arriba y el pie | `app/Views/layouts/main.php` |
 | El menu lateral del panel | `app/Views/layouts/panel.php` |
 | Las partes del panel de la pecera | `app/Views/dashboard/partes/` |
-| Colores y tipografias | arriba de todo en `public/css/aqua.css` (`:root`) |
-| Estilos de la portada / del panel / del login | `public/css/home.css`, `dashboard.css`, `auth.css` |
+| Colores y tipografias | arriba de todo en `public/css/layouts/main.css` (`:root`) |
+| Los estilos de una vista | `public/css/`, con la misma ruta y nombre que la vista: los de `app/Views/home/secciones/hero.php` estan en `public/css/home/secciones/hero.css` |
+| Estilos que comparten todas las paginas / las del panel / las de cuenta | `public/css/layouts/main.css`, `panel.css`, `auth.css` |
+| Una animacion o algo que es solo visual (cartel de "cargando", bloques que aparecen, carrusel, dibujo del grafico) | `public/js/animaciones/` |
+| Lo que hace el trabajo en el navegador (validar, comprar, pedir y mostrar los datos del panel) | `public/js/funciones/` |
 | Que direccion abre que pagina | `app/Config/Routes.php` |
 | Que hace cada pagina | `app/Controllers/` |
 | Como se calcula lo que muestra el panel | `app/Libraries/PanelPecera.php` |

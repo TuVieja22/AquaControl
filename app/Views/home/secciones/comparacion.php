@@ -1,3 +1,4 @@
+<?php usar_css('css/home/secciones/comparacion.css') ?>
 <?php
 // "Por que elegir AquaControl": tabla comparativa (true = tilde, false = guion).
 $filas = [

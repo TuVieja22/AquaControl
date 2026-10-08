@@ -1,3 +1,4 @@
+<?php usar_css('css/dashboard/partes/control.css') ?>
 <?php
 // Control manual (modo vacaciones y temperatura objetivo) y rangos optimos vigentes.
 $config = $dashboardData['config'];

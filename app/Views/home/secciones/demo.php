@@ -1,4 +1,5 @@
-<?php // "Dashboard preview": panel de muestra. aqua.js le cambia los numeros cada pocos segundos. ?>
+<?php usar_css('css/home/secciones/demo.css') ?>
+<?php // "Dashboard preview": panel de muestra. animaciones/portada.js le cambia los numeros cada pocos segundos. ?>
 <section class="landing-section dashboard-preview-section" id="demo">
   <div class="container">
     <div class="section-heading" data-reveal>

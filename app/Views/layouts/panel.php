@@ -1,3 +1,4 @@
+<?php usar_css('css/layouts/panel.css') ?>
 <?php
 /*
  * Molde de las paginas del panel (Panel, Dispositivos, Usuarios, Pedidos): menu lateral
@@ -22,10 +23,6 @@ if ($esAdmin) {
 }
 ?>
 <?= $this->extend('layouts/main') ?>
-
-<?= $this->section('estilos') ?>
-  <link rel="stylesheet" href="<?= base_url('css/dashboard.css') ?>">
-<?= $this->endSection() ?>
 
 <?= $this->section('contenido') ?>
 <main class="dashboard-page">

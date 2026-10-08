@@ -1,0 +1,41 @@
+/* ===================================================
+   AquaControl — errors/404.css
+   Estilos de la vista app/Views/errors/404.php ("pagina no encontrada").
+   =================================================== */
+
+.not-found {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.not-found-box { max-width: 460px; margin: auto; }
+.not-found-fish { margin-bottom: 16px; font-size: 80px; opacity: 0.6; }
+
+.not-found h1 {
+  margin-bottom: 8px;
+  color: var(--teal-300);
+  font-family: var(--font-display);
+  font-size: 5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.not-found h2 {
+  margin-bottom: 12px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+}
+
+.not-found p {
+  margin-bottom: 36px;
+  color: rgba(159,225,203,0.5);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.not-found .btn { display: inline-flex; width: auto; padding: 14px 32px; }

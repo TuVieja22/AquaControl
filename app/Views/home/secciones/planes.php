@@ -1,3 +1,4 @@
+<?php usar_css('css/home/secciones/planes.css') ?>
 <?php // "Precio y planes": plan gratis y el kit. El precio sale de commerce.unitPrice (.env). ?>
 <section class="landing-section pricing-section" id="planes">
   <div class="container">

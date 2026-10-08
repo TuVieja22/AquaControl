@@ -1,0 +1,7 @@
+/* ===================================================
+   AquaControl — auth/register.css
+   Estilos propios de la vista app/Views/auth/register.php (crear cuenta).
+   Hoy no necesita ninguno: la tarjeta, el logo y los links salen de layouts/auth.css,
+   y el campo de contrasena de components/campo_password.css.
+   Lo que escribas aca cambia solamente esta pantalla.
+   =================================================== */

@@ -1,0 +1,12 @@
+/* ===================================================
+   AquaControl — users/index.css
+   Estilos propios de la vista app/Views/users/index.php (usuarios).
+   Las tarjetas, la tabla y las etiquetas estan en layouts/panel.css.
+   =================================================== */
+
+/* Etiqueta verde de las cuentas activas. */
+.status-pill.is-active {
+  border-color: rgba(29,158,117,0.28);
+  background: rgba(29,158,117,0.1);
+  color: var(--ok);
+}

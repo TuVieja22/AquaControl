@@ -1,0 +1,94 @@
+/* ===================================================
+   AquaControl — dashboard/partes/alertas_y_alimentaciones.css
+   Estilos de la vista app/Views/dashboard/partes/alertas_y_alimentaciones.php: la lista de
+   alertas sin leer y la tabla de las ultimas alimentaciones.
+   =================================================== */
+
+.content-grid { grid-template-columns: 1.1fr 1fr; }
+
+.alerts-card,
+.feeding-card { padding: 24px; }
+
+/* ── ALERTAS ─────────────────────────────────────────── */
+.alerts-list {
+  display: grid;
+  gap: 14px;
+}
+
+.alert-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(93,202,165,0.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+}
+
+.alert-copy strong { color: var(--text-primary); }
+
+.alert-copy span,
+.empty-state { color: var(--text-muted); }
+
+.alert-badge {
+  min-width: 78px;
+  display: inline-flex;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.level-1 { background: rgba(29,158,117,0.12); color: var(--ok); }
+.level-2 { background: rgba(239,159,39,0.12); color: var(--warn); }
+.level-3 { background: rgba(226,75,74,0.12); color: var(--danger); }
+
+/* ── ALIMENTACIONES ──────────────────────────────────── */
+.feeding-card .table-wrap {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(93,202,165,0.08);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.history-table th {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.feeding-card .history-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-bg-strong);
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 768px) {
+  .content-grid,
+  .alert-item { grid-template-columns: 1fr; }
+
+  .feeding-card .table-wrap { max-height: 280px; }
+}
+
+@media (max-width: 480px) {
+  .alerts-card,
+  .feeding-card { padding: 20px; }
+}

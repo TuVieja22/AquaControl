@@ -90,6 +90,7 @@ app/
     CsrfTokenHeaderFilter.php (devuelve el token CSRF nuevo en un header)
   Helpers/
     formulario_helper.php     (error_campo() y clase_error() para las vistas)
+    estilos_helper.php        (usar_css() y enlaces_css(): la hoja de estilos de cada vista)
   Libraries/
     PanelPecera.php           (datos del panel)
     DeviceAuth.php            (busca el dispositivo por su API key)
@@ -180,7 +181,7 @@ Config base:
 
 ### `app/Config/Autoload.php`
 
-Carga en todas las paginas los helpers `form` (para `set_value()` y `set_checkbox()`) y `formulario` (propio: `error_campo()` y `clase_error()`).
+Carga en todas las paginas los helpers `form` (para `set_value()` y `set_checkbox()`), `formulario` (propio: `error_campo()` y `clase_error()`) y `estilos` (propio: `usar_css()` y `enlaces_css()`, ver FRONTEND_DOCUMENTACION.md).
 
 ### `app/Config/Toolbar.php`
 
@@ -234,7 +235,7 @@ Config CSRF:
 - Header `X-CSRF-TOKEN`.
 - Regenera token en cada submission.
 
-El filtro `csrf` esta activo globalmente (ver `Filters.php`). Los formularios envian `csrf_field()` y las llamadas AJAX mandan el header `X-CSRF-TOKEN` leido de `<meta name="csrf-token">`. Como el token se regenera en cada POST, el filtro `csrfheader` devuelve el token nuevo en el header de respuesta y `window.AquaCsrf` (en `aqua.js`) lo actualiza en la pagina.
+El filtro `csrf` esta activo globalmente (ver `Filters.php`). Los formularios envian `csrf_field()` y las llamadas AJAX mandan el header `X-CSRF-TOKEN` leido de `<meta name="csrf-token">`. Como el token se regenera en cada POST, el filtro `csrfheader` devuelve el token nuevo en el header de respuesta y `window.AquaCsrf` (en `public/js/funciones/aqua.js`) lo actualiza en la pagina.
 
 ### `app/Config/Commerce.php`
 
@@ -353,7 +354,7 @@ Responsabilidad: renderizar la portada con el formulario de compra.
 `index()` lee `Config\Commerce` y `Config\MercadoPago` y pasa dos cosas a la vista `home/index`:
 
 - `producto`: sku, nombre, descripcion, precio, moneda, cantidad maxima, mensaje de entrega y el precio ya formateado para la tarjeta y el resumen.
-- `compra`: lo que necesita `purchase.js` (producto, locale, public key y URL para crear la preferencia). Se imprime como JSON en la pagina.
+- `compra`: lo que necesita `funciones/purchase.js` (producto, locale, public key y URL para crear la preferencia). Se imprime como JSON en la pagina.
 
 Mercado Pago es el unico medio de pago.
 
@@ -436,7 +437,7 @@ Paginas (las cuatro llaman a `pagina($seccion)` y usan la misma vista):
 - `settings()`: configuracion.
 - `profile()`: mi cuenta.
 
-Acciones (responden el JSON del panel actualizado, para que `dashboard.js` redibuje sin recargar):
+Acciones (responden el JSON del panel actualizado, para que `funciones/dashboard.js` redibuje sin recargar):
 
 - `latest()`: datos actualizados (con los filtros del historial de la query string).
 - `markAlertRead($alertId)`: marca una alerta del usuario como leida.
@@ -478,7 +479,7 @@ feeder            hasDevice, online, pending, statusLevel, statusText, lastText,
 latestTimestamp   fecha de la ultima lectura
 ```
 
-El controlador le suma `userName` y `endpoints` (las direcciones que usa `dashboard.js`).
+El controlador le suma `userName` y `endpoints` (las direcciones que usa `funciones/dashboard.js`).
 
 Logica central:
 

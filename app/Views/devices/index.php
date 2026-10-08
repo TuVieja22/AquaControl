@@ -1,3 +1,4 @@
+<?php usar_css('css/devices/index.css') ?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('lateral') ?>

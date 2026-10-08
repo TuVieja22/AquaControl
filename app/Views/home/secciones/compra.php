@@ -1,4 +1,5 @@
-<?php // "Compra segura": formulario del pedido. purchase.js calcula el total y abre Mercado Pago. ?>
+<?php usar_css('css/home/secciones/compra.css') ?>
+<?php // "Compra segura": formulario del pedido. funciones/purchase.js calcula el total y abre Mercado Pago. ?>
 <section class="landing-section checkout-section" id="checkout">
   <div class="container">
     <div class="checkout-layout">

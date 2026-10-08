@@ -1,3 +1,4 @@
+<?php usar_css('css/home/secciones/caracteristicas.css') ?>
 <?php
 // "Caracteristicas principales": 5 tarjetas. El icono sale de la clase CSS icon-<icon>.
 $caracteristicas = [

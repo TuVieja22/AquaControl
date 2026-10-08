@@ -1,0 +1,339 @@
+/* ===================================================
+   AquaControl — home/secciones/compra.css
+   Estilos de la vista app/Views/home/secciones/compra.php: el formulario del pedido.
+   =================================================== */
+
+.checkout-section { padding-top: 0; }
+
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.86fr) minmax(380px, 1.14fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.checkout-copy {
+  position: sticky;
+  top: 110px;
+}
+
+.checkout-copy p { color: var(--text-muted); }
+
+.checkout-copy p:not(.eyebrow) {
+  max-width: 620px;
+  margin-top: 20px;
+  line-height: 1.75;
+}
+
+.trust-row {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.purchase-panel { padding: 28px; }
+
+.checkout-console {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028)),
+    rgba(8, 14, 27, 0.76);
+  box-shadow: var(--shadow-card), 0 0 54px rgba(0,212,255,0.12);
+}
+
+.purchase-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.purchase-panel-tag {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--teal-300);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.purchase-panel-head h3,
+.purchase-summary h4,
+.purchase-method-copy strong {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.purchase-panel-head h3 { font-size: 1.6rem; }
+
+.purchase-status,
+.purchase-summary-note {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.purchase-status {
+  padding: 8px 12px;
+  border: 1px solid var(--surface-border-strong);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  white-space: nowrap;
+}
+
+.purchase-form {
+  display: grid;
+  gap: 22px;
+}
+
+.purchase-field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 16px;
+}
+
+.purchase-field { min-width: 0; }
+
+.purchase-quantity {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 10px;
+}
+
+.purchase-qty-btn {
+  height: 48px;
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius);
+  background: var(--chip-bg);
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  transition: var(--transition);
+}
+
+.purchase-qty-btn:hover,
+.purchase-qty-btn:focus-visible {
+  border-color: rgba(93,202,165,0.3);
+  box-shadow: var(--shadow-glow);
+}
+
+.purchase-qty-input { text-align: center; }
+
+.purchase-methods {
+  display: grid;
+  gap: 12px;
+  border: 0;
+}
+
+.purchase-method-card,
+.purchase-summary,
+.purchase-sdk-panel {
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: var(--surface-bg);
+}
+
+.purchase-method-card {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: start;
+  gap: 14px;
+  padding: 16px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.purchase-method-card.is-selected {
+  border-color: rgba(93,202,165,0.32);
+  box-shadow: var(--shadow-glow);
+}
+
+.purchase-method-card input {
+  margin-top: 4px;
+  accent-color: var(--aqua-cyan);
+}
+
+.purchase-method-copy small {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.purchase-summary { padding: 20px; }
+
+.purchase-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.purchase-summary-list {
+  display: grid;
+  gap: 14px;
+}
+
+.purchase-summary-list div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.purchase-summary-list dt { color: var(--text-muted); }
+
+.purchase-summary-list dd {
+  margin: 0;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.purchase-summary-total-row {
+  padding-top: 14px;
+  border-top: 1px solid var(--surface-border);
+}
+
+.purchase-summary-total-row dt,
+.purchase-summary-total-row dd {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.purchase-consent { margin-top: -4px; }
+
+/* Mensaje debajo del formulario (lo muestra funciones/purchase.js). */
+.purchase-feedback {
+  display: none;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+.purchase-feedback.is-visible { display: block; }
+
+.purchase-feedback.is-error {
+  background: rgba(226,75,74,0.1);
+  border-color: rgba(226,75,74,0.24);
+  color: #f7b2b1;
+}
+
+.purchase-feedback.is-success {
+  background: rgba(29,158,117,0.1);
+  border-color: rgba(29,158,117,0.24);
+  color: var(--teal-100);
+}
+
+.purchase-feedback.is-info {
+  background: rgba(29,158,117,0.08);
+  border-color: rgba(93,202,165,0.16);
+  color: var(--text-muted);
+}
+
+/* Boton "Obtener mi AquaControl" (brillo que cruza al pasar el mouse). */
+.purchase-actions { display: flex; }
+
+.purchase-payment-action .Btn {
+  position: relative;
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #78efff, var(--aqua-cyan) 58%, #2ca5ff);
+  color: #00131c;
+  font-weight: 900;
+  box-shadow: 0 18px 50px rgba(0,212,255,0.24);
+  cursor: pointer;
+  transition-duration: .3s;
+}
+
+.purchase-payment-action .Btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background-color: rgba(255,255,255,0.7);
+  mix-blend-mode: soft-light;
+  transition-duration: .3s;
+}
+
+.purchase-payment-action .Btn:hover::before {
+  border-radius: 0;
+  transform: translate(100%, -50%);
+}
+
+.purchase-payment-action .Btn:active { transform: translateY(1px); }
+
+.purchase-payment-action .Btn:disabled {
+  opacity: 0.88;
+  cursor: wait;
+}
+
+.purchase-payment-action .svgIcon { width: 16px; }
+.purchase-payment-action .svgIcon path { fill: #00131c; }
+
+.purchase-payment-action .purchase-submit-label,
+.purchase-payment-action .svgIcon {
+  position: relative;
+  z-index: 1;
+}
+
+/* Lugar donde aparece el boton oficial de Mercado Pago. */
+.purchase-sdk-area {
+  display: grid;
+  gap: 16px;
+}
+
+.purchase-sdk-panel { padding: 18px; }
+.purchase-sdk-panel[hidden] { display: none !important; }
+
+.purchase-sdk-panel.is-loading::before {
+  content: 'Preparando checkout...';
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 980px) {
+  .checkout-layout { grid-template-columns: 1fr; }
+  .checkout-copy { position: static; }
+  .purchase-panel { padding: 24px; }
+}
+
+@media (max-width: 640px) {
+  .purchase-field-grid,
+  .purchase-summary-head,
+  .purchase-summary-list div,
+  .purchase-panel-head {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .purchase-field-grid { gap: 14px; }
+  .purchase-quantity { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+
+  .purchase-panel,
+  .purchase-summary,
+  .purchase-sdk-panel { padding: 18px; }
+
+  .purchase-summary-list dd { text-align: left; }
+}
+
+@media (max-width: 520px) {
+  /* En celulares chicos esta seccion vuelve a tener el espacio de arriba de las demas. */
+  .checkout-section { padding-top: 64px; }
+}

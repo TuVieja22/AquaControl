@@ -1,6 +1,7 @@
 /* ===================================================
-   AquaControl — auth.css
-   Paginas de cuenta: login, registro, recuperar y nueva contrasena.
+   AquaControl — layouts/auth.css
+   Estilos del molde de las pantallas de cuenta (app/Views/layouts/auth.php): la tarjeta
+   centrada, el logo y los links que comparten login, registro, recuperar y nueva contrasena.
    =================================================== */
 
 .auth-page {
@@ -54,17 +55,7 @@
   font-size: 0.875rem;
 }
 
-/* Renglon con la etiqueta "Contrasena" y el link "Olvidaste tu contrasena?". */
-.auth-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.auth-label-row .form-label { margin: 0; }
-.auth-label-row .auth-link { font-size: 0.8rem; }
-
+/* Links de la tarjeta ("Olvidaste tu contrasena?", "Registrate gratis") y el renglon de abajo. */
 .auth-link {
   color: var(--teal-300);
   transition: color var(--transition);
@@ -80,47 +71,6 @@
   color: rgba(159,225,203,0.45);
   font-size: 0.85rem;
   text-align: center;
-}
-
-/* Contrasena con el boton del ojito. */
-.input-group { position: relative; }
-.input-group .form-control { padding-right: 44px; }
-
-.input-toggle {
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: rgba(159,225,203,0.45);
-  font-size: 16px;
-  transform: translateY(-50%);
-  transition: var(--transition);
-}
-
-.input-toggle:hover { color: var(--teal-300); }
-
-/* Barra de seguridad de la contrasena (la pinta auth.js). */
-.strength-bar {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.strength-seg {
-  flex: 1;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.08);
-  transition: background 0.3s ease;
-}
-
-.strength-text {
-  height: 14px;
-  margin-top: 5px;
-  color: var(--text-muted);
-  font-size: 0.72rem;
 }
 
 @keyframes fadeInUp {

@@ -29,7 +29,7 @@ class Home extends BaseController
                 'precioTarjeta'   => $precio !== null ? $tienda->moneda() . ' ' . number_format($precio, 0, ',', '.') : 'Consultar',
                 'precioResumen'   => $precio !== null ? $tienda->moneda() . ' ' . number_format($precio, 2, ',', '.') : null,
             ],
-            // Lo que necesita purchase.js para calcular el total y abrir Mercado Pago.
+            // Lo que necesita funciones/purchase.js para calcular el total y abrir Mercado Pago.
             'compra'   => [
                 'product' => [
                     'sku'         => $tienda->productSku,

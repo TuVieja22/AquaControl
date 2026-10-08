@@ -1,0 +1,258 @@
+/* ===================================================
+   AquaControl — home/secciones/producto.css
+   Estilos de la vista app/Views/home/secciones/producto.php: "Producto en accion" (la galeria).
+   =================================================== */
+
+.product-gallery {
+  display: grid;
+  grid-template-columns: 1.16fr 0.84fr;
+  grid-auto-rows: minmax(260px, auto);
+  gap: 16px;
+}
+
+.gallery-card {
+  position: relative;
+  min-height: 300px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  background: var(--aqua-panel);
+  box-shadow: var(--shadow-card);
+}
+
+.gallery-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 1px solid rgba(0,212,255,0);
+  border-radius: inherit;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.gallery-card:hover::before {
+  border-color: rgba(0,212,255,0.52);
+  box-shadow: inset 0 0 36px rgba(0,212,255,0.18), 0 0 36px rgba(0,212,255,0.16);
+}
+
+.gallery-card img {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  transition: transform 700ms ease, filter 700ms ease;
+}
+
+.gallery-card:hover img {
+  filter: saturate(1.08) contrast(1.05);
+  transform: scale(1.045);
+}
+
+.gallery-product {
+  grid-row: span 2;
+  min-height: 620px;
+}
+
+.gallery-product img { object-position: center; }
+.gallery-sensors img { object-position: left center; }
+
+.gallery-copy {
+  position: absolute;
+  inset: auto 16px 16px;
+  z-index: 3;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  background: rgba(5, 7, 13, 0.62);
+  backdrop-filter: blur(18px);
+}
+
+/* Mini panel y acuario dibujados con CSS (sin imagenes). */
+.mini-dashboard,
+.aquarium-visual {
+  position: absolute;
+  inset: 0;
+  padding: 28px;
+}
+
+.mini-dashboard { background: linear-gradient(145deg, rgba(15,23,42,0.98), rgba(5,7,13,0.9)), #0f172a; }
+
+.mini-dashboard-top {
+  width: 58%;
+  height: 12px;
+  margin-bottom: 34px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--aqua-cyan), transparent);
+}
+
+.mini-chart {
+  height: 150px;
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(0,212,255,0.16);
+  border-radius: 8px;
+  background: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), rgba(255,255,255,0.035);
+  background-size: 100% 34px;
+}
+
+.mini-chart span {
+  flex: 1;
+  border-radius: 999px 999px 4px 4px;
+  background: linear-gradient(180deg, var(--aqua-cyan), rgba(64,242,191,0.4));
+  box-shadow: 0 0 24px rgba(0,212,255,0.22);
+  animation: metricFloat 2.8s ease-in-out infinite alternate;
+}
+
+.mini-chart span:nth-child(2n) { animation-delay: 240ms; }
+
+/* Altura de cada barrita del grafico de muestra. */
+.mini-chart span:nth-child(1) { height: 42%; }
+.mini-chart span:nth-child(2) { height: 65%; }
+.mini-chart span:nth-child(3) { height: 54%; }
+.mini-chart span:nth-child(4) { height: 78%; }
+.mini-chart span:nth-child(5) { height: 62%; }
+
+.mini-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mini-metrics span {
+  padding: 16px;
+  border: 1px solid rgba(0,212,255,0.14);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.045);
+  color: var(--text-primary);
+}
+
+.aquarium-visual {
+  background:
+    linear-gradient(180deg, rgba(0,212,255,0.18), transparent 22%),
+    linear-gradient(180deg, rgba(5, 46, 73, 0.95), rgba(5, 7, 13, 0.96));
+}
+
+.aquarium-light {
+  position: absolute;
+  top: 28px;
+  left: 12%;
+  right: 12%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--aqua-cyan), transparent);
+  box-shadow: 0 0 32px rgba(0,212,255,0.5);
+}
+
+.aquarium-fish {
+  position: absolute;
+  width: 52px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f8bd55, #ff7b54);
+  box-shadow: 0 0 22px rgba(248,189,85,0.18);
+}
+
+.aquarium-fish::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: -14px;
+  border-left: 17px solid #ff7b54;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+.fish-one {
+  top: 33%;
+  left: 19%;
+  animation: glideOne 7s ease-in-out infinite alternate;
+}
+
+.fish-two {
+  top: 47%;
+  right: 18%;
+  width: 42px;
+  height: 18px;
+  background: linear-gradient(90deg, var(--aqua-green), #65a9ff);
+  transform: scaleX(-1);
+  animation: glideTwo 8s ease-in-out infinite alternate;
+}
+
+.fish-two::after { border-left-color: #65a9ff; }
+
+.aquarium-plant {
+  position: absolute;
+  bottom: 0;
+  width: 16px;
+  height: 92px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(180deg, var(--aqua-green), rgba(64,242,191,0.12));
+  transform-origin: bottom;
+  animation: plantWave 3.6s ease-in-out infinite alternate;
+}
+
+.plant-one { left: 18%; }
+.plant-two { right: 22%; height: 128px; animation-delay: 500ms; }
+
+.aquarium-bubble {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(255,255,255,0.72);
+  border-radius: 50%;
+  opacity: 0.65;
+  animation: bubbleRise 4s ease-in infinite;
+}
+
+.bubble-one { left: 30%; bottom: 40px; }
+.bubble-two { left: 37%; bottom: 70px; animation-delay: 800ms; }
+.bubble-three { right: 33%; bottom: 46px; animation-delay: 1500ms; }
+
+/* ── ANIMACIONES ─────────────────────────────────────── */
+@keyframes metricFloat {
+  from { transform: scaleY(0.86); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes glideOne {
+  to { transform: translate(42px, 12px); }
+}
+
+@keyframes glideTwo {
+  to { transform: scaleX(-1) translate(38px, -14px); }
+}
+
+@keyframes plantWave {
+  to { transform: skewX(-7deg); }
+}
+
+@keyframes bubbleRise {
+  to { transform: translateY(-140px); opacity: 0; }
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 980px) {
+  .product-gallery { grid-template-columns: 1fr; }
+  .gallery-product { min-height: 440px; }
+}
+
+@media (max-width: 768px) {
+  .gallery-card,
+  .gallery-product { min-height: 360px; }
+
+  .gallery-copy {
+    inset: auto 12px 12px;
+    padding: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-chart span,
+  .aquarium-fish,
+  .aquarium-plant,
+  .aquarium-bubble { animation: none !important; }
+}

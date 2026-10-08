@@ -1,0 +1,7 @@
+/* ===================================================
+   AquaControl — auth/reset.css
+   Estilos propios de la vista app/Views/auth/reset.php (elegir una contrasena nueva).
+   Hoy no necesita ninguno: la tarjeta, el logo y los links salen de layouts/auth.css,
+   y el campo de contrasena de components/campo_password.css.
+   Lo que escribas aca cambia solamente esta pantalla.
+   =================================================== */

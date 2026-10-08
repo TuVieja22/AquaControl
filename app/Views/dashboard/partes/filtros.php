@@ -1,3 +1,4 @@
+<?php usar_css('css/dashboard/partes/filtros.css') ?>
 <?php // Filtros del historial (solo en /dashboard/history): fechas y dispositivo. ?>
 <section class="glass-card history-filters" id="filtros-historial">
   <div class="panel-head">

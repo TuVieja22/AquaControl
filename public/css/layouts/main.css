@@ -1,9 +1,9 @@
 /* ===================================================
-   AquaControl — aqua.css
-   Estilos que comparten TODAS las paginas. Cada pagina suma el suyo:
-     home.css      -> portada y compra
-     dashboard.css -> panel, dispositivos, usuarios y pedidos
-     auth.css      -> login, registro y recuperar contrasena
+   AquaControl — layouts/main.css
+   Estilos del molde comun (app/Views/layouts/main.php): los comparten TODAS las paginas.
+   Cada vista tiene su propia hoja en public/css, con su misma ruta y nombre:
+     app/Views/auth/login.php  ->  public/css/auth/login.css
+   y la pide en su primera linea con usar_css('css/auth/login.css').
    =================================================== */
 
 /* ── 1. COLORES, LETRAS Y MEDIDAS ─────────────────────
@@ -241,62 +241,8 @@ button { cursor: pointer; font-family: inherit; }
   font-size: 0.85rem;
 }
 
-/* Boton "Salir": un circulo que se estira y muestra el texto al pasar el mouse. */
-.logout-button-wrap { display: inline-flex; }
+/* El boton "Salir" (components/logout_button.css) va al final de la barra. */
 .navbar-logout { margin-left: 4px; }
-.logout-button-wrap .logout-form { display: inline-flex; margin: 0; }
-
-.logout-button-wrap .Btn {
-  position: relative;
-  width: 45px;
-  height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  overflow: hidden;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--teal-900), var(--aqua-cyan));
-  box-shadow: 2px 2px 10px rgba(4, 52, 44, 0.24);
-  font: inherit;
-  appearance: none;
-  cursor: pointer;
-  transition-duration: .3s;
-}
-
-.logout-button-wrap .sign {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition-duration: .3s;
-}
-
-.logout-button-wrap .sign svg { width: 17px; }
-.logout-button-wrap .sign svg path { fill: white; }
-
-.logout-button-wrap .text {
-  position: absolute;
-  right: 0%;
-  width: 0%;
-  opacity: 0;
-  color: white;
-  font-size: 1.2em;
-  font-weight: 600;
-  white-space: nowrap;
-  transition-duration: .3s;
-}
-
-.logout-button-wrap .Btn:hover {
-  width: 125px;
-  border-radius: 40px;
-  box-shadow: 0 10px 24px rgba(29, 158, 117, 0.28);
-}
-
-.logout-button-wrap .Btn:hover .sign { width: 30%; padding-left: 20px; }
-.logout-button-wrap .Btn:hover .text { width: 70%; opacity: 1; padding-right: 10px; }
-.logout-button-wrap .Btn:active { transform: translate(2px, 2px); }
 
 /* ── 6. BOTONES ────────────────────────────────────── */
 .btn {
@@ -386,6 +332,8 @@ button { cursor: pointer; font-family: inherit; }
 .form-control.is-invalid { border-color: var(--danger); }
 .form-control.is-invalid:focus { box-shadow: 0 0 0 3px rgba(226,75,74,0.15); }
 
+/* Cajita con el error de un campo (la imprime error_campo() y la llena funciones/auth.js).
+   El icono de aviso lo pone el CSS y, si no hay mensaje, la cajita no se ve. */
 .invalid-feedback {
   display: flex;
   align-items: center;
@@ -394,6 +342,9 @@ button { cursor: pointer; font-family: inherit; }
   color: #F09595;
   font-size: 0.78rem;
 }
+
+.invalid-feedback::before { content: "\26A0"; }
+.invalid-feedback:empty { display: none; }
 
 .form-check {
   display: flex;
@@ -411,24 +362,9 @@ button { cursor: pointer; font-family: inherit; }
   accent-color: var(--aqua-cyan);
 }
 
-/* ── 8. MENSAJES (flash) ───────────────────────────── */
-.flash {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  padding: 12px 18px;
-  border-radius: var(--radius);
-  font-size: 0.875rem;
-  animation: fadeInDown 0.3s ease;
-}
-
-.flash-success { background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.3); color: #5DCAA5; }
-.flash-error   { background: rgba(226,75,74,0.1);  border: 1px solid rgba(226,75,74,0.3);  color: #F09595; }
-.flash-info    { background: rgba(55,138,221,0.1); border: 1px solid rgba(55,138,221,0.3); color: #85B7EB; }
-
-/* ── 9. PANEL "EN VIVO" ────────────────────────────────
-   Lo usan la demo de la portada y el panel real (dashboard.css le agrega detalles). */
+/* ── 8. PANEL "EN VIVO" ────────────────────────────────
+   Lo usan dos vistas de paginas distintas, por eso esta en el molde comun: la demo de
+   la portada (home/secciones/demo.css) y el panel real (dashboard/partes/en_vivo.css). */
 .dashboard-preview {
   padding: clamp(18px, 3vw, 32px);
   border: 1px solid rgba(0,212,255,0.18);
@@ -610,7 +546,7 @@ button { cursor: pointer; font-family: inherit; }
   animation: livePulse 1.9s ease-in-out infinite;
 }
 
-/* ── 10. PIE DE PAGINA ─────────────────────────────── */
+/* ── 9. PIE DE PAGINA ──────────────────────────────── */
 .footer {
   padding: 54px 0 40px;
   border-top: 1px solid rgba(255,255,255,0.08);
@@ -700,8 +636,8 @@ button { cursor: pointer; font-family: inherit; }
 
 .footer-copy strong { color: var(--aqua-cyan); }
 
-/* ── 11. CARTEL DE "CARGANDO" ──────────────────────────
-   Lo muestra aqua.js (window.AquaLoader) si una carga tarda mas de 300 ms. */
+/* ── 10. CARTEL DE "CARGANDO" ─────────────────────────
+   Lo muestra animaciones/generales.js (window.AquaLoader) si una carga tarda mas de 300 ms. */
 .page-loader-overlay {
   position: fixed;
   inset: 0;
@@ -745,45 +681,7 @@ html.js .page-loader-overlay.is-visible { display: flex; }
   box-shadow: 0 0 24px rgba(0,212,255,0.62);
 }
 
-/* ── 12. PAGINA 404 ────────────────────────────────── */
-.not-found {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 24px;
-  text-align: center;
-}
-
-.not-found-box { max-width: 460px; margin: auto; }
-.not-found-fish { margin-bottom: 16px; font-size: 80px; opacity: 0.6; }
-
-.not-found h1 {
-  margin-bottom: 8px;
-  color: var(--teal-300);
-  font-family: var(--font-display);
-  font-size: 5rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-}
-
-.not-found h2 {
-  margin-bottom: 12px;
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-}
-
-.not-found p {
-  margin-bottom: 36px;
-  color: rgba(159,225,203,0.5);
-  font-size: 0.95rem;
-  line-height: 1.7;
-}
-
-.not-found .btn { display: inline-flex; width: auto; padding: 14px 32px; }
-
-/* ── 13. ANIMACIONES ───────────────────────────────── */
+/* ── 11. ANIMACIONES ───────────────────────────────── */
 @keyframes lightSweep {
   from { transform: translateX(-2%); opacity: 0.72; }
   to { transform: translateX(2%); opacity: 1; }
@@ -794,16 +692,11 @@ html.js .page-loader-overlay.is-visible { display: flex; }
   50% { transform: scale(0.72); opacity: 0.68; }
 }
 
-@keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes loaderSpin {
   to { transform: rotate(360deg); }
 }
 
-/* ── 14. PANTALLAS MAS CHICAS ──────────────────────── */
+/* ── 12. PANTALLAS MAS CHICAS ──────────────────────── */
 @media (max-width: 1180px) {
   .dashboard-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-chart-area { grid-template-columns: 1fr; }

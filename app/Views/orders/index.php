@@ -1,3 +1,4 @@
+<?php usar_css('css/orders/index.css') ?>
 <?php
 $aprobados = $summary['aprobado'] ?? ['cantidad' => 0, 'total' => 0];
 $pendientes = (int) ($summary['pendiente']['cantidad'] ?? 0) + (int) ($summary['en_proceso']['cantidad'] ?? 0);

@@ -1,3 +1,4 @@
+<?php usar_css('css/home/secciones/beneficios.css') ?>
 <?php
 // "Beneficios reales": 4 tarjetas con tilde.
 $beneficios = [

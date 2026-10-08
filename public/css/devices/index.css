@@ -1,0 +1,105 @@
+/* ===================================================
+   AquaControl — devices/index.css
+   Estilos propios de la vista app/Views/devices/index.php (dispositivos).
+   Las tarjetas, la tabla y las etiquetas estan en layouts/panel.css.
+   =================================================== */
+
+/* Formulario de alta a la izquierda y listado a la derecha. */
+.management-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.75fr) minmax(0, 1.25fr);
+  align-items: start;
+  gap: 20px;
+}
+
+/* Sin esto, una tabla ancha estiraba la pagina en el celular (en vez de deslizarse dentro de su tarjeta). */
+.management-grid > * { min-width: 0; }
+
+/* Botones de cada fila: Editar, Generar key, Revocar y Eliminar. */
+.management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.management-actions .btn { width: auto; }
+.management-actions form { margin: 0; }
+
+.danger-action {
+  border-color: rgba(226,75,74,0.28);
+  color: #f7b2b1;
+}
+
+.danger-action:hover,
+.danger-action:focus-visible {
+  border-color: rgba(226,75,74,0.42);
+  background: rgba(226,75,74,0.1);
+}
+
+/* API key recien generada. */
+.api-key-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  border-color: var(--surface-border-strong);
+}
+
+.api-key-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.api-key-value code {
+  min-width: 0;
+  flex: 1 1 280px;
+  padding: 12px 14px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.api-key-value .btn { width: auto; }
+
+.api-key-help {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.api-key-example {
+  margin: 0;
+  padding: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.api-key-cell code {
+  display: block;
+  color: var(--text-primary);
+}
+
+.api-key-cell small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 980px) {
+  .management-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .management-actions .btn,
+  .management-actions form { width: 100%; }
+}

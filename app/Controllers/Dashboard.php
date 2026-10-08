@@ -12,7 +12,7 @@ use Config\Feeding;
 /**
  * Panel de la pecera. Las paginas (panel, historial, configuracion y mi cuenta) usan la
  * misma vista; las acciones (alimentar, horarios, etc.) responden JSON con los datos
- * actualizados para que dashboard.js redibuje sin recargar.
+ * actualizados para que funciones/dashboard.js redibuje sin recargar.
  */
 class Dashboard extends BaseController
 {
@@ -38,7 +38,7 @@ class Dashboard extends BaseController
         return $this->pagina('profile');
     }
 
-    /** Datos actualizados (dashboard.js los pide cada pocos segundos). */
+    /** Datos actualizados (funciones/dashboard.js los pide cada pocos segundos). */
     public function latest(): ResponseInterface
     {
         return $this->respuesta();
@@ -190,7 +190,7 @@ class Dashboard extends BaseController
         ]);
     }
 
-    /** Direcciones que usa dashboard.js (mantienen los filtros del historial). */
+    /** Direcciones que usa funciones/dashboard.js (mantienen los filtros del historial). */
     private function endpoints(array $filtros): array
     {
         $query = $filtros['query'] === [] ? '' : '?' . http_build_query($filtros['query']);

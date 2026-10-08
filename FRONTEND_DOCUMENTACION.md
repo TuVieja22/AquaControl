@@ -21,11 +21,11 @@ El estado persistente real vive en backend: sesion, base de datos y configuracio
 | Vistas PHP de CodeIgniter | Renderizado HTML server-side, con layouts (`extend` / `section`). |
 | HTML5 + CSS3 | Maquetacion, formularios, tablas, panel y portada. |
 | JavaScript vanilla | Validaciones, cartel de carga, compra, panel en vivo. |
-| Chart.js 4 por CDN | Grafico del panel. `dashboard.js` lo carga recien cuando hace falta. |
-| Mercado Pago JS SDK | Boton de pago, cargado por `purchase.js` al confirmar la compra. |
+| Chart.js 4 por CDN | Grafico del panel. `animaciones/grafico.js` lo carga recien cuando hace falta. |
+| Mercado Pago JS SDK | Boton de pago, cargado por `funciones/purchase.js` al confirmar la compra. |
 | Google Fonts | Inter y Poppins, cargadas desde `layouts/main.php` sin frenar el dibujo de la pagina. |
 
-No hay `package.json`, bundler, React ni Vue. La arquitectura es de paginas PHP con un archivo JS por pantalla.
+No hay `package.json`, bundler, React ni Vue. La arquitectura es de paginas PHP con su JavaScript separado en dos carpetas: `public/js/funciones/` (lo que hace el trabajo) y `public/js/animaciones/` (lo que es solo visual).
 
 ## Arquitectura frontend
 
@@ -38,8 +38,8 @@ flowchart TD
     V --> P[layouts/panel.php: menu lateral]
     V --> L[layouts/main.php: head, barra y pie]
     P --> L
-    L --> CSS[aqua.css + CSS de la pagina]
-    L --> JS[aqua.js + JS de la pagina]
+    L --> CSS[Hoja de estilos de cada vista]
+    L --> JS[JS de todas las paginas + JS de la pagina]
     JS --> API[Endpoints JSON o formularios POST]
     API --> JS
     JS --> DOM[Actualizacion del DOM]
@@ -49,14 +49,16 @@ flowchart TD
 
 Todas las vistas empiezan con `$this->extend(...)` y completan secciones del molde:
 
-- **`layouts/main.php`** es el molde de todas las paginas: `<head>`, barra de navegacion y pie. Secciones: `contenido` (obligatoria), `estilos` y `scripts` (opcionales).
+- **`layouts/main.php`** es el molde de todas las paginas: `<head>`, barra de navegacion y pie. Secciones: `contenido` (obligatoria), `cabecera` (etiquetas extra para el `<head>`) y `scripts` (opcionales).
 - **`layouts/panel.php`** extiende a `main` y agrega el menu lateral. Lo usan el panel, Dispositivos, Usuarios y Pedidos. Secciones: `lateral` (titulo sobre el menu), `panel` (contenido) y `scripts`.
+- **`layouts/auth.php`** extiende a `main` y pone la tarjeta centrada de las pantallas de cuenta (login, registro, recuperar y nueva contrasena), ademas de cargar `funciones/auth.js`. Seccion: `tarjeta`.
 
-Cada vista pide sus propios archivos: un `<link>` en la seccion `estilos` y un `<script>` en la seccion `scripts`. Los controladores no saben nada de CSS ni de JS.
+Cada vista pide sus propios archivos: su hoja de estilos con `usar_css()` en la primera linea (ver "CSS y sistema visual") y su `<script>` en la seccion `scripts`. Los controladores no saben nada de CSS ni de JS.
 
-Ejemplo minimo de una pagina nueva del panel:
+Ejemplo minimo de una pagina nueva del panel (`app/Views/mi_carpeta/mi_pagina.php`, con sus estilos en `public/css/mi_carpeta/mi_pagina.css`):
 
 ```php
+<?php usar_css('css/mi_carpeta/mi_pagina.css') ?>
 <?= $this->extend('layouts/panel') ?>
 
 <?= $this->section('lateral') ?>
@@ -68,6 +70,8 @@ Ejemplo minimo de una pagina nueva del panel:
 <?= $this->endSection() ?>
 ```
 
+Si la pagina necesita JavaScript, sus `<script>` van en la seccion `scripts`, separados por lo que hacen: el codigo que hace el trabajo en `public/js/funciones/` y lo que es solo visual en `public/js/animaciones/` (ver "JavaScript").
+
 ## Estructura de carpetas frontend
 
 ```text
@@ -75,6 +79,7 @@ app/Views/
   layouts/
     main.php                    (molde de todas las paginas)
     panel.php                   (molde con menu lateral)
+    auth.php                    (molde de las pantallas de cuenta)
   components/
     flash_messages.php          (mensajes de exito / error / aviso)
     logout_button.php           (boton "Salir")
@@ -120,16 +125,41 @@ app/Views/
     404.php
 
 public/
-  css/
-    aqua.css                    (global: se carga en todas las paginas)
-    home.css                    (portada y compra)
-    dashboard.css               (panel, dispositivos, usuarios y pedidos)
-    auth.css                    (login, registro, recuperar)
+  css/                          (una hoja por vista, con su misma ruta y nombre)
+    layouts/
+      main.css                  (global: colores, base, barra, botones, formularios, pie)
+      panel.css                 (menu lateral y lo comun de las paginas del panel)
+      auth.css                  (tarjeta centrada de las pantallas de cuenta)
+    components/
+      flash_messages.css
+      logout_button.css
+      campo_password.css
+    home/
+      index.css                 (lo que comparten varias secciones de la portada)
+      secciones/                (hero.css, producto.css, ... una por seccion)
+    auth/
+      login.css, register.css, recover.css, reset.css
+    dashboard/
+      index.css                 (lo que comparten varias partes del panel)
+      partes/                   (filtros.css, en_vivo.css, ... una por parte)
+    devices/
+      index.css, edit.css
+    users/
+      index.css, edit.css
+    orders/
+      index.css
+    errors/
+      404.css
   js/
-    aqua.js                     (global: se carga en todas las paginas)
-    auth.js
-    dashboard.js
-    purchase.js
+    funciones/                  (lo que hace el trabajo: datos, formularios, servidor)
+      aqua.js                   (todas las paginas)
+      auth.js
+      dashboard.js
+      purchase.js
+    animaciones/                (lo que es solo visual)
+      generales.js              (todas las paginas)
+      portada.js
+      grafico.js
   img/
     aquacontrol-product.webp
   favicon.ico
@@ -137,17 +167,17 @@ public/
 
 ## Carga de assets por pantalla
 
-| Pantalla | Vista | Molde | CSS propio | JS propio |
+| Pantalla | Vista | Molde | CSS (ademas de `layouts/main.css`) | JS propio |
 | --- | --- | --- | --- | --- |
-| Portada / compra | `home/index.php` | `main` | `home.css` | `purchase.js` |
-| Cuentas | `auth/*.php` | `main` | `auth.css` | `auth.js` |
-| Panel de la pecera | `dashboard/index.php` | `panel` | `dashboard.css` | `dashboard.js` |
-| Dispositivos | `devices/*.php` | `panel` | `dashboard.css` | ninguno |
-| Usuarios | `users/*.php` | `panel` | `dashboard.css` | ninguno |
-| Pedidos | `orders/index.php` | `panel` | `dashboard.css` | ninguno |
-| 404 | `errors/404.php` | `main` | ninguno | ninguno |
+| Portada / compra | `home/index.php` | `main` | `home/index.css` y una hoja por seccion (`home/secciones/*.css`) | `animaciones/portada.js` y `funciones/purchase.js` |
+| Cuentas | `auth/*.php` | `auth` | `layouts/auth.css`, `components/campo_password.css` y la de la vista (`auth/login.css`, ...) | `funciones/auth.js` |
+| Panel de la pecera | `dashboard/index.php` | `panel` | `layouts/panel.css`, `dashboard/index.css` y una hoja por parte (`dashboard/partes/*.css`) | `animaciones/grafico.js` y `funciones/dashboard.js` |
+| Dispositivos | `devices/*.php` | `panel` | `layouts/panel.css` y `devices/index.css` o `devices/edit.css` | ninguno |
+| Usuarios | `users/*.php` | `panel` | `layouts/panel.css` y `users/index.css` o `users/edit.css` | ninguno |
+| Pedidos | `orders/index.php` | `panel` | `layouts/panel.css` y `orders/index.css` | ninguno |
+| 404 | `errors/404.php` | `main` | `errors/404.css` | ninguno |
 
-`aqua.css` y `aqua.js` se cargan siempre desde `layouts/main.php`. `dashboard.css` lo carga `layouts/panel.php`.
+`layouts/main.css`, `funciones/aqua.js` y `animaciones/generales.js` se cargan siempre desde `layouts/main.php`. Las hojas de los componentes (`components/*.css`) se cargan solo en las paginas donde aparece el componente.
 
 ## Archivos importantes
 
@@ -156,23 +186,28 @@ public/
 Define la estructura del documento:
 
 - Calcula si hay usuario autenticado y si es administrador.
-- `<meta name="csrf-token">` y `<meta name="csrf-header">`: de ahi saca `aqua.js` el token para los pedidos AJAX.
+- `<meta name="csrf-token">` y `<meta name="csrf-header">`: de ahi saca `funciones/aqua.js` el token para los pedidos AJAX.
 - Un script de una linea agrega la clase `js` a `<html>` (las animaciones de aparicion solo se aplican si hay JavaScript).
 - Tipografias con `media="print" onload="this.media='all'"`: se descargan sin frenar el primer dibujo de la pagina.
-- Cartel de "cargando" (`[data-page-loader]`), oculto hasta que `aqua.js` lo muestra.
+- `enlaces_css()` escribe los `<link>` de las hojas de estilo que pidieron las vistas de esa pagina.
+- Cartel de "cargando" (`[data-page-loader]`), oculto hasta que `animaciones/generales.js` lo muestra.
 - Barra de navegacion: los invitados ven login/registro; los usuarios ven panel, dispositivos y salir; los administradores tambien ven usuarios y pedidos.
 - Pie de pagina.
-- Carga `aqua.js` y despues la seccion `scripts` de la pagina.
+- Carga `funciones/aqua.js`, `animaciones/generales.js` y despues la seccion `scripts` de la pagina.
 
-Orden importante: `aqua.js` corre antes que el JS de la pagina, que puede usar `window.AquaCsrf` y `window.AquaLoader`.
+Orden importante: esos dos corren antes que el JS de la pagina, que puede usar `window.AquaCsrf` (de `funciones/aqua.js`) y `window.AquaLoader` (de `animaciones/generales.js`).
 
 ### `app/Views/layouts/panel.php`
 
 Menu lateral del panel. El link activo se marca solo con `url_is()` segun la direccion. Muestra los mensajes flash arriba del contenido.
 
+### `app/Views/layouts/auth.php`
+
+Tarjeta centrada de las pantallas de cuenta. Cada pantalla completa la seccion `tarjeta` con su logo, sus mensajes y su formulario. Tambien carga `funciones/auth.js`.
+
 ### `app/Views/components/flash_messages.php`
 
-Muestra los mensajes de un solo uso que deja el controlador con `->with('success' | 'error' | 'info', '...')`. Escapa el texto con `esc()`. `aqua.js` los desvanece a los 5 segundos.
+Muestra los mensajes de un solo uso que deja el controlador con `->with('success' | 'error' | 'info', '...')`. Escapa el texto con `esc()`. `animaciones/generales.js` los desvanece a los 5 segundos.
 
 ### `app/Views/components/logout_button.php`
 
@@ -194,6 +229,13 @@ Disponibles en todas las vistas:
 - `clase_error($errors, 'email')`: devuelve ` is-invalid` para pintar el borde del campo.
 - `set_value('email')` y `set_checkbox('terms', '1')` (de CodeIgniter): conservan lo que el usuario habia escrito si el formulario vuelve con errores.
 
+### Ayudas de estilos (`app/Helpers/estilos_helper.php`)
+
+Disponibles en todas las vistas:
+
+- `usar_css('css/auth/login.css')`: va en la primera linea de cada vista y anota su hoja de estilos. No escribe nada.
+- `enlaces_css()`: lo llama `layouts/main.php` dentro del `<head>` y escribe un `<link>` por cada hoja anotada. No repite una hoja aunque el componente aparezca dos veces.
+
 ### `app/Views/home/index.php` y `home/secciones/`
 
 La portada es una lista de `include`, una linea por seccion. Para mover una seccion se cambia el orden de las lineas; para sacarla se borra su linea.
@@ -201,7 +243,7 @@ La portada es una lista de `include`, una linea por seccion. Para mover una secc
 Recibe de `Home::index()`:
 
 - `$producto`: datos ya listos para mostrar (nombre, precio formateado, cantidad maxima, mensaje de entrega).
-- `$compra`: se imprime como JSON en `<script id="purchase-data">` para `purchase.js`.
+- `$compra`: se imprime como JSON en `<script id="purchase-data">` para `funciones/purchase.js`.
 
 ```json
 {
@@ -228,8 +270,9 @@ La imagen del producto es `img/aquacontrol-product.webp` (unos 95 KB). Se precar
 
 Los cuatro formularios (`login`, `register`, `recover`, `reset`) tienen la misma forma:
 
+- Extienden `layouts/auth` y completan la seccion `tarjeta`.
 - POST a `auth/...` con `csrf_field()`.
-- `data-auth-form="login|register|recover|reset"` para que `auth.js` los valide antes de enviar.
+- `data-auth-form="login|register|recover|reset"` para que `funciones/auth.js` los valide antes de enviar.
 - Errores del servidor con `error_campo()`.
 
 Detalles:
@@ -250,7 +293,7 @@ Es la pantalla mas importante. La usan las cuatro direcciones del panel (princip
 - `alimentador.php`: estado del ESP32 (conectado, offline, orden en curso, ultima orden), "Alimentar ahora" y horarios con gramos por racion.
 - `perfil.php`: formulario "Mi cuenta" (lo guarda el controlador `Perfil`).
 
-Los datos llegan en `$dashboardData` y se imprimen como JSON en `<script id="dashboard-data">`. El primer dibujo lo hace PHP con esos mismos datos; despues `dashboard.js` los va refrescando.
+Los datos llegan en `$dashboardData` y se imprimen como JSON en `<script id="dashboard-data">`. El primer dibujo lo hace PHP con esos mismos datos; despues `funciones/dashboard.js` los va refrescando.
 
 ### `app/Views/devices/index.php`
 
@@ -259,7 +302,7 @@ Pantalla de dispositivos del usuario:
 - Formulario POST `dispositivos/nuevo`.
 - Tabla de dispositivos existentes, con el prefijo de la API key y la ultima conexion.
 - Acciones editar/eliminar y generar/regenerar/revocar API key.
-- Las acciones delicadas piden confirmacion con el atributo `data-confirm="..."` en el `<form>` (lo atiende `aqua.js`).
+- Las acciones delicadas piden confirmacion con el atributo `data-confirm="..."` en el `<form>` (lo atiende `funciones/aqua.js`).
 - Tras generar una key muestra un panel (`#api-key-nueva`) con la key completa (una sola vez), boton Copiar (`data-copy-target`) y ejemplo de request.
 
 ### `app/Views/devices/edit.php`
@@ -289,38 +332,67 @@ Error 404 personalizado para rutas no encontradas. Usa el molde comun y un boton
 
 ## JavaScript
 
-### `public/js/aqua.js`
+El JavaScript esta separado en dos carpetas segun para que sirve:
+
+| Carpeta | Que hay | Regla |
+| --- | --- | --- |
+| `public/js/funciones/` | El codigo que hace el trabajo: lee formularios, valida, calcula y habla con el servidor. | No tiene colores, iconos, animaciones ni estilos. Para cambiar como se ve algo solo pone o saca una clase (`is-invalid`, `is-showing`) o anota un dato (`data-score`). |
+| `public/js/animaciones/` | Lo que es solo visual: lo que aparece, se mueve, se desvanece o se dibuja. | No toca datos ni habla con el servidor. |
+
+El aspecto (colores, tamanos, transiciones) va siempre en el CSS de la vista; los iconos van en la vista.
+
+| Archivo | Se carga en | Desde |
+| --- | --- | --- |
+| `funciones/aqua.js` | todas las paginas | `layouts/main.php` |
+| `animaciones/generales.js` | todas las paginas | `layouts/main.php` |
+| `funciones/auth.js` | pantallas de cuenta | `layouts/auth.php` |
+| `animaciones/portada.js` | portada | `home/index.php` |
+| `funciones/purchase.js` | portada | `home/index.php` |
+| `animaciones/grafico.js` | panel de la pecera | `dashboard/index.php` |
+| `funciones/dashboard.js` | panel de la pecera | `dashboard/index.php` |
+
+### `public/js/funciones/aqua.js`
 
 Se carga en todas las paginas. Responsabilidades:
 
 - **`window.AquaCsrf`**: `headers()` devuelve el header `X-CSRF-TOKEN` para un `fetch`; `refresh(response)` guarda el token nuevo que devuelve el servidor (cambia en cada POST) y lo actualiza tambien en los formularios de la pagina.
-- **`window.AquaLoader`**: `mostrar()` y `ocultar()` el cartel de "cargando". Aparece solo si la espera pasa de 300 ms, asi en las cargas rapidas no se ve. Se muestra al hacer clic en un link interno y al enviar un formulario.
 - **`data-confirm`**: un `<form data-confirm="Seguro?">` pide confirmacion antes de enviarse.
-- **Mensajes flash**: se desvanecen a los 5 segundos.
+- **`data-copy-target="id"`**: boton que copia el texto de ese elemento.
+
+### `public/js/animaciones/generales.js`
+
+Se carga en todas las paginas. Solo cosas visuales:
+
+- **`window.AquaLoader`**: `mostrar()` y `ocultar()` el cartel de "cargando". Aparece solo si la espera pasa de 300 ms, asi en las cargas rapidas no se ve. Se muestra al hacer clic en un link interno y al enviar un formulario (salvo que tenga `data-skip-loader="true"`).
+- **Mensajes flash**: a los 5 segundos les pone la clase `is-leaving` (el desvanecido esta en `components/flash_messages.css`) y medio segundo despues los quita.
+
+### `public/js/animaciones/portada.js`
+
+Animaciones de la portada:
+
 - **`data-reveal`**: los elementos aparecen cuando entran en pantalla (`IntersectionObserver`).
 - **Demo de la portada**: numeros de ejemplo que cambian cada 2,8 s (se pausa con la pestana oculta).
 - **Carrusel de testimonios**: botones anterior/siguiente.
-- **`data-copy-target="id"`**: boton que copia el texto de ese elemento.
 
-### `public/js/auth.js`
+### `public/js/funciones/auth.js`
 
 Paginas de cuenta:
 
 - Vincula formularios con `data-auth-form`.
 - Valida email y contrasena segura (longitud, mayuscula, minuscula, numero y caracter especial) antes de enviar.
-- Muestra los errores en las cajitas `.invalid-feedback` de cada campo.
-- Actualiza el medidor de seguridad.
-- Boton del ojito para mostrar u ocultar la contrasena.
+- Escribe el texto del error en la cajita `.invalid-feedback` de cada campo (el icono de aviso y el ocultarla cuando esta vacia los resuelve `layouts/main.css`).
+- Medidor de seguridad: calcula el puntaje (0 a 5) y lo anota en `data-score` de `.strength-bar`; los colores los pone `components/campo_password.css`.
+- Boton del ojito: cambia el campo entre `password` y `text` y le pone la clase `is-showing` al boton; el CSS muestra el ojo o el ojo tachado (los dos dibujos estan en `components/campo_password.php`).
 
 El servidor vuelve a validar todo: esto solo avisa antes.
 
-### `public/js/dashboard.js`
+### `public/js/funciones/dashboard.js`
 
 Panel de la pecera. Los textos ya vienen armados desde `PanelPecera.php`; el JS solo los pone en su lugar.
 
 1. Lee el JSON de `#dashboard-data` y lo guarda en `state`.
 2. Dibuja tarjetas, resumen, alertas, tabla de alimentaciones, configuracion y estado del alimentador.
-3. Carga Chart.js desde el CDN y dibuja el grafico. Si los datos no cambiaron no lo toca; si cambiaron lo actualiza en el lugar, sin volver a animarlo.
+3. Le pasa los numeros del grafico a `window.AquaGrafico.dibujar(state.charts)` (ver `animaciones/grafico.js`).
 4. Atiende acciones (todas envian el header `X-CSRF-TOKEN` via `window.AquaCsrf`):
    - marcar alerta leida,
    - alimentar ahora (encola la orden para el ESP32 y muestra el mensaje del backend),
@@ -354,7 +426,15 @@ Forma del estado:
 }
 ```
 
-### `public/js/purchase.js`
+### `public/js/animaciones/grafico.js`
+
+Dibujo del grafico de temperatura y pH del panel (`window.AquaGrafico`). Aca estan los colores, el grosor de las lineas y el cartelito al pasar el mouse.
+
+- Carga Chart.js desde el CDN. Si no carga, el resto del panel igual anda.
+- `dibujar(datos)` recibe `{ labels, temperature, ph, count }`. Si los datos no cambiaron no toca el grafico; si cambiaron lo actualiza en el lugar, sin volver a animarlo.
+- Tiene que estar antes que `funciones/dashboard.js` en la pagina (asi esta en `dashboard/index.php`).
+
+### `public/js/funciones/purchase.js`
 
 Formulario de compra de la portada:
 
@@ -366,16 +446,40 @@ Formulario de compra de la portada:
 
 ## CSS y sistema visual
 
+Cada vista tiene su propia hoja de estilos en `public/css`, con la misma ruta y el mismo nombre que la vista:
+
+```text
+app/Views/auth/login.php              ->  public/css/auth/login.css
+app/Views/home/secciones/hero.php     ->  public/css/home/secciones/hero.css
+app/Views/layouts/panel.php           ->  public/css/layouts/panel.css
+```
+
+La vista la pide en su primera linea:
+
+```php
+<?php usar_css('css/auth/login.css') ?>
+```
+
+`layouts/main.php` escribe los `<link>` con `enlaces_css()`, de lo mas general a lo mas particular: primero los moldes (`layouts/`), despues los componentes (`components/`) y al final la pagina con sus partes. Por eso una vista puede pisar un estilo de su molde. Una seccion de la portada o una parte del panel que se saca de su `index.php` deja de cargar su hoja.
+
+Donde va cada regla:
+
 | Archivo | Responsabilidad |
 | --- | --- |
-| `aqua.css` | Colores y medidas (`:root`), base, fondo, barra de navegacion, botones, formularios, mensajes, panel "en vivo" compartido (portada y panel), pie, cartel de carga, 404 y animaciones. |
-| `home.css` | Secciones de la portada, en el mismo orden que `home/secciones/`, y la compra. |
-| `dashboard.css` | Estructura con menu lateral, partes del panel, y las tablas de dispositivos, usuarios y pedidos. |
-| `auth.css` | Tarjeta centrada de login, registro, recuperar y nueva contrasena. |
+| `layouts/main.css` | Lo que usan todas las paginas: colores y medidas (`:root`), base, fondo, barra de navegacion, botones, formularios, pie, cartel de carga y animaciones. Tambien el panel "en vivo", porque lo comparten la demo de la portada y el panel real. |
+| `layouts/panel.css` | Menu lateral, tarjeta base, y las tablas, formularios y etiquetas que comparten Dispositivos, Usuarios y Pedidos. |
+| `layouts/auth.css` | Tarjeta centrada, logo y links de las pantallas de cuenta. |
+| `components/*.css` | Los estilos de cada componente (mensajes, boton "Salir", campo de contrasena). |
+| `home/index.css` y `dashboard/index.css` | Lo que comparten varias secciones de la portada o varias partes del panel. |
+| El resto | Solo lo propio de esa vista. |
 
-Cada archivo esta dividido con comentarios de seccion y termina con sus reglas para pantallas mas chicas (`@media`).
+Una clase que usa una sola vista va en la hoja de esa vista; una que usan varias va en la hoja de lo que tienen en comun (el `index` de la pagina o el molde). Las vistas que hoy no necesitan estilos propios (`auth/register`, `auth/recover`, `auth/reset`, `devices/edit` y `users/edit`) igual tienen su hoja, con un comentario que dice de donde salen los suyos.
 
-Los colores se definen una sola vez como variables en `:root`, al principio de `aqua.css` (por ejemplo `--aqua-cyan`, el color principal). Cambiar una variable cambia ese color en toda la pagina.
+Cada archivo termina con sus reglas para pantallas mas chicas (`@media`).
+
+Los colores se definen una sola vez como variables en `:root`, al principio de `layouts/main.css` (por ejemplo `--aqua-cyan`, el color principal). Cambiar una variable cambia ese color en toda la pagina.
+
+El email de recuperacion (`emails/recuperar_contrasena.php`) no tiene hoja: los programas de correo no cargan archivos CSS, asi que lleva sus estilos escritos en cada etiqueta.
 
 ## Rendimiento: decisiones que conviene mantener
 
@@ -424,11 +528,11 @@ El panel usa direcciones distintas para activar secciones, pero dibuja la misma 
 
 ### Estado client-side
 
-- `dashboard.js`:
+- `funciones/dashboard.js`:
   - mantiene `state` con lo que mando el backend,
   - lo actualiza con cada respuesta JSON,
-  - vuelve a dibujar el DOM y el grafico.
-- `purchase.js`:
+  - vuelve a dibujar el DOM y le pasa los numeros al grafico.
+- `funciones/purchase.js`:
   - calcula el resumen de compra,
   - monta el boton de Mercado Pago.
 - Formularios:
@@ -462,7 +566,7 @@ No se guarda nada en el navegador (ni token, ni usuario, ni datos de la pecera).
 ```mermaid
 sequenceDiagram
     participant U as Usuario
-    participant F as login.php + auth.js
+    participant F as login.php + funciones/auth.js
     participant B as Auth::login
     participant DB as usuarios
     participant S as Sesion
@@ -480,7 +584,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant F as dashboard.js
+    participant F as funciones/dashboard.js
     participant API as Dashboard::latest
     participant P as PanelPecera
     F->>API: GET /dashboard/api/latest cada 5 s (pestana visible)
@@ -514,7 +618,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant U as Usuario
-    participant F as purchase.js
+    participant F as funciones/purchase.js
     participant API as Checkout::mercadoPagoPreference
     participant MP as Mercado Pago
     U->>F: Email, cantidad, terminos

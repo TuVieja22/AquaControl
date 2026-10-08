@@ -1,13 +1,21 @@
+<?php usar_css('css/layouts/main.css') ?>
 <?php
 /*
  * Molde de TODAS las paginas: <head>, barra de navegacion y pie.
  * Cada pagina empieza con  $this->extend('layouts/main')  y completa estas secciones:
  *   - 'contenido': lo que va entre la barra y el pie (obligatoria)
- *   - 'estilos':   <link> a hojas de estilo propias de esa pagina (opcional)
+ *   - 'cabecera':  etiquetas extra para el <head> de esa pagina (opcional)
  *   - 'scripts':   <script> propios de esa pagina (opcional)
+ * Las hojas de estilo no van en una seccion: cada vista anota la suya en su primera
+ * linea con usar_css() y aca se escriben todas juntas con enlaces_css().
  */
 $logueado = (bool) session()->get('user_id');
 $esAdmin = session()->get('user_role') === 'administrador';
+
+if ($logueado) {
+    // El boton "Salir" se dibuja mas abajo, cuando el <head> ya esta escrito: su hoja se anota aca.
+    usar_css('css/components/logout_button.css');
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -25,8 +33,8 @@ $esAdmin = session()->get('user_role') === 'administrador';
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@500;600;700;800&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@500;600;700;800&display=swap"></noscript>
-  <link rel="stylesheet" href="<?= base_url('css/aqua.css') ?>">
-  <?= $this->renderSection('estilos') ?>
+  <?= enlaces_css() ?>
+  <?= $this->renderSection('cabecera') ?>
 </head>
 <body>
 
@@ -101,7 +109,9 @@ $esAdmin = session()->get('user_role') === 'administrador';
   </footer>
 </div>
 
-<script src="<?= base_url('js/aqua.js') ?>"></script>
+<!-- JavaScript de todas las paginas: las funciones por un lado y lo visual por otro. -->
+<script src="<?= base_url('js/funciones/aqua.js') ?>"></script>
+<script src="<?= base_url('js/animaciones/generales.js') ?>"></script>
 <?= $this->renderSection('scripts') ?>
 </body>
 </html>

@@ -1,3 +1,4 @@
+<?php usar_css('css/components/flash_messages.css') ?>
 <?php
 // Mensajes de un solo uso que deja el controlador con ->with('success'|'error'|'info', '...').
 $iconos = ['error' => '&#9888;', 'success' => '&#10003;', 'info' => '&#8505;'];

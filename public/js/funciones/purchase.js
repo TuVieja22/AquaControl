@@ -1,5 +1,5 @@
 /* ===================================================
-   AquaControl — purchase.js
+   AquaControl — funciones/purchase.js
    Formulario de compra de la portada: calcula el total segun la cantidad y, al
    confirmar, pide al servidor la "preferencia" de Mercado Pago y muestra su boton.
    =================================================== */

@@ -1,3 +1,4 @@
+<?php usar_css('css/dashboard/partes/perfil.css') ?>
 <?php
 // "Mi cuenta": formulario para cambiar nombre y email (lo guarda el controlador Perfil).
 // Si el formulario volvio con errores, se muestran los datos que habia escrito el usuario.

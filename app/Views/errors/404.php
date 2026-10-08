@@ -1,3 +1,4 @@
+<?php usar_css('css/errors/404.css') ?>
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('contenido') ?>

@@ -7,8 +7,9 @@
 
 if (! function_exists('error_campo')) {
     /**
-     * Cajita roja con el error de un campo. Si no hay error queda oculta: igual se
-     * imprime porque auth.js la usa para mostrar errores sin recargar la pagina.
+     * Cajita roja con el error de un campo. Si no hay error queda vacia (y el CSS la
+     * oculta): igual se imprime porque funciones/auth.js la usa para mostrar errores sin
+     * recargar la pagina. El icono de aviso y los colores estan en css/layouts/main.css.
      *
      *   <?= error_campo($errors ?? [], 'email') ?>
      */
@@ -16,11 +17,7 @@ if (! function_exists('error_campo')) {
     {
         $atributoId = $id !== '' ? ' id="' . esc($id, 'attr') . '"' : '';
 
-        if (! isset($errores[$campo])) {
-            return '<div class="invalid-feedback"' . $atributoId . ' style="display:none"></div>';
-        }
-
-        return '<div class="invalid-feedback"' . $atributoId . '><span>&#9888;</span> ' . esc($errores[$campo]) . '</div>';
+        return '<div class="invalid-feedback"' . $atributoId . '>' . esc($errores[$campo] ?? '') . '</div>';
     }
 }
 

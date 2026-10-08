@@ -1,0 +1,38 @@
+/* ===================================================
+   AquaControl — orders/index.css
+   Estilos propios de la vista app/Views/orders/index.php (pedidos).
+   Las tarjetas, la tabla y las etiquetas estan en layouts/panel.css.
+   =================================================== */
+
+/* Botones para filtrar por estado. */
+.order-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.order-filters .btn {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.order-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.order-warning { color: var(--warn); }
+
+/* Color de la etiqueta segun el estado del pedido. */
+.order-status-aprobado { border-color: var(--ok); color: var(--ok); }
+
+.order-status-pendiente,
+.order-status-en_proceso { border-color: var(--warn); color: var(--warn); }
+
+.order-status-rechazado,
+.order-status-cancelado,
+.order-status-reembolsado { border-color: var(--danger); color: var(--danger); }

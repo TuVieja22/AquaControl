@@ -1,4 +1,5 @@
-<?php // Alertas sin leer y ultimas 10 alimentaciones (dashboard.js redibuja ambas listas). ?>
+<?php usar_css('css/dashboard/partes/alertas_y_alimentaciones.css') ?>
+<?php // Alertas sin leer y ultimas 10 alimentaciones (funciones/dashboard.js redibuja ambas listas). ?>
 <section class="dashboard-grid content-grid">
   <article class="glass-card alerts-card">
     <div class="panel-head">

@@ -1,0 +1,105 @@
+/* ===================================================
+   AquaControl — dashboard/partes/perfil.css
+   Estilos de la vista app/Views/dashboard/partes/perfil.php: "Mi cuenta".
+   =================================================== */
+
+.profile-grid { grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr); }
+
+.profile-card { padding: 24px; }
+
+.profile-form {
+  display: grid;
+  gap: 20px;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.profile-form .form-group { margin-bottom: 0; }
+
+.profile-form .field-help { line-height: 1.45; }
+
+.profile-form .form-control[readonly] {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.profile-form-actions .btn { width: auto; }
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.profile-avatar {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,212,255,0.24);
+  border-radius: 8px;
+  background: rgba(0,212,255,0.08);
+  color: var(--aqua-cyan);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.profile-identity h3 {
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.profile-identity span:not(.profile-avatar) {
+  display: block;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.profile-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-summary-item {
+  padding: 16px;
+  border: 1px solid rgba(93,202,165,0.08);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+}
+
+.profile-summary-item span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.profile-summary-item strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 768px) {
+  .profile-grid,
+  .profile-form-grid { grid-template-columns: 1fr; }
+
+  .profile-form-actions .btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .profile-card { padding: 20px; }
+}

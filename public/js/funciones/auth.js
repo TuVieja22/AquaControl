@@ -1,8 +1,10 @@
 /* ===================================================
-   AquaControl — auth.js
+   AquaControl — funciones/auth.js
    Paginas de cuenta (login, registro, recuperar y nueva contrasena): revisa los
-   formularios antes de enviarlos, barra de seguridad de la contrasena y boton para
-   mostrarla. El servidor vuelve a validar todo: esto solo avisa antes.
+   formularios antes de enviarlos, calcula la seguridad de la contrasena y el boton
+   para mostrarla. El servidor vuelve a validar todo: esto solo avisa antes.
+   Aca no hay colores ni iconos: el aspecto de los errores esta en css/layouts/main.css
+   y el del campo de contrasena en css/components/campo_password.css.
    =================================================== */
 
 'use strict';
@@ -17,7 +19,6 @@
     special: 'Debe contener al menos un caracter especial.'
   };
 
-  const strengthPalette = ['#E24B4A', '#EF9F27', '#EF9F27', '#1D9E75', '#5DCAA5'];
   const strengthLabels = ['', 'Muy debil', 'Debil', 'Aceptable', 'Fuerte', 'Muy fuerte'];
 
   function getField(form, selector) {
@@ -28,13 +29,13 @@
     return field?.closest('.form-group')?.querySelector('.invalid-feedback') || null;
   }
 
+  // La cajita del error se oculta sola cuando queda vacia (ver .invalid-feedback en el CSS).
   function clearFeedback(node) {
     if (!node) {
       return;
     }
 
-    node.innerHTML = '';
-    node.style.display = 'none';
+    node.textContent = '';
   }
 
   function showFieldError(field, message, feedbackNode = null) {
@@ -49,8 +50,7 @@
       return;
     }
 
-    feedback.innerHTML = `<span>&#9888;</span> ${message}`;
-    feedback.style.display = 'flex';
+    feedback.textContent = message;
   }
 
   function clearFieldError(field, feedbackNode = null) {
@@ -126,22 +126,19 @@
 
   function bindPasswordStrength(form) {
     const passwordField = getField(form, '#password');
-    const segments = form.querySelectorAll('.strength-seg');
+    const bar = form.querySelector('.strength-bar');
     const label = form.querySelector('.strength-text');
 
-    if (!passwordField || !segments.length || !label) {
+    if (!passwordField || !bar || !label) {
       return;
     }
 
     passwordField.addEventListener('input', function () {
       const score = passwordStrengthScore(passwordField.value);
 
-      segments.forEach(function (segment, index) {
-        segment.style.background = index < score ? strengthPalette[score - 1] : 'rgba(255,255,255,0.08)';
-      });
-
+      // Solo se anota el puntaje (0 a 5): los colores de la barra los pone el CSS.
+      bar.dataset.score = String(score);
       label.textContent = passwordField.value.length ? strengthLabels[score] : '';
-      label.style.color = score >= 4 ? '#5DCAA5' : score >= 3 ? '#EF9F27' : '#F09595';
     });
   }
 
@@ -257,16 +254,14 @@
     bindPasswordStrength(form);
   });
 
-  // Boton del ojito: muestra u oculta la contrasena.
-  const EYE_OPEN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-  const EYE_CLOSED = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-
+  // Boton del ojito: muestra u oculta la contrasena. Los dos dibujos del ojo estan en
+  // components/campo_password.php; la clase is-showing decide cual se ve.
   document.querySelectorAll('.input-toggle').forEach(function (button) {
     button.addEventListener('click', function () {
       const input = button.closest('.input-group').querySelector('input');
       const mostrar = input.type === 'password';
       input.type = mostrar ? 'text' : 'password';
-      button.innerHTML = mostrar ? EYE_CLOSED : EYE_OPEN;
+      button.classList.toggle('is-showing', mostrar);
       button.setAttribute('aria-label', mostrar ? 'Ocultar contrasena' : 'Mostrar contrasena');
     });
   });

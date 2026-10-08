@@ -1,0 +1,16 @@
+/* ===================================================
+   AquaControl — auth/login.css
+   Estilos propios de la vista app/Views/auth/login.php (iniciar sesion).
+   La tarjeta y el logo estan en layouts/auth.css.
+   =================================================== */
+
+/* Renglon con la etiqueta "Contrasena" y el link "Olvidaste tu contrasena?". */
+.auth-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.auth-label-row .form-label { margin: 0; }
+.auth-label-row .auth-link { font-size: 0.8rem; }

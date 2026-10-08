@@ -1,3 +1,4 @@
+<?php usar_css('css/home/index.css') ?>
 <?php
 /*
  * Portada. Cada bloque de la pagina esta en su propio archivo dentro de home/secciones/:
@@ -7,9 +8,8 @@
 ?>
 <?= $this->extend('layouts/main') ?>
 
-<?= $this->section('estilos') ?>
+<?= $this->section('cabecera') ?>
   <link rel="preload" as="image" href="<?= base_url('img/aquacontrol-product.webp') ?>" type="image/webp">
-  <link rel="stylesheet" href="<?= base_url('css/home.css') ?>">
 <?= $this->endSection() ?>
 
 <?= $this->section('contenido') ?>
@@ -30,5 +30,6 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-  <script src="<?= base_url('js/purchase.js') ?>"></script>
+  <script src="<?= base_url('js/animaciones/portada.js') ?>"></script>
+  <script src="<?= base_url('js/funciones/purchase.js') ?>"></script>
 <?= $this->endSection() ?>

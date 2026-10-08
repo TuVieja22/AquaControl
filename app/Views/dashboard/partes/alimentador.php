@@ -1,3 +1,4 @@
+<?php usar_css('css/dashboard/partes/alimentador.css') ?>
 <?php
 // Alimentador (servo del ESP32): "Alimentar ahora" y horarios programados.
 $feeder = $dashboardData['feeder'];

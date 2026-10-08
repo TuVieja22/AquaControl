@@ -1,0 +1,39 @@
+/* ===================================================
+   AquaControl — home/secciones/beneficios.css
+   Estilos de la vista app/Views/home/secciones/beneficios.php: las 4 tarjetas con tilde.
+   =================================================== */
+
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.benefit-card {
+  min-height: 240px;
+  padding: 24px;
+}
+
+.benefit-mark {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 24px;
+  border-radius: 50%;
+}
+
+.benefit-mark::before {
+  width: 14px;
+  height: 7px;
+  border-left: 2px solid var(--aqua-green);
+  border-bottom: 2px solid var(--aqua-green);
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 1180px) {
+  .benefit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .benefit-grid { grid-template-columns: 1fr; }
+}

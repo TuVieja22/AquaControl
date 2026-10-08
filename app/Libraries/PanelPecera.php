@@ -17,7 +17,7 @@ use DateTimeZone;
  * alimentaciones y estado del alimentador.
  *
  * Lo usan la pagina del panel (para dibujarla) y las respuestas JSON con las que
- * dashboard.js la refresca cada pocos segundos, asi que los textos se calculan en un
+ * funciones/dashboard.js la refresca cada pocos segundos, asi que los textos se calculan en un
  * solo lugar: aca.
  */
 class PanelPecera
@@ -373,7 +373,7 @@ class PanelPecera
         return ($valor >= $min - $margen && $valor <= $max + $margen) ? 'warn' : 'danger';
     }
 
-    /** "hace 12 s", "hace 3 min" o la fecha completa si paso mas de una hora (igual que dashboard.js). */
+    /** "hace 12 s", "hace 3 min" o la fecha completa si paso mas de una hora (igual que funciones/dashboard.js). */
     private function haceCuanto(?string $fecha): string
     {
         if (empty($fecha)) {

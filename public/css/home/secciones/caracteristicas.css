@@ -1,0 +1,81 @@
+/* ===================================================
+   AquaControl — home/secciones/caracteristicas.css
+   Estilos de la vista app/Views/home/secciones/caracteristicas.php: las 5 tarjetas.
+   =================================================== */
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.feature-tile h3 { font-size: 1.04rem; }
+
+/* Iconos dibujados con CSS: icon-<nombre> (ver caracteristicas.php).
+   El cuadradito que los contiene (.icon-badge) esta en home/index.css. */
+.icon-pulse::before {
+  width: 26px;
+  height: 14px;
+  border-bottom: 3px solid var(--aqua-cyan);
+  border-left: 3px solid transparent;
+  transform: skewX(-18deg);
+}
+
+.icon-feed::before {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--aqua-cyan);
+  border-radius: 50%;
+}
+
+.icon-feed::after {
+  width: 6px;
+  height: 20px;
+  background: var(--aqua-cyan);
+  transform: translateX(14px) rotate(-28deg);
+}
+
+.icon-alert::before {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--aqua-amber);
+  transform: rotate(45deg);
+}
+
+.icon-alert::after {
+  width: 4px;
+  height: 15px;
+  background: var(--aqua-amber);
+  box-shadow: 0 10px 0 -1px var(--aqua-amber);
+}
+
+.icon-away::before {
+  width: 25px;
+  height: 25px;
+  border: 2px solid var(--aqua-green);
+  border-radius: 50%;
+}
+
+.icon-away::after {
+  width: 13px;
+  height: 2px;
+  background: var(--aqua-green);
+  transform-origin: left;
+  transform: rotate(-42deg) translate(1px, 3px);
+}
+
+.icon-energy::before {
+  width: 15px;
+  height: 26px;
+  background: var(--aqua-green);
+  clip-path: polygon(55% 0, 100% 0, 58% 42%, 100% 42%, 32% 100%, 48% 55%, 0 55%);
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 1180px) {
+  .feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .feature-grid { grid-template-columns: 1fr; }
+}

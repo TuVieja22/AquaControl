@@ -1,3 +1,4 @@
+<?php usar_css('css/home/secciones/producto.css') ?>
 <?php
 // "Producto en accion": galeria de 4 tarjetas (2 con foto y 2 dibujadas con CSS). Para que una tarjeta use otra foto, sumale 'image' => base_url('img/otra.webp').
 $imagen = base_url('img/aquacontrol-product.webp');
@@ -24,11 +25,11 @@ $tarjetas = [
             <div class="mini-dashboard" aria-hidden="true">
               <div class="mini-dashboard-top"></div>
               <div class="mini-chart">
-                <span style="height: 42%"></span>
-                <span style="height: 65%"></span>
-                <span style="height: 54%"></span>
-                <span style="height: 78%"></span>
-                <span style="height: 62%"></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
               <div class="mini-metrics">
                 <span>25.6&deg;C</span>

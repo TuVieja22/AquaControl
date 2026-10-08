@@ -1,0 +1,131 @@
+/* ===================================================
+   AquaControl — home/secciones/hero.css
+   Estilos de la vista app/Views/home/secciones/hero.php: la portada con la foto de fondo.
+   =================================================== */
+
+.landing-hero {
+  position: relative;
+  min-height: calc(100svh - 132px);
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.landing-hero::before,
+.landing-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+
+.landing-hero::before {
+  background-image: url('../../../img/aquacontrol-product.webp');
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.92) contrast(1.04);
+  transform: scale(1.025);
+  animation: heroImageIn 1200ms ease both;
+}
+
+.landing-hero::after {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(5,7,13,0.92) 0%, rgba(5,7,13,0.74) 35%, rgba(5,7,13,0.34) 64%, rgba(5,7,13,0.76) 100%),
+    linear-gradient(180deg, rgba(5,7,13,0.18), rgba(5,7,13,0.74) 100%),
+    linear-gradient(105deg, transparent 0 48%, rgba(0,212,255,0.14) 55%, transparent 66%);
+}
+
+.hero-content {
+  padding-top: clamp(86px, 12vh, 132px);
+  padding-bottom: clamp(78px, 11vh, 130px);
+}
+
+.hero-content h1 {
+  max-width: 980px;
+  margin: 0 0 24px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(2.55rem, 6.6vw, 6.5rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: 0;
+  text-wrap: balance;
+  text-shadow: 0 24px 80px rgba(0,0,0,0.62);
+}
+
+.hero-subtitle {
+  max-width: 680px;
+  margin: 0 0 34px;
+  color: rgba(235,245,255,0.82);
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  line-height: 1.75;
+}
+
+.hero-eyebrow { color: #aaf4ff; }
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.hero-signal {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 30px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(7, 11, 20, 0.48);
+  color: rgba(235,245,255,0.74);
+  font-size: 0.88rem;
+  backdrop-filter: blur(16px);
+}
+
+@keyframes heroImageIn {
+  from { transform: scale(1.075); opacity: 0.66; }
+  to { transform: scale(1.025); opacity: 1; }
+}
+
+/* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+@media (max-width: 768px) {
+  .landing-hero { min-height: calc(100svh - 118px); }
+
+  .landing-hero::after {
+    background:
+      linear-gradient(180deg, rgba(5,7,13,0.7) 0%, rgba(5,7,13,0.66) 28%, rgba(5,7,13,0.88) 100%),
+      linear-gradient(90deg, rgba(5,7,13,0.72), rgba(5,7,13,0.32));
+  }
+
+  .hero-content {
+    padding-top: 84px;
+    padding-bottom: 64px;
+  }
+
+  .hero-actions { width: 100%; }
+
+  .hero-signal {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  /* En celulares chicos la portada ya ocupa toda la pantalla: sin espacio extra arriba y abajo. */
+  .hero-content {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .hero-content h1 { font-size: clamp(2.25rem, 13vw, 3.75rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero::before { animation: none !important; }
+}

@@ -1,0 +1,46 @@
+/* ===================================================
+   AquaControl — dashboard/partes/filtros.css
+   Estilos de la vista app/Views/dashboard/partes/filtros.php: los filtros del historial.
+   =================================================== */
+
+.history-filters {
+  margin-bottom: 20px;
+  padding: 22px 24px;
+}
+
+.history-filters-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.history-filters-form .form-group { margin: 0; }
+
+.history-filters-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.history-filters-actions .btn {
+  width: auto;
+  white-space: nowrap;
+}
+
+.history-filters-meta,
+.history-filters-error {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+}
+
+.history-filters-meta { color: var(--text-muted); }
+.history-filters-error { color: var(--danger); }
+
+@media (max-width: 900px) {
+  .history-filters-form { grid-template-columns: 1fr 1fr; }
+  .history-filters-actions { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .history-filters-form { grid-template-columns: 1fr; }
+}
