@@ -22,6 +22,7 @@
                   PING                       responde PONG
 */
 
+// Librerias: sensor de temperatura y servo.
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP32Servo.h>
@@ -41,10 +42,12 @@ const int MS_ABIERTO = 1000;    // tiempo abierto antes de volver
 const unsigned long INTERVALO_TEMP_MS = 2000;
 const unsigned long MS_CONVERSION = 800; // DS18B20 a 12 bits tarda ~750 ms
 
+// Objetos que manejan el sensor de temperatura y el servo.
 OneWire oneWire(PIN_DS18B20);
 DallasTemperature sensorTemperatura(&oneWire);
 Servo alimentador;
 
+// Ultima medicion pedida, si el sensor esta midiendo y texto que va llegando por el cable.
 unsigned long ultimoPedidoTemp = 0;
 bool convirtiendo = false;
 String bufferSerie;
@@ -54,18 +57,22 @@ String bufferSerie;
 void alimentar(long id, float gramos) {
   Serial.printf("Alimentando (racion de %.2f g): un giro de ida y vuelta...\n", gramos);
 
+  // Abre la compuerta, espera y la cierra.
   alimentador.write(SERVO_ABIERTO);
   delay(MS_ABIERTO);
   alimentador.write(SERVO_CERRADO);
   delay(500); // deja que llegue a la posicion cerrada antes de confirmar
 
+  // Le avisa a la PC que termino.
   Serial.printf("ACK:%ld:OK\n", id);
 }
 
+// Interpreta un mensaje que llego desde la PC.
 void procesarLinea(String linea) {
   linea.trim();
   if (linea.length() == 0) return;
 
+  // PING: solo responde, para probar la conexion.
   if (linea == "PING") {
     Serial.println("PONG");
     return;
@@ -84,10 +91,12 @@ void procesarLinea(String linea) {
     return;
   }
 
+  // Cualquier otra cosa no se entiende.
   Serial.print("Orden desconocida: ");
   Serial.println(linea);
 }
 
+// Junta las letras que llegan por el cable hasta completar un renglon.
 void leerOrdenes() {
   while (Serial.available()) {
     char c = (char) Serial.read();
@@ -105,12 +114,14 @@ void leerOrdenes() {
 void actualizarTemperatura() {
   unsigned long ahora = millis();
 
+  // Cada 2 segundos le pide al sensor que mida.
   if (!convirtiendo && ahora - ultimoPedidoTemp >= INTERVALO_TEMP_MS) {
     sensorTemperatura.requestTemperatures();
     ultimoPedidoTemp = ahora;
     convirtiendo = true;
   }
 
+  // Cuando la medicion esta lista, la manda a la PC (o avisa el error).
   if (convirtiendo && ahora - ultimoPedidoTemp >= MS_CONVERSION) {
     convirtiendo = false;
     float t = sensorTemperatura.getTempCByIndex(0);
@@ -122,21 +133,26 @@ void actualizarTemperatura() {
   }
 }
 
+// Se ejecuta una vez al encender: prepara el puerto, el sensor y el servo.
 void setup() {
   Serial.begin(115200);
   delay(300);
 
+  // Sensor de temperatura (sin frenar el programa mientras mide).
   sensorTemperatura.begin();
   sensorTemperatura.setWaitForConversion(false);
 
+  // Servo: arranca con la compuerta cerrada.
   alimentador.setPeriodHertz(50);
   alimentador.attach(PIN_SERVO, 500, 2400);
   alimentador.write(SERVO_CERRADO);
 
+  // Le avisa a la PC que esta listo.
   Serial.println("AquaControl ESP32 (USB) - DS18B20 en GPIO18, servo en GPIO19");
   Serial.println("READY");
 }
 
+// Se repite sin parar: atiende ordenes y mide la temperatura.
 void loop() {
   leerOrdenes();
   actualizarTemperatura();

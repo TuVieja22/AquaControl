@@ -3,6 +3,7 @@
 <section class="landing-section checkout-section" id="checkout">
   <div class="container">
     <div class="checkout-layout">
+      <?php // Columna izquierda: titulo, descripcion y tres datos destacados. ?>
       <div class="checkout-copy" data-reveal>
         <p class="eyebrow">Compra segura</p>
         <h2>Configura tu pedido y deja listo el checkout.</h2>
@@ -14,7 +15,9 @@
         </div>
       </div>
 
+      <?php // Columna derecha: el pedido. ?>
       <div class="purchase-panel checkout-console" data-reveal>
+        <?php // Encabezado con el nombre del producto. ?>
         <div class="purchase-panel-head">
           <div>
             <p class="purchase-panel-tag">Pedido</p>
@@ -23,18 +26,23 @@
           <span class="purchase-status">Compra segura</span>
         </div>
 
+        <?php // Mensajes (por ejemplo, el resultado del pago al volver de Mercado Pago). ?>
         <?= view('components/flash_messages') ?>
 
+        <?php // Formulario de compra (lo maneja funciones/purchase.js: no recarga la pagina). ?>
         <form id="purchaseForm" class="purchase-form" data-skip-loader="true" novalidate>
+          <?php // Codigo del producto (viaja escondido en el formulario). ?>
           <input type="hidden" name="product_sku" value="<?= esc($producto['sku']) ?>">
 
           <div class="purchase-field-grid">
+            <?php // Correo del comprador. ?>
             <div class="purchase-field">
               <label class="form-label" for="purchaseEmail">Email de contacto</label>
               <input class="form-control" id="purchaseEmail" name="email" type="email" inputmode="email"
                 autocomplete="email" placeholder="tu@correo.com" required>
             </div>
 
+            <?php // Cantidad, con botones para restar y sumar. ?>
             <div class="purchase-field">
               <label class="form-label" for="purchaseQuantity">Cantidad</label>
               <div class="purchase-quantity">
@@ -46,6 +54,7 @@
             </div>
           </div>
 
+          <?php // Medio de pago (por ahora solo Mercado Pago). ?>
           <fieldset class="purchase-methods">
             <legend class="form-label">Metodo de pago</legend>
             <label class="purchase-method-card">
@@ -57,6 +66,7 @@
             </label>
           </fieldset>
 
+          <?php // Resumen: producto, precio, cantidad y total (se actualiza solo). ?>
           <div class="purchase-summary" aria-live="polite">
             <div class="purchase-summary-head">
               <h4>Resumen</h4>
@@ -83,13 +93,16 @@
             </dl>
           </div>
 
+          <?php // Casilla de aceptacion. ?>
           <label class="form-check purchase-consent">
             <input type="checkbox" id="purchaseTerms" name="terms" value="1" required>
             <span>Acepto continuar con el checkout seguro y recibir confirmaciones del pedido en el email indicado.</span>
           </label>
 
+          <?php // Aca aparecen los avisos y errores de la compra. ?>
           <div id="purchaseFeedback" class="purchase-feedback" role="status" aria-live="polite"></div>
 
+          <?php // Boton de pagar. ?>
           <div class="purchase-actions purchase-payment-action">
             <button type="submit" class="Btn purchase-submit" id="purchaseSubmit">
               <svg class="svgIcon" viewBox="0 0 576 512" aria-hidden="true">
@@ -99,6 +112,7 @@
             </button>
           </div>
 
+          <?php // Aca aparece el boton oficial de Mercado Pago. ?>
           <div class="purchase-sdk-area">
             <div id="mercadoPagoContainer" class="purchase-sdk-panel" hidden></div>
           </div>

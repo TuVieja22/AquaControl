@@ -10,8 +10,10 @@ use CodeIgniter\Model;
  */
 class DispositivoModel extends Model
 {
+    // Todas las API keys empiezan con este texto.
     public const API_KEY_PREFIX = 'aqk_';
 
+    // Tipos de dispositivo y el nombre que se muestra de cada uno.
     public const TIPOS = [
         'sensor'      => 'Sensor',
         'actuador'    => 'Actuador',
@@ -23,6 +25,7 @@ class DispositivoModel extends Model
     /** Cada cuantos segundos como maximo se actualiza `ultima_conexion` (el ESP32 consulta cada 2 s). */
     private const SEGUNDOS_ENTRE_REGISTROS = 10;
 
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'dispositivos';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -44,6 +47,7 @@ class DispositivoModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
+    // Reglas que se revisan antes de guardar un dispositivo.
     protected $validationRules = [
         'usuario_id' => 'required|is_natural_no_zero',
         'nombre'     => 'required|min_length[2]|max_length[100]',
@@ -51,6 +55,7 @@ class DispositivoModel extends Model
         'ubicacion'  => 'required|min_length[2]|max_length[120]',
     ];
 
+    // Mensaje de cada error.
     protected $validationMessages = [
         'nombre' => [
             'required'   => 'El nombre del dispositivo es obligatorio.',
@@ -66,6 +71,7 @@ class DispositivoModel extends Model
         ],
     ];
 
+    // Dispositivos del usuario, del mas nuevo al mas viejo.
     public function porUsuario(int $userId): array
     {
         return $this->where('usuario_id', $userId)
@@ -73,6 +79,7 @@ class DispositivoModel extends Model
             ->findAll();
     }
 
+    // Un dispositivo, solo si es de ese usuario.
     public function buscarParaUsuario(int $deviceId, int $userId): ?array
     {
         return $this->where('id', $deviceId)
@@ -92,8 +99,10 @@ class DispositivoModel extends Model
      */
     public function generarApiKey(int $deviceId): string
     {
+        // Clave al azar: el prefijo mas 48 letras y numeros.
         $apiKey = self::API_KEY_PREFIX . bin2hex(random_bytes(24));
 
+        // Se guarda el hash, el comienzo de la clave (para reconocerla) y la fecha.
         $this->builder()
             ->where('id', $deviceId)
             ->update([
@@ -105,6 +114,7 @@ class DispositivoModel extends Model
         return $apiKey;
     }
 
+    // Borra la API key del dispositivo.
     public function revocarApiKey(int $deviceId): void
     {
         $this->builder()
@@ -116,6 +126,7 @@ class DispositivoModel extends Model
             ]);
     }
 
+    // Dispositivo al que le pertenece una API key (null si no existe).
     public function buscarPorApiKey(string $apiKey): ?array
     {
         if (! str_starts_with($apiKey, self::API_KEY_PREFIX)) {
@@ -131,6 +142,7 @@ class DispositivoModel extends Model
      */
     public function registrarConexion(array $device): void
     {
+        // Si ya se anoto hace muy poco, no se vuelve a escribir.
         $ultima = strtotime((string) ($device['ultima_conexion'] ?? '')) ?: 0;
         if (time() - $ultima < self::SEGUNDOS_ENTRE_REGISTROS) {
             return;
@@ -141,6 +153,7 @@ class DispositivoModel extends Model
             ->update(['ultima_conexion' => date('Y-m-d H:i:s')]);
     }
 
+    // Hash SHA-256 de una API key (es lo que se guarda en la base).
     public static function hashApiKey(string $apiKey): string
     {
         return hash('sha256', $apiKey);

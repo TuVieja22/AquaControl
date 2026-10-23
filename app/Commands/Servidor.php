@@ -21,18 +21,22 @@ use CodeIgniter\CLI\CLI;
  */
 class Servidor extends BaseCommand
 {
+    // Nombre, descripcion y opciones del comando (lo que muestra "php spark").
     protected $group       = 'AquaControl';
     protected $name        = 'servir';
     protected $description = 'Inicia la pagina (IPv4 + IPv6, con OPcache) en el puerto indicado.';
     protected $usage       = 'servir [--puerto 8080]';
     protected $options     = ['--puerto' => 'Puerto donde escuchar (por defecto 8080).'];
 
+    // Lo que hace el comando al ejecutarlo.
     public function run(array $params)
     {
+        // Puerto elegido (8080 si no se indica).
         $puerto = (int) (CLI::getOption('puerto') ?? 8080);
 
         $this->cerrarServidoresAnteriores();
 
+        // Arranca dos servidores: uno para IPv4 y otro para IPv6.
         $procesos = [];
         foreach (['0.0.0.0', '[::]'] as $direccion) {
             $procesos[$direccion] = proc_open(
@@ -42,6 +46,7 @@ class Servidor extends BaseCommand
             );
         }
 
+        // Espera un segundo y revisa cuales quedaron andando.
         sleep(1);
         foreach ($procesos as $direccion => $proceso) {
             if (! proc_get_status($proceso)['running']) {
@@ -51,6 +56,7 @@ class Servidor extends BaseCommand
             }
         }
 
+        // Si no arranco ninguno, el puerto estaba ocupado.
         if ($procesos === []) {
             CLI::error("No se pudo iniciar la pagina: el puerto {$puerto} esta ocupado.");
 
@@ -60,6 +66,7 @@ class Servidor extends BaseCommand
         CLI::write("AquaControl listo en http://localhost:{$puerto} (en la red: http://IP-DE-ESTA-PC:{$puerto})", 'green');
         CLI::write('Para apagarlo cerra esta ventana o apreta Ctrl+C.');
 
+        // Queda esperando hasta que se cierren los servidores.
         while ($procesos !== []) {
             foreach ($procesos as $direccion => $proceso) {
                 if (! proc_get_status($proceso)['running']) {
@@ -72,8 +79,10 @@ class Servidor extends BaseCommand
         return EXIT_SUCCESS;
     }
 
+    // Arma el comando que arranca un servidor de PHP en esa direccion.
     private function comando(string $direccion, int $puerto): string
     {
+        // Ajustes de OPcache (lo que hace rapida la pagina).
         $ajustes = [
             'opcache.enable_cli=1',
             'opcache.validate_timestamps=1',
@@ -83,6 +92,7 @@ class Servidor extends BaseCommand
             array_unshift($ajustes, 'zend_extension=opcache');
         }
 
+        // php, los ajustes, direccion y puerto, la carpeta public y el archivo que reparte los pedidos.
         return implode(' ', [
             escapeshellarg(PHP_BINARY),
             implode(' ', array_map(static fn (string $ajuste): string => '-d ' . $ajuste, $ajustes)),
@@ -98,6 +108,7 @@ class Servidor extends BaseCommand
      */
     private function cerrarServidoresAnteriores(): void
     {
+        // Solo hace falta en Windows.
         if (DIRECTORY_SEPARATOR !== '\\') {
             return;
         }

@@ -1,7 +1,9 @@
 <?php usar_css('css/home/secciones/producto.css') ?>
 <?php
 // "Producto en accion": galeria de 4 tarjetas (2 con foto y 2 dibujadas con CSS). Para que una tarjeta use otra foto, sumale 'image' => base_url('img/otra.webp').
+// Foto que usan las tarjetas que no indican otra.
 $imagen = base_url('img/aquacontrol-product.webp');
+// Las cuatro tarjetas: clase CSS, etiqueta, titulo, texto y tipo.
 $tarjetas = [
     ['class' => 'gallery-product', 'label' => 'Producto completo', 'title' => 'Kit AquaControl IoT', 'copy' => 'Modulo central, sensores y alimentador en una pieza visualmente integrada.', 'type' => 'image'],
     ['class' => 'gallery-sensors', 'label' => 'Sensores', 'title' => 'Lecturas precisas', 'copy' => 'pH, temperatura y nivel conectados al ecosistema en tiempo real.', 'type' => 'image'],
@@ -11,14 +13,17 @@ $tarjetas = [
 ?>
 <section class="landing-section product-action" id="producto">
   <div class="container">
+    <?php // Titulo de la seccion. ?>
     <div class="section-heading" data-reveal>
       <p class="eyebrow">Producto en acci&oacute;n</p>
       <h2>Hardware, sensores y software trabajando como un solo sistema.</h2>
     </div>
 
+    <?php // Galeria: una tarjeta por cada elemento de la lista. ?>
     <div class="product-gallery">
       <?php foreach ($tarjetas as $item): ?>
         <article class="gallery-card <?= esc($item['class']) ?>" data-reveal>
+          <?php // Segun el tipo: una foto, un panel dibujado o una pecera dibujada. ?>
           <?php if ($item['type'] === 'image'): ?>
             <img src="<?= $item['image'] ?? $imagen ?>" alt="<?= esc($item['title']) ?>" width="1448" height="1086" loading="lazy" decoding="async">
           <?php elseif ($item['type'] === 'dashboard'): ?>
@@ -48,6 +53,7 @@ $tarjetas = [
               <span class="aquarium-bubble bubble-three"></span>
             </div>
           <?php endif; ?>
+          <?php // Textos de la tarjeta. ?>
           <div class="gallery-copy">
             <span><?= $item['label'] ?></span>
             <h3><?= $item['title'] ?></h3>

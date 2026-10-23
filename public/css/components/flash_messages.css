@@ -4,6 +4,7 @@
    uso (exito, error o aviso) que aparecen arriba de los formularios.
    =================================================== */
 
+/* Forma comun de los mensajes (aparecen bajando). */
 .flash {
   display: flex;
   align-items: center;
@@ -15,6 +16,7 @@
   animation: fadeInDown 0.3s ease;
 }
 
+/* Colores segun el tipo: exito (verde), error (rojo) y aviso (azul). */
 .flash-success { background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.3); color: #5DCAA5; }
 .flash-error   { background: rgba(226,75,74,0.1);  border: 1px solid rgba(226,75,74,0.3);  color: #F09595; }
 .flash-info    { background: rgba(55,138,221,0.1); border: 1px solid rgba(55,138,221,0.3); color: #85B7EB; }
@@ -25,6 +27,7 @@
   transition: opacity 0.5s ease;
 }
 
+/* Animacion de entrada: aparece bajando. */
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-16px); }
   to   { opacity: 1; transform: translateY(0); }

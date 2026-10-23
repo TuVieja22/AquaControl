@@ -3,11 +3,13 @@
    Estilos de la vista app/Views/home/secciones/como_funciona.php: los pasos.
    =================================================== */
 
+/* Lineas finas arriba y abajo de la seccion. */
 .process-section {
   border-top: 1px solid rgba(255,255,255,0.07);
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
+/* Fila de pasos. */
 .process-track {
   position: relative;
   display: grid;
@@ -15,6 +17,7 @@
   gap: 18px;
 }
 
+/* Linea que une los pasos. */
 .process-track::before {
   content: '';
   position: absolute;
@@ -26,6 +29,7 @@
   box-shadow: 0 0 24px rgba(0,212,255,0.24);
 }
 
+/* Tarjeta de cada paso. */
 .process-step {
   position: relative;
   min-height: 380px;
@@ -33,6 +37,7 @@
   padding: 26px;
 }
 
+/* Numero del paso. */
 .process-step > span {
   color: var(--aqua-cyan);
   font-size: 0.78rem;
@@ -40,6 +45,7 @@
   letter-spacing: 0.16em;
 }
 
+/* Recuadro del dibujo de cada paso. */
 .step-visual {
   position: relative;
   height: 168px;
@@ -54,6 +60,7 @@
   background-size: 28px 28px;
 }
 
+/* Base comun de los tres dibujos. */
 .sensor-visual::before,
 .device-visual::before,
 .phone-visual::before {
@@ -66,6 +73,7 @@
   transform: translate(-50%, -50%);
 }
 
+/* Dibujo del sensor. */
 .sensor-visual::before {
   width: 34px;
   height: 110px;
@@ -84,6 +92,7 @@
   box-shadow: 0 0 18px rgba(64,242,191,0.42);
 }
 
+/* Dibujo del dispositivo. */
 .device-visual::before {
   width: 118px;
   height: 118px;
@@ -103,6 +112,7 @@
   transform: translate(-50%, -50%);
 }
 
+/* Dibujo del celular. */
 .phone-visual::before {
   width: 86px;
   height: 132px;
@@ -124,6 +134,7 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: los pasos uno debajo de otro. */
 @media (max-width: 980px) {
   .process-track { grid-template-columns: 1fr; }
   .process-step { min-height: auto; }

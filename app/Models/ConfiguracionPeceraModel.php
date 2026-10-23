@@ -22,6 +22,7 @@ class ConfiguracionPeceraModel extends Model
         'cantidad_alim_gramos' => 1.00,
     ];
 
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'configuracion_pecera';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -44,6 +45,7 @@ class ConfiguracionPeceraModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
+    // Configuracion guardada del usuario (null si todavia no tiene).
     public function porUsuario(int $userId): ?array
     {
         return $this->where('usuario_id', $userId)->first();

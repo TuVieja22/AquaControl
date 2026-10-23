@@ -28,20 +28,24 @@ class TablasDeLecturasEIndices extends Migration
     /** Indices de una sola columna que los nuevos dejan de mas. */
     private const INDICES_VIEJOS = [['usuario_id'], ['leida']];
 
+    // Agrega las columnas de horarios (si faltan) y cambia los indices.
     public function up(): void
     {
+        // Los dos horarios de alimentacion y los gramos por racion.
         $columnas = [
             'hora_alim_1'          => ['type' => 'TIME', 'null' => true, 'default' => '08:00:00', 'after' => 'temp_objetivo'],
             'hora_alim_2'          => ['type' => 'TIME', 'null' => true, 'default' => '18:00:00', 'after' => 'hora_alim_1'],
             'cantidad_alim_gramos' => ['type' => 'DECIMAL', 'constraint' => '4,2', 'null' => false, 'default' => 1.00, 'after' => 'hora_alim_2'],
         ];
 
+        // Solo se agregan las que todavia no existen.
         foreach ($columnas as $nombre => $definicion) {
             if (! $this->db->fieldExists($nombre, 'configuracion_pecera')) {
                 $this->forge->addColumn('configuracion_pecera', [$nombre => $definicion]);
             }
         }
 
+        // En cada tabla: crea el indice nuevo y quita los viejos que sobran.
         foreach (self::INDICES as $tabla => [$nombre, $columnasDelIndice]) {
             $actuales = $this->indices($tabla);
             $cambios = [];
@@ -61,6 +65,7 @@ class TablasDeLecturasEIndices extends Migration
         }
     }
 
+    // Deshace los cambios de indices.
     public function down(): void
     {
         // Solo se deshacen los indices: las columnas tienen datos y no se borran.
@@ -69,6 +74,7 @@ class TablasDeLecturasEIndices extends Migration
                 continue;
             }
 
+            // Vuelve a poner los indices de una sola columna.
             $cambios = ['ADD KEY idx_usuario (usuario_id)', "DROP KEY {$nombre}"];
             if ($tabla === 'alertas') {
                 $cambios[] = 'ADD KEY idx_leida (leida)';
@@ -81,6 +87,7 @@ class TablasDeLecturasEIndices extends Migration
     /** Indices de una tabla (sin la clave primaria): nombre => columnas en orden. */
     private function indices(string $tabla): array
     {
+        // Lee los indices de la tabla y junta sus columnas en orden.
         $indices = [];
         $filas = $this->db->query('SHOW INDEX FROM ' . $this->db->prefixTable($tabla))->getResultArray();
 

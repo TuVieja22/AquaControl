@@ -10,6 +10,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class Dispositivos extends BaseController
 {
+    // Modelo de dispositivos: lo usan todos los metodos.
     private DispositivoModel $dispositivoModel;
 
     public function __construct()
@@ -17,13 +18,16 @@ class Dispositivos extends BaseController
         $this->dispositivoModel = new DispositivoModel();
     }
 
+    // Lista de dispositivos del usuario.
     public function index(): string
     {
         return $this->listado();
     }
 
+    // Registra un dispositivo nuevo con los datos del formulario.
     public function create(): string|RedirectResponse
     {
+        // Si el modelo rechaza los datos, se vuelve a la lista mostrando los errores.
         if (! $this->dispositivoModel->insert($this->datosDelFormulario())) {
             return $this->listado($this->dispositivoModel->errors());
         }
@@ -31,14 +35,17 @@ class Dispositivos extends BaseController
         return $this->volver('success', 'Dispositivo registrado correctamente.');
     }
 
+    // Muestra el formulario de edicion y guarda los cambios.
     public function edit(int $id): string|RedirectResponse
     {
+        // Solo se puede editar un dispositivo propio.
         $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
         if (! $device) {
             return $this->volver('error', 'El dispositivo no existe o no tienes permisos para editarlo.');
         }
 
         $errores = [];
+        // Si llego el formulario, intenta guardar; si falla, muestra los errores con lo escrito.
         if ($this->request->getMethod() === 'POST') {
             $datos = $this->datosDelFormulario();
             if ($this->dispositivoModel->update($id, ['id' => $id] + $datos)) {
@@ -56,6 +63,7 @@ class Dispositivos extends BaseController
         ]);
     }
 
+    // Elimina un dispositivo propio.
     public function delete(int $id): RedirectResponse
     {
         if (! $this->dispositivoModel->buscarParaUsuario($id, $this->userId())) {
@@ -73,11 +81,13 @@ class Dispositivos extends BaseController
      */
     public function generateApiKey(int $id): RedirectResponse
     {
+        // Solo sobre un dispositivo propio.
         $device = $this->dispositivoModel->buscarParaUsuario($id, $this->userId());
         if (! $device) {
             return $this->volver('error', 'El dispositivo no existe o no tienes permisos sobre el.');
         }
 
+        // Crea la clave nueva y se la pasa a la pagina una sola vez, para mostrarla.
         $apiKey = $this->dispositivoModel->generarApiKey($id);
 
         return redirect()
@@ -88,6 +98,7 @@ class Dispositivos extends BaseController
                 : 'API key regenerada. La anterior dejo de funcionar.');
     }
 
+    // Anula la API key: el dispositivo deja de poder conectarse.
     public function revokeApiKey(int $id): RedirectResponse
     {
         if (! $this->dispositivoModel->buscarParaUsuario($id, $this->userId())) {
@@ -99,6 +110,7 @@ class Dispositivos extends BaseController
         return $this->volver('success', 'API key revocada. El dispositivo ya no podra enviar lecturas.');
     }
 
+    // Muestra la pagina de dispositivos (con errores y lo escrito, si los hay).
     private function listado(array $errores = []): string
     {
         return view('devices/index', [
@@ -116,6 +128,7 @@ class Dispositivos extends BaseController
         ]);
     }
 
+    // Datos del formulario, sin espacios de mas y a nombre del usuario.
     private function datosDelFormulario(): array
     {
         return [
@@ -126,6 +139,7 @@ class Dispositivos extends BaseController
         ];
     }
 
+    // Vuelve a la lista con un mensaje.
     private function volver(string $tipo, string $mensaje): RedirectResponse
     {
         return redirect()->to(base_url('dispositivos'))->with($tipo, $mensaje);

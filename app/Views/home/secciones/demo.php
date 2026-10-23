@@ -2,12 +2,15 @@
 <?php // "Dashboard preview": panel de muestra. animaciones/portada.js le cambia los numeros cada pocos segundos. ?>
 <section class="landing-section dashboard-preview-section" id="demo">
   <div class="container">
+    <?php // Titulo de la seccion. ?>
     <div class="section-heading" data-reveal>
       <p class="eyebrow">Dashboard preview</p>
       <h2>Una cabina de control futurista para tu ecosistema.</h2>
     </div>
 
+    <?php // Panel de muestra. ?>
     <div class="dashboard-preview" data-dashboard-demo data-reveal>
+      <?php // Encabezado: cartel "En vivo", nombre del acuario y ultima sincronizacion. ?>
       <div class="dashboard-preview-header">
         <div>
           <span class="dashboard-chip"><span class="signal-dot"></span> En vivo</span>
@@ -16,6 +19,7 @@
         <p>Ultima sincronizacion <strong data-live-sync>hace 4 s</strong></p>
       </div>
 
+      <?php // Cuatro tarjetas con numeros (los data-live-... son las marcas que usa el JavaScript). ?>
       <div class="dashboard-preview-grid">
         <div class="live-stat">
           <span>Temperatura</span>
@@ -39,6 +43,7 @@
         </div>
       </div>
 
+      <?php // Grafico dibujado a mano (no usa datos reales) y, al lado, tres avisos de ejemplo. ?>
       <div class="dashboard-chart-area">
         <div class="chart-panel">
           <div class="chart-head">
@@ -57,6 +62,7 @@
             <path class="chart-line-secondary" d="M20 126 C92 146 128 98 194 134 C272 176 314 88 386 118 C462 148 524 104 620 132"/>
           </svg>
         </div>
+        <?php // Avisos de ejemplo. ?>
         <div class="alert-stack">
           <article>
             <span class="status-ok"></span>

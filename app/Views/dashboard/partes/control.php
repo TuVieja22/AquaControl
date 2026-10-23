@@ -1,9 +1,11 @@
 <?php usar_css('css/dashboard/partes/control.css') ?>
 <?php
 // Control manual (modo vacaciones y temperatura objetivo) y rangos optimos vigentes.
+// Atajo a la configuracion de la pecera.
 $config = $dashboardData['config'];
 ?>
 <section class="dashboard-grid control-grid" id="configuracion">
+  <?php // Control manual. ?>
   <article class="glass-card control-card">
     <div class="panel-head">
       <div>
@@ -13,6 +15,7 @@ $config = $dashboardData['config'];
     </div>
 
     <div class="control-actions">
+      <?php // Modo vacaciones: estado actual y boton para cambiarlo. ?>
       <div class="toggle-row">
         <div>
           <span class="form-label">Modo vacaciones</span>
@@ -21,6 +24,7 @@ $config = $dashboardData['config'];
         <button class="btn btn-outline" id="vacationToggleBtn" type="button">Activar / desactivar</button>
       </div>
 
+      <?php // Temperatura objetivo. ?>
       <form id="targetTemperatureForm" class="control-form">
         <label class="form-label" for="temp_objetivo">Temperatura objetivo</label>
         <div class="control-inline">
@@ -31,6 +35,7 @@ $config = $dashboardData['config'];
     </div>
   </article>
 
+  <?php // Rangos ideales configurados (solo se muestran). ?>
   <article class="glass-card control-card">
     <div class="panel-head">
       <div>

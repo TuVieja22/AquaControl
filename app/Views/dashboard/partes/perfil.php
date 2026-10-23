@@ -2,12 +2,14 @@
 <?php
 // "Mi cuenta": formulario para cambiar nombre y email (lo guarda el controlador Perfil).
 // Si el formulario volvio con errores, se muestran los datos que habia escrito el usuario.
+// Errores, datos a mostrar e inicial del nombre (para el circulo).
 $errores = $profileErrors;
 $nombre = $profileForm['nombre'] ?? $profile['nombre'];
 $email = $profileForm['email'] ?? $profile['email'];
 $inicial = strtoupper(substr(trim($nombre), 0, 1)) ?: 'U';
 ?>
 <section class="dashboard-grid profile-grid" id="perfil">
+  <?php // Formulario de la cuenta. ?>
   <article class="glass-card profile-card">
     <div class="panel-head">
       <div>
@@ -16,10 +18,12 @@ $inicial = strtoupper(substr(trim($nombre), 0, 1)) ?: 'U';
       </div>
     </div>
 
+    <?php // Manda los cambios a dashboard/profile. ?>
     <form class="profile-form" action="<?= base_url('dashboard/profile') ?>" method="POST" novalidate>
       <?= csrf_field() ?>
 
       <div class="profile-form-grid">
+        <?php // Nombre y apellido. ?>
         <div class="form-group">
           <label class="form-label" for="profile_nombre">Nombre y apellido</label>
           <input class="form-control<?= clase_error($errores, 'nombre') ?>" id="profile_nombre" name="nombre" type="text" value="<?= esc($nombre) ?>" autocomplete="name" required>
@@ -27,6 +31,7 @@ $inicial = strtoupper(substr(trim($nombre), 0, 1)) ?: 'U';
           <?= error_campo($errores, 'nombre') ?>
         </div>
 
+        <?php // Correo electronico. ?>
         <div class="form-group">
           <label class="form-label" for="profile_email">Correo electronico</label>
           <input class="form-control<?= clase_error($errores, 'email') ?>" id="profile_email" name="email" type="email" value="<?= esc($email) ?>" autocomplete="email" required>
@@ -34,27 +39,25 @@ $inicial = strtoupper(substr(trim($nombre), 0, 1)) ?: 'U';
           <?= error_campo($errores, 'email') ?>
         </div>
 
+        <?php // Contrasena actual (solo hace falta para cambiar el correo). ?>
         <div class="form-group">
           <label class="form-label" for="profile_current_password">Contrasena actual</label>
           <input class="form-control<?= clase_error($errores, 'current_password') ?>" id="profile_current_password" name="current_password" type="password" autocomplete="current-password" placeholder="Solo si cambias el email">
           <p class="field-help">Confirma tu identidad antes de modificar el correo de acceso.</p>
           <?= error_campo($errores, 'current_password') ?>
         </div>
-
-        <div class="form-group">
-          <label class="form-label" for="profile_role">Rol actual</label>
-          <input class="form-control" id="profile_role" type="text" value="<?= esc($profile['roleLabel']) ?>" readonly>
-          <p class="field-help">Define los permisos disponibles dentro de AquaControl.</p>
-        </div>
       </div>
 
+      <?php // Boton de guardar. ?>
       <div class="profile-form-actions">
         <button class="btn btn-primary" type="submit">Guardar cambios</button>
       </div>
     </form>
   </article>
 
+  <?php // Resumen de la cuenta. ?>
   <article class="glass-card profile-card profile-summary-card">
+    <?php // Circulo con la inicial, nombre y correo. ?>
     <div class="profile-identity">
       <span class="profile-avatar"><?= esc($inicial) ?></span>
       <div>
@@ -64,11 +67,8 @@ $inicial = strtoupper(substr(trim($nombre), 0, 1)) ?: 'U';
       </div>
     </div>
 
+    <?php // Fecha de alta y ultimo cambio. ?>
     <div class="profile-summary">
-      <div class="profile-summary-item">
-        <span>Rol</span>
-        <strong><?= esc($profile['roleLabel']) ?></strong>
-      </div>
       <div class="profile-summary-item">
         <span>Cuenta creada</span>
         <strong><?= $profile['created_at'] ? date('d/m/Y', strtotime($profile['created_at'])) : 'Sin datos' ?></strong>

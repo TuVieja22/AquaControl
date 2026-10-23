@@ -28,6 +28,7 @@ class Filters extends BaseFilters
      * or [filter_name => [classname1, classname2, ...]]
      */
     public array $aliases = [
+        // Filtros propios de AquaControl: auth, csrfheader y deviceauth (estan en app/Filters).
         'auth'          => \App\Filters\AuthFilter::class,
         'csrf'          => CSRF::class,
         'csrfheader'    => \App\Filters\CsrfTokenHeaderFilter::class,
@@ -79,12 +80,14 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
+            // Antes de cada pagina: se revisa el sello de seguridad de los formularios.
             'csrf' => ['except' => self::SIN_CSRF],
             // 'invalidchars',
         ],
         'after' => [
             // 'honeypot',
             // 'secureheaders',
+            // Despues de cada pagina: se manda el sello nuevo en un header.
             'csrfheader' => ['except' => self::SIN_CSRF],
         ],
     ];

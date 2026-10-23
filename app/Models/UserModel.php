@@ -9,32 +9,30 @@ use CodeIgniter\Model;
  */
 class UserModel extends Model
 {
+    // Roles posibles; las cuentas nuevas son de usuario comun.
     public const ROLE_ADMIN = 'administrador';
     public const ROLE_USER = 'usuario';
     public const ROLE_TECHNICIAN = 'tecnico';
     public const DEFAULT_ROLE = self::ROLE_USER;
 
-    public const ROLES = [
-        self::ROLE_ADMIN      => 'Administrador',
-        self::ROLE_USER       => 'Usuario comun',
-        self::ROLE_TECHNICIAN => 'Tecnico',
-    ];
-
     /** Regla de contrasena segura (se le antepone "required|" o "permit_empty|"). */
     public const PASSWORD_RULE = 'min_length[8]|regex_match[/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/]';
 
+    // Mensajes de error de la contrasena.
     public const PASSWORD_MESSAGES = [
         'required'    => 'La contrasena es obligatoria.',
         'min_length'  => 'La contrasena debe tener al menos 8 caracteres.',
         'regex_match' => 'La contrasena debe incluir mayusculas, minusculas, numeros y caracteres especiales.',
     ];
 
+    // Tabla y clave.
     protected $table            = 'usuarios';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
 
+    // Columnas que se pueden escribir.
     protected $allowedFields = [
         'nombre',
         'email',
@@ -53,6 +51,7 @@ class UserModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
+    // Reglas que se revisan antes de guardar una cuenta.
     protected $validationRules = [
         // El "id" necesita su propia regla porque la del email lo usa ({id}) para no
         // contar al propio usuario como "correo repetido".
@@ -63,6 +62,7 @@ class UserModel extends Model
         'rol'      => 'permit_empty|in_list[administrador,usuario,tecnico]',
     ];
 
+    // Mensaje de cada error.
     protected $validationMessages = [
         'nombre' => [
             'required'   => 'El nombre es obligatorio.',
@@ -83,6 +83,7 @@ class UserModel extends Model
     protected $beforeInsert = ['normalizarDatos'];
     protected $beforeUpdate = ['normalizarDatos'];
 
+    // Pasa el correo a minusculas y convierte la contrasena en un hash (bcrypt).
     protected function normalizarDatos(array $data): array
     {
         if (isset($data['data']['email'])) {
@@ -96,6 +97,7 @@ class UserModel extends Model
         return $data;
     }
 
+    // Cuenta activa con ese correo.
     public function findByEmail(string $email): ?array
     {
         return $this->where('email', strtolower(trim($email)))
@@ -103,11 +105,13 @@ class UserModel extends Model
             ->first();
     }
 
+    // Compara la contrasena escrita con el hash guardado.
     public function verifyPassword(string $plain, string $hash): bool
     {
         return password_verify($plain, $hash);
     }
 
+    // Crea el codigo para cambiar la contrasena; vale una hora.
     public function generarTokenRecuperacion(int $userId): string
     {
         $token = bin2hex(random_bytes(32));
@@ -121,6 +125,7 @@ class UserModel extends Model
         return $token;
     }
 
+    // Cuenta a la que pertenece un codigo que todavia no vencio.
     public function findByTokenValido(string $token): ?array
     {
         return $this->where('token_recuperacion', hash('sha256', $token))
@@ -129,6 +134,7 @@ class UserModel extends Model
             ->first();
     }
 
+    // Guarda la contrasena nueva, anula el codigo y quita los bloqueos.
     public function restablecerPassword(int $userId, string $nuevaPassword): bool
     {
         return $this->update($userId, [
@@ -149,6 +155,7 @@ class UserModel extends Model
         return $this->insert($datos);
     }
 
+    // Suma un intento fallido a la cuenta y la bloquea si llego al limite.
     public function registrarIntentoFallido(int $userId, int $maxAttempts, int $lockMinutes): bool
     {
         $user = $this->find($userId);
@@ -156,6 +163,7 @@ class UserModel extends Model
             return false;
         }
 
+        // Si el bloqueo anterior ya vencio, la cuenta empieza de cero.
         $vencido = ! empty($user['bloqueado_hasta']) && strtotime((string) $user['bloqueado_hasta']) <= time();
         $attempts = ($vencido ? 0 : (int) ($user['login_intentos'] ?? 0)) + 1;
 
@@ -165,6 +173,7 @@ class UserModel extends Model
         ]);
     }
 
+    // Pone en cero los intentos fallidos y quita el bloqueo.
     public function resetearSeguridadLogin(int $userId): bool
     {
         return $this->update($userId, [
@@ -173,19 +182,9 @@ class UserModel extends Model
         ]);
     }
 
+    // Segundos que faltan para que termine el bloqueo (0 si no esta bloqueada).
     public function segundosBloqueoRestantes(array $user): int
     {
         return max(0, (strtotime((string) ($user['bloqueado_hasta'] ?? '')) ?: 0) - time());
-    }
-
-    public function roleLabel(string $role): string
-    {
-        return self::ROLES[$role] ?? self::ROLES[self::DEFAULT_ROLE];
-    }
-
-    /** Cuantos administradores activos hay (para no dejar el sistema sin ninguno). */
-    public function administradoresActivos(): int
-    {
-        return $this->where('rol', self::ROLE_ADMIN)->where('activo', 1)->countAllResults();
     }
 }

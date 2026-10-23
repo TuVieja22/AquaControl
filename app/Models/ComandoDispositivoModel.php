@@ -17,8 +17,10 @@ use DateTimeZone;
  */
 class ComandoDispositivoModel extends Model
 {
+    // Unica orden que existe por ahora: mover el servo del alimentador.
     public const ACCION_ALIMENTAR = 'alimentar';
 
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'comandos_dispositivo';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -37,18 +39,22 @@ class ComandoDispositivoModel extends Model
         'mensaje',
     ];
 
+    // La base anota sola cuando se creo y cuando cambio cada orden.
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
+    // Tiempos y limites del alimentador (app/Config/Feeding.php).
     private Feeding $feeding;
 
+    // Al crear el modelo se lee esa configuracion.
     public function __construct(...$params)
     {
         parent::__construct(...$params);
         $this->feeding = config(Feeding::class);
     }
 
+    // Orden de alimentar que todavia no termino (en cola o ya enviada), si hay alguna.
     public function alimentacionPendiente(int $userId): ?array
     {
         $this->expirarVencidos($userId);
@@ -60,6 +66,7 @@ class ComandoDispositivoModel extends Model
             ->first();
     }
 
+    // Ultima orden de alimentar, sin importar como termino.
     public function ultimaAlimentacion(int $userId): ?array
     {
         return $this->where('usuario_id', $userId)
@@ -68,6 +75,7 @@ class ComandoDispositivoModel extends Model
             ->first();
     }
 
+    // Crea la orden de "Alimentar ahora"; vence sola si nadie la toma a tiempo.
     public function crearAlimentacionManual(int $userId, float $grams): int
     {
         $now = time();
@@ -89,15 +97,18 @@ class ComandoDispositivoModel extends Model
      */
     public function programarAlimentaciones(int $userId, array $config): void
     {
+        // Gramos por racion, margen permitido y hora actual.
         $grams = (float) ($config['cantidad_alim_gramos'] ?? 1);
         $window = $this->feeding->scheduleWindowMinutes * 60;
         $now = time();
 
+        // Recorre los horarios: solo sirven los que ya pasaron y siguen dentro del margen.
         foreach ($this->horariosEnUtc($config) as $scheduledAt) {
             if ($scheduledAt > $now || $now >= $scheduledAt + $window) {
                 continue;
             }
 
+            // Crea la orden (si ya existia, la base la ignora).
             $this->db->table($this->table)->ignore(true)->insert([
                 'usuario_id'      => $userId,
                 'accion'          => self::ACCION_ALIMENTAR,
@@ -118,10 +129,12 @@ class ComandoDispositivoModel extends Model
      */
     public function horariosEnUtc(array $config): array
     {
+        // Dia de hoy en la zona horaria del alimentador.
         $zone = new DateTimeZone($this->feeding->timezone);
         $today = new DateTimeImmutable('today', $zone);
         $timestamps = [];
 
+        // Cada horario se convierte a fecha y hora de ayer y de hoy.
         foreach (self::horasConfiguradas($config) as $time) {
             [$hour, $minute] = array_map('intval', explode(':', $time));
 
@@ -143,12 +156,14 @@ class ComandoDispositivoModel extends Model
         $zone = new DateTimeZone($this->feeding->timezone);
         $now = time();
 
+        // Devuelve el primero que todavia no paso.
         foreach ($this->horariosEnUtc($config) as $timestamp) {
             if ($timestamp > $now) {
                 return (new DateTimeImmutable('@' . $timestamp))->setTimezone($zone)->format('H:i');
             }
         }
 
+        // Si hoy ya pasaron todos, el proximo es el primero del dia siguiente.
         $hours = self::horasConfiguradas($config);
 
         return $hours === [] ? null : $hours[0]; // el primero de maniana
@@ -161,10 +176,12 @@ class ComandoDispositivoModel extends Model
      */
     public function reclamarPendientes(array $device): array
     {
+        // Primero se dan de baja las ordenes vencidas.
         $userId = (int) $device['usuario_id'];
         $deviceId = (int) $device['id'];
         $this->expirarVencidos($userId);
 
+        // Ordenes pendientes del usuario, sin dispositivo fijo o para este mismo.
         $candidates = $this->where('usuario_id', $userId)
             ->where('estado', 'pendiente')
             ->groupStart()
@@ -174,6 +191,7 @@ class ComandoDispositivoModel extends Model
             ->orderBy('id', 'ASC')
             ->findAll(10);
 
+        // Se marcan como enviadas una por una; solo cuentan las que este pedido logro marcar.
         $claimed = [];
         foreach ($candidates as $command) {
             $this->db->table($this->table)
@@ -200,6 +218,7 @@ class ComandoDispositivoModel extends Model
      */
     public function finalizar(int $commandId, int $deviceId, string $status, ?string $message = null): ?array
     {
+        // Solo se cierra si es de este dispositivo y estaba enviada.
         $this->db->table($this->table)
             ->where('id', $commandId)
             ->where('dispositivo_id', $deviceId)
@@ -214,6 +233,7 @@ class ComandoDispositivoModel extends Model
         return $this->db->affectedRows() === 1 ? $this->find($commandId) : null;
     }
 
+    // Datos extra de la orden (por ejemplo los gramos), guardados como texto JSON.
     public static function parametros(array $command): array
     {
         $params = json_decode((string) ($command['parametros'] ?? ''), true);
@@ -221,6 +241,7 @@ class ComandoDispositivoModel extends Model
         return is_array($params) ? $params : [];
     }
 
+    // Horarios validos de la configuracion, como "HH:MM", sin repetir y ordenados.
     public static function horasConfiguradas(array $config): array
     {
         $hours = [];
@@ -237,6 +258,7 @@ class ComandoDispositivoModel extends Model
         return $hours;
     }
 
+    // Pasa a "expirado" las ordenes pendientes cuyo plazo ya vencio.
     private function expirarVencidos(int $userId): void
     {
         $this->db->table($this->table)

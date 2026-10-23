@@ -14,6 +14,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class AuthFilter implements FilterInterface
 {
+    // Se ejecuta antes de la pagina: sin sesion, manda al login.
     public function before(RequestInterface $request, $arguments = null)
     {
         if (! session()->get('logged_in')) {
@@ -22,6 +23,7 @@ class AuthFilter implements FilterInterface
             return redirect()->to(base_url('auth/login'));
         }
 
+        // Si la ruta pide un rol, el usuario tiene que tenerlo.
         $roles = array_filter((array) $arguments);
         if ($roles !== [] && ! in_array((string) session()->get('user_role'), $roles, true)) {
             session()->setFlashdata('error', 'No tienes permisos para acceder a esa seccion.');
@@ -29,9 +31,11 @@ class AuthFilter implements FilterInterface
             return redirect()->to(base_url('dashboard'));
         }
 
+        // Todo bien: sigue hacia la pagina.
         return null;
     }
 
+    // Despues de la pagina no hace nada.
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
     }

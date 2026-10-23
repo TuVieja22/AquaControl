@@ -12,12 +12,14 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class DeviceAuthFilter implements FilterInterface
 {
+    // Antes de la pagina: deja pasar solo si la API key es de un dispositivo registrado.
     public function before(RequestInterface $request, $arguments = null)
     {
         if (service('deviceAuth')->authenticate($request) !== null) {
             return null;
         }
 
+        // Sin clave valida responde 401 (no autorizado).
         return service('response')
             ->setStatusCode(401)
             ->setHeader('WWW-Authenticate', 'Bearer realm="aquacontrol-device"')
@@ -27,6 +29,7 @@ class DeviceAuthFilter implements FilterInterface
             ]);
     }
 
+    // Despues de la pagina no hace nada.
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
     }

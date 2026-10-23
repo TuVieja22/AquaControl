@@ -42,11 +42,13 @@ class MercadoPago extends BaseConfig
     /** Endpoint del backend que crea la preferencia (normalmente no hace falta cambiarlo). */
     public string $preferenceUrl = '';
 
+    // Dice si se esta probando en la PC (runtime = local).
     public function esLocal(): bool
     {
         return strtolower($this->runtime) === 'local';
     }
 
+    // Dice si hay que volver solo al sitio despues de pagar.
     public function usarAutoReturn(): bool
     {
         if ($this->autoReturn === null) {

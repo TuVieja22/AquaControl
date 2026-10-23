@@ -1,12 +1,14 @@
 /* ===================================================
    AquaControl — layouts/panel.css
    Estilos del molde del panel (app/Views/layouts/panel.php): el menu lateral y lo que
-   comparten sus paginas (panel de la pecera, dispositivos, usuarios y pedidos).
+   comparten sus paginas (panel de la pecera y dispositivos).
    =================================================== */
 
 /* ── ESTRUCTURA: menu a la izquierda, contenido a la derecha ── */
+/* Espacio arriba y abajo de la pagina. */
 .dashboard-page { padding: 42px 0 80px; }
 
+/* Dos columnas: menu y contenido. */
 .dashboard-shell {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -14,10 +16,12 @@
   gap: 24px;
 }
 
+/* Permite que las columnas se achiquen sin desbordar. */
 .dashboard-sidebar,
 .dashboard-main,
 .dashboard-main > * { min-width: 0; }
 
+/* Columna de contenido: las tarjetas van una debajo de otra. */
 .dashboard-main {
   display: grid;
   gap: 24px;
@@ -31,12 +35,14 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Menu lateral: queda fijo al bajar por la pagina. */
 .dashboard-sidebar {
   position: sticky;
   top: 104px;
   padding: 26px;
 }
 
+/* Titulos con la letra de titulos. */
 .dashboard-sidebar h1,
 .dashboard-title,
 .panel-head h3 {
@@ -45,27 +51,32 @@
   letter-spacing: -0.02em;
 }
 
+/* Titulo del menu lateral. */
 .dashboard-sidebar h1 {
   margin-bottom: 10px;
   font-size: 2rem;
 }
 
+/* Textos secundarios, en gris. */
 .dashboard-kicker,
 .dashboard-subtitle,
 .dashboard-intro,
 .table-empty { color: var(--text-muted); }
 
+/* Descripcion debajo del titulo. */
 .dashboard-intro {
   margin-bottom: 22px;
   font-size: 0.95rem;
 }
 
+/* Lista de links del menu. */
 .dashboard-menu {
   display: grid;
   gap: 10px;
   margin-bottom: 24px;
 }
 
+/* Cada link del menu. */
 .dashboard-link {
   padding: 13px 16px;
   border: 1px solid transparent;
@@ -74,6 +85,7 @@
   transition: var(--transition);
 }
 
+/* Link al pasar el mouse y link de la pagina actual. */
 .dashboard-link:hover,
 .dashboard-link.is-active {
   border-color: rgba(93,202,165,0.18);
@@ -81,6 +93,7 @@
   box-shadow: var(--shadow-glow);
 }
 
+/* Titulo grande de una pagina del panel. */
 .dashboard-title {
   margin: 8px 0 10px;
   font-size: clamp(2rem, 4vw, 3rem);
@@ -96,6 +109,7 @@
   text-transform: uppercase;
 }
 
+/* Encabezado de tarjeta: titulo a la izquierda y algo mas a la derecha. */
 .panel-head {
   display: flex;
   align-items: center;
@@ -104,22 +118,28 @@
   margin-bottom: 20px;
 }
 
+/* Titulo de la tarjeta. */
 .panel-head h3 { font-size: 1.45rem; }
 
 /* Una tabla ancha se desliza dentro de su tarjeta. */
 .table-wrap { overflow-x: auto; }
 
 /* ── DISPOSITIVOS, USUARIOS Y PEDIDOS (lo que comparten) ─── */
+/* Encabezado de las paginas de gestion. */
 .management-hero { padding: 28px 32px; }
+/* Tarjeta de las paginas de gestion. */
 .management-card { padding: 24px; }
 
+/* Tarjeta angosta (formularios de edicion). */
 .management-narrow { max-width: 760px; }
 
+/* Formulario: campos uno debajo de otro. */
 .management-form {
   display: grid;
   gap: 18px;
 }
 
+/* Fila de botones del formulario. */
 .management-form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -127,21 +147,22 @@
   gap: 10px;
 }
 
+/* Los botones ocupan solo lo que necesitan. */
 .management-form-actions .btn { width: auto; }
 
+/* Lista desplegable con la misma altura que un campo. */
 select.form-control { min-height: 48px; }
 
+/* Aclaracion debajo de un campo. */
 .field-help {
   margin-top: 6px;
   color: var(--text-muted);
   font-size: 0.8rem;
 }
 
-/* Etiquetas redondeadas (cantidad, rol, tipo, estado). */
+/* Etiquetas redondeadas (cantidad y tipo). */
 .management-count,
-.role-badge,
-.type-badge,
-.status-pill {
+.type-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -157,17 +178,20 @@ select.form-control { min-height: 48px; }
   white-space: nowrap;
 }
 
+/* La etiqueta de cantidad tiene un ancho minimo. */
 .management-count { min-width: 42px; }
 
+/* Color del texto de las etiquetas. */
 .management-count,
-.role-badge,
 .type-badge { color: var(--teal-100); }
 
+/* Tabla de las paginas de gestion. */
 .management-table {
   width: 100%;
   border-collapse: collapse;
 }
 
+/* Celdas. */
 .management-table th,
 .management-table td {
   padding: 14px 12px;
@@ -177,6 +201,7 @@ select.form-control { min-height: 48px; }
   vertical-align: middle;
 }
 
+/* Encabezados de columna. */
 .management-table th {
   color: var(--text-muted);
   font-size: 0.78rem;
@@ -185,6 +210,7 @@ select.form-control { min-height: 48px; }
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets: una sola columna y botones a todo el ancho. */
 @media (max-width: 768px) {
   .dashboard-shell { grid-template-columns: 1fr; }
   .dashboard-sidebar { position: static; }
@@ -203,6 +229,7 @@ select.form-control { min-height: 48px; }
   .management-table td { min-width: 140px; }
 }
 
+/* Celulares chicos: menos espacio alrededor. */
 @media (max-width: 480px) {
   .dashboard-page { padding-top: 24px; }
   .dashboard-sidebar { padding: 20px; }

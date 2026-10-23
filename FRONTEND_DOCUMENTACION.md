@@ -10,7 +10,6 @@ La experiencia se divide en cinco superficies principales:
 - Autenticacion: registro, login, recuperacion y reseteo de contrasena.
 - Panel de la pecera con metricas, grafico, alertas y controles.
 - Gestion de dispositivos del usuario autenticado.
-- Gestion de usuarios y pedidos para administradores.
 
 El estado persistente real vive en backend: sesion, base de datos y configuracion en `.env`. El frontend mantiene solo estado temporal de UI: formularios, datos del panel, resumen de compra y el grafico.
 
@@ -50,7 +49,7 @@ flowchart TD
 Todas las vistas empiezan con `$this->extend(...)` y completan secciones del molde:
 
 - **`layouts/main.php`** es el molde de todas las paginas: `<head>`, barra de navegacion y pie. Secciones: `contenido` (obligatoria), `cabecera` (etiquetas extra para el `<head>`) y `scripts` (opcionales).
-- **`layouts/panel.php`** extiende a `main` y agrega el menu lateral. Lo usan el panel, Dispositivos, Usuarios y Pedidos. Secciones: `lateral` (titulo sobre el menu), `panel` (contenido) y `scripts`.
+- **`layouts/panel.php`** extiende a `main` y agrega el menu lateral. Lo usan el panel y Dispositivos. Secciones: `lateral` (titulo sobre el menu), `panel` (contenido) y `scripts`.
 - **`layouts/auth.php`** extiende a `main` y pone la tarjeta centrada de las pantallas de cuenta (login, registro, recuperar y nueva contrasena), ademas de cargar `funciones/auth.js`. Seccion: `tarjeta`.
 
 Cada vista pide sus propios archivos: su hoja de estilos con `usar_css()` en la primera linea (ver "CSS y sistema visual") y su `<script>` en la seccion `scripts`. Los controladores no saben nada de CSS ni de JS.
@@ -114,11 +113,6 @@ app/Views/
   devices/
     index.php
     edit.php
-  users/
-    index.php
-    edit.php
-  orders/
-    index.php
   emails/
     recuperar_contrasena.php    (cuerpo del email de recuperacion)
   errors/
@@ -144,10 +138,6 @@ public/
       partes/                   (filtros.css, en_vivo.css, ... una por parte)
     devices/
       index.css, edit.css
-    users/
-      index.css, edit.css
-    orders/
-      index.css
     errors/
       404.css
   js/
@@ -173,8 +163,6 @@ public/
 | Cuentas | `auth/*.php` | `auth` | `layouts/auth.css`, `components/campo_password.css` y la de la vista (`auth/login.css`, ...) | `funciones/auth.js` |
 | Panel de la pecera | `dashboard/index.php` | `panel` | `layouts/panel.css`, `dashboard/index.css` y una hoja por parte (`dashboard/partes/*.css`) | `animaciones/grafico.js` y `funciones/dashboard.js` |
 | Dispositivos | `devices/*.php` | `panel` | `layouts/panel.css` y `devices/index.css` o `devices/edit.css` | ninguno |
-| Usuarios | `users/*.php` | `panel` | `layouts/panel.css` y `users/index.css` o `users/edit.css` | ninguno |
-| Pedidos | `orders/index.php` | `panel` | `layouts/panel.css` y `orders/index.css` | ninguno |
 | 404 | `errors/404.php` | `main` | `errors/404.css` | ninguno |
 
 `layouts/main.css`, `funciones/aqua.js` y `animaciones/generales.js` se cargan siempre desde `layouts/main.php`. Las hojas de los componentes (`components/*.css`) se cargan solo en las paginas donde aparece el componente.
@@ -185,13 +173,13 @@ public/
 
 Define la estructura del documento:
 
-- Calcula si hay usuario autenticado y si es administrador.
+- Calcula si hay usuario autenticado.
 - `<meta name="csrf-token">` y `<meta name="csrf-header">`: de ahi saca `funciones/aqua.js` el token para los pedidos AJAX.
 - Un script de una linea agrega la clase `js` a `<html>` (las animaciones de aparicion solo se aplican si hay JavaScript).
 - Tipografias con `media="print" onload="this.media='all'"`: se descargan sin frenar el primer dibujo de la pagina.
 - `enlaces_css()` escribe los `<link>` de las hojas de estilo que pidieron las vistas de esa pagina.
 - Cartel de "cargando" (`[data-page-loader]`), oculto hasta que `animaciones/generales.js` lo muestra.
-- Barra de navegacion: los invitados ven login/registro; los usuarios ven panel, dispositivos y salir; los administradores tambien ven usuarios y pedidos.
+- Barra de navegacion: los invitados ven login/registro; los usuarios ven su nombre, panel, dispositivos y salir.
 - Pie de pagina.
 - Carga `funciones/aqua.js`, `animaciones/generales.js` y despues la seccion `scripts` de la pagina.
 
@@ -308,23 +296,6 @@ Pantalla de dispositivos del usuario:
 ### `app/Views/devices/edit.php`
 
 Formulario de edicion de dispositivo (POST a `dispositivos/editar/{id}`), con nombre, tipo y ubicacion precargados.
-
-### `app/Views/users/index.php` y `users/edit.php`
-
-Pantallas administrativas (filtro `auth:administrador`):
-
-- Lista de usuarios con nombre, email, rol, estado y accion editar.
-- Edicion de nombre, rol y, opcionalmente, password. El email se muestra readonly.
-- El backend impide dejar el sistema sin administradores activos.
-
-### `app/Views/orders/index.php`
-
-Pantalla administrativa de pedidos:
-
-- Resumen de aprobados (cantidad y monto) y pendientes.
-- Filtros por estado (`?estado=`) con contador por estado.
-- Tabla con fecha, referencia, pago de Mercado Pago, cliente, producto, total y estado.
-- Marca los pagos cuyo monto no coincide con el pedido para revision manual.
 
 ### `app/Views/errors/404.php`
 
@@ -467,13 +438,13 @@ Donde va cada regla:
 | Archivo | Responsabilidad |
 | --- | --- |
 | `layouts/main.css` | Lo que usan todas las paginas: colores y medidas (`:root`), base, fondo, barra de navegacion, botones, formularios, pie, cartel de carga y animaciones. Tambien el panel "en vivo", porque lo comparten la demo de la portada y el panel real. |
-| `layouts/panel.css` | Menu lateral, tarjeta base, y las tablas, formularios y etiquetas que comparten Dispositivos, Usuarios y Pedidos. |
+| `layouts/panel.css` | Menu lateral, tarjeta base, y las tablas, formularios y etiquetas de Dispositivos. |
 | `layouts/auth.css` | Tarjeta centrada, logo y links de las pantallas de cuenta. |
 | `components/*.css` | Los estilos de cada componente (mensajes, boton "Salir", campo de contrasena). |
 | `home/index.css` y `dashboard/index.css` | Lo que comparten varias secciones de la portada o varias partes del panel. |
 | El resto | Solo lo propio de esa vista. |
 
-Una clase que usa una sola vista va en la hoja de esa vista; una que usan varias va en la hoja de lo que tienen en comun (el `index` de la pagina o el molde). Las vistas que hoy no necesitan estilos propios (`auth/register`, `auth/recover`, `auth/reset`, `devices/edit` y `users/edit`) igual tienen su hoja, con un comentario que dice de donde salen los suyos.
+Una clase que usa una sola vista va en la hoja de esa vista; una que usan varias va en la hoja de lo que tienen en comun (el `index` de la pagina o el molde). Las vistas que hoy no necesitan estilos propios (`auth/register`, `auth/recover`, `auth/reset` y `devices/edit`) igual tienen su hoja, con un comentario que dice de donde salen los suyos.
 
 Cada archivo termina con sus reglas para pantallas mas chicas (`@media`).
 
@@ -507,8 +478,6 @@ flowchart LR
     Dashboard --> Alimentador["/dashboard/settings#alimentador"]
     Dashboard --> Perfil["/dashboard/profile#perfil"]
     Dashboard --> Dispositivos["/dispositivos"]
-    Dashboard --> Usuarios["/usuarios (admin)"]
-    Dashboard --> Pedidos["/pedidos (admin)"]
 ```
 
 El panel usa direcciones distintas para activar secciones, pero dibuja la misma vista `dashboard/index.php` y navega a anclas internas.
@@ -557,7 +526,6 @@ No se guarda nada en el navegador (ni token, ni usuario, ni datos de la pecera).
 | Form "Mi cuenta" | `POST /dashboard/profile` | HTML redirect | Actualizar nombre/email. |
 | Formularios de cuenta | `POST /auth/*` | HTML redirect | Registro, login, recuperar, reset. |
 | Formularios de dispositivos | `POST /dispositivos/*` | HTML redirect | ABM de dispositivos y API keys. |
-| Formulario de usuarios | `POST /usuarios/editar/{id}` | HTML redirect | Edicion administrativa. |
 
 ## Ejemplos de flujo de ejecucion
 

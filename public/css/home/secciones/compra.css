@@ -3,8 +3,10 @@
    Estilos de la vista app/Views/home/secciones/compra.php: el formulario del pedido.
    =================================================== */
 
+/* Esta seccion va pegada a la anterior. */
 .checkout-section { padding-top: 0; }
 
+/* Dos columnas: texto y pedido. */
 .checkout-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.86fr) minmax(380px, 1.14fr);
@@ -12,27 +14,33 @@
   gap: 24px;
 }
 
+/* Columna del texto (queda fija al bajar). */
 .checkout-copy {
   position: sticky;
   top: 110px;
 }
 
+/* Textos en gris. */
 .checkout-copy p { color: var(--text-muted); }
 
+/* Descripcion. */
 .checkout-copy p:not(.eyebrow) {
   max-width: 620px;
   margin-top: 20px;
   line-height: 1.75;
 }
 
+/* Fila de pildoras. */
 .trust-row {
   display: grid;
   gap: 10px;
   margin-top: 28px;
 }
 
+/* Tarjeta del pedido. */
 .purchase-panel { padding: 28px; }
 
+/* Fondo de la tarjeta. */
 .checkout-console {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028)),
@@ -40,6 +48,7 @@
   box-shadow: var(--shadow-card), 0 0 54px rgba(0,212,255,0.12);
 }
 
+/* Encabezado: nombre del producto y cartel. */
 .purchase-panel-head {
   display: flex;
   justify-content: space-between;
@@ -48,6 +57,7 @@
   margin-bottom: 24px;
 }
 
+/* Texto chico "Pedido". */
 .purchase-panel-tag {
   display: block;
   margin-bottom: 8px;
@@ -58,6 +68,7 @@
   text-transform: uppercase;
 }
 
+/* Titulos con la letra de titulos. */
 .purchase-panel-head h3,
 .purchase-summary h4,
 .purchase-method-copy strong {
@@ -66,8 +77,10 @@
   letter-spacing: -0.02em;
 }
 
+/* Nombre del producto. */
 .purchase-panel-head h3 { font-size: 1.6rem; }
 
+/* Textos chicos del encabezado y del resumen. */
 .purchase-status,
 .purchase-summary-note {
   color: var(--text-muted);
@@ -76,6 +89,7 @@
   text-transform: uppercase;
 }
 
+/* Cartel "Compra segura". */
 .purchase-status {
   padding: 8px 12px;
   border: 1px solid var(--surface-border-strong);
@@ -84,19 +98,23 @@
   white-space: nowrap;
 }
 
+/* Formulario: bloques uno debajo de otro. */
 .purchase-form {
   display: grid;
   gap: 22px;
 }
 
+/* Correo y cantidad, lado a lado. */
 .purchase-field-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
   gap: 16px;
 }
 
+/* Permite que los campos se achiquen. */
 .purchase-field { min-width: 0; }
 
+/* Cantidad: boton, numero, boton. */
 .purchase-quantity {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) 48px;
@@ -104,6 +122,7 @@
   gap: 10px;
 }
 
+/* Botones de restar y sumar. */
 .purchase-qty-btn {
   height: 48px;
   border: 1px solid var(--surface-border-strong);
@@ -114,20 +133,24 @@
   transition: var(--transition);
 }
 
+/* Al pasar el mouse. */
 .purchase-qty-btn:hover,
 .purchase-qty-btn:focus-visible {
   border-color: rgba(93,202,165,0.3);
   box-shadow: var(--shadow-glow);
 }
 
+/* El numero va centrado. */
 .purchase-qty-input { text-align: center; }
 
+/* Bloque del medio de pago. */
 .purchase-methods {
   display: grid;
   gap: 12px;
   border: 0;
 }
 
+/* Fondo y borde comunes de las cajas. */
 .purchase-method-card,
 .purchase-summary,
 .purchase-sdk-panel {
@@ -136,6 +159,7 @@
   background: var(--surface-bg);
 }
 
+/* Caja del medio de pago. */
 .purchase-method-card {
   display: grid;
   grid-template-columns: 20px 1fr;
@@ -146,16 +170,19 @@
   transition: var(--transition);
 }
 
+/* Medio de pago elegido. */
 .purchase-method-card.is-selected {
   border-color: rgba(93,202,165,0.32);
   box-shadow: var(--shadow-glow);
 }
 
+/* Circulito de seleccion. */
 .purchase-method-card input {
   margin-top: 4px;
   accent-color: var(--aqua-cyan);
 }
 
+/* Descripcion del medio de pago. */
 .purchase-method-copy small {
   display: block;
   margin-top: 6px;
@@ -163,8 +190,10 @@
   line-height: 1.55;
 }
 
+/* Caja del resumen. */
 .purchase-summary { padding: 20px; }
 
+/* Titulo del resumen y aviso de entrega. */
 .purchase-summary-head {
   display: flex;
   justify-content: space-between;
@@ -173,11 +202,13 @@
   margin-bottom: 16px;
 }
 
+/* Lista del resumen. */
 .purchase-summary-list {
   display: grid;
   gap: 14px;
 }
 
+/* Cada renglon: dato a la izquierda y valor a la derecha. */
 .purchase-summary-list div {
   display: flex;
   justify-content: space-between;
@@ -185,25 +216,30 @@
   gap: 16px;
 }
 
+/* Nombre del dato. */
 .purchase-summary-list dt { color: var(--text-muted); }
 
+/* Valor. */
 .purchase-summary-list dd {
   margin: 0;
   color: var(--text-primary);
   text-align: right;
 }
 
+/* Renglon del total, separado. */
 .purchase-summary-total-row {
   padding-top: 14px;
   border-top: 1px solid var(--surface-border);
 }
 
+/* Total, mas grande. */
 .purchase-summary-total-row dt,
 .purchase-summary-total-row dd {
   font-size: 1.05rem;
   font-weight: 700;
 }
 
+/* Casilla de aceptacion. */
 .purchase-consent { margin-top: -4px; }
 
 /* Mensaje debajo del formulario (lo muestra funciones/purchase.js). */
@@ -215,8 +251,10 @@
   font-size: 0.92rem;
 }
 
+/* Se ve solo cuando hay un mensaje. */
 .purchase-feedback.is-visible { display: block; }
 
+/* Colores segun el tipo: error, exito e informacion. */
 .purchase-feedback.is-error {
   background: rgba(226,75,74,0.1);
   border-color: rgba(226,75,74,0.24);
@@ -238,6 +276,7 @@
 /* Boton "Obtener mi AquaControl" (brillo que cruza al pasar el mouse). */
 .purchase-actions { display: flex; }
 
+/* El boton. */
 .purchase-payment-action .Btn {
   position: relative;
   width: 100%;
@@ -257,6 +296,7 @@
   transition-duration: .3s;
 }
 
+/* Brillo que cruza el boton. */
 .purchase-payment-action .Btn::before {
   content: "";
   position: absolute;
@@ -270,21 +310,26 @@
   transition-duration: .3s;
 }
 
+/* El brillo se mueve al pasar el mouse. */
 .purchase-payment-action .Btn:hover::before {
   border-radius: 0;
   transform: translate(100%, -50%);
 }
 
+/* Al apretarlo. */
 .purchase-payment-action .Btn:active { transform: translateY(1px); }
 
+/* Boton apagado mientras se prepara el pago. */
 .purchase-payment-action .Btn:disabled {
   opacity: 0.88;
   cursor: wait;
 }
 
+/* Icono de la tarjeta. */
 .purchase-payment-action .svgIcon { width: 16px; }
 .purchase-payment-action .svgIcon path { fill: #00131c; }
 
+/* Texto e icono por encima del brillo. */
 .purchase-payment-action .purchase-submit-label,
 .purchase-payment-action .svgIcon {
   position: relative;
@@ -297,9 +342,12 @@
   gap: 16px;
 }
 
+/* Caja del boton de Mercado Pago. */
 .purchase-sdk-panel { padding: 18px; }
+/* Escondida hasta que hace falta. */
 .purchase-sdk-panel[hidden] { display: none !important; }
 
+/* Cartel de espera mientras carga. */
 .purchase-sdk-panel.is-loading::before {
   content: 'Preparando checkout...';
   display: block;
@@ -308,12 +356,14 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: una sola columna. */
 @media (max-width: 980px) {
   .checkout-layout { grid-template-columns: 1fr; }
   .checkout-copy { position: static; }
   .purchase-panel { padding: 24px; }
 }
 
+/* Celulares: campos y renglones uno debajo de otro. */
 @media (max-width: 640px) {
   .purchase-field-grid,
   .purchase-summary-head,
@@ -333,6 +383,7 @@
   .purchase-summary-list dd { text-align: left; }
 }
 
+/* Celulares chicos. */
 @media (max-width: 520px) {
   /* En celulares chicos esta seccion vuelve a tener el espacio de arriba de las demas. */
   .checkout-section { padding-top: 64px; }

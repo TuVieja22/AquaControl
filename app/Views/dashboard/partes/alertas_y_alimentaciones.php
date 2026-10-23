@@ -1,6 +1,7 @@
 <?php usar_css('css/dashboard/partes/alertas_y_alimentaciones.css') ?>
 <?php // Alertas sin leer y ultimas 10 alimentaciones (funciones/dashboard.js redibuja ambas listas). ?>
 <section class="dashboard-grid content-grid">
+  <?php // Alertas sin leer. ?>
   <article class="glass-card alerts-card">
     <div class="panel-head">
       <div>
@@ -8,6 +9,7 @@
         <h3>Recientes sin leer</h3>
       </div>
     </div>
+    <?php // Lista de alertas (si no hay ninguna, un texto que lo dice). ?>
     <div id="alertsList" class="alerts-list">
       <?php if ($dashboardData['alerts'] === []): ?>
         <p class="empty-state">No hay alertas pendientes.</p>
@@ -25,6 +27,7 @@
     </div>
   </article>
 
+  <?php // Ultimas alimentaciones. ?>
   <article class="glass-card feeding-card" id="historial">
     <div class="panel-head">
       <div>
@@ -32,6 +35,7 @@
         <h3>Ultimas 10 alimentaciones</h3>
       </div>
     </div>
+    <?php // Tabla: fecha, cantidad y tipo. ?>
     <div class="table-wrap">
       <table class="history-table">
         <thead>

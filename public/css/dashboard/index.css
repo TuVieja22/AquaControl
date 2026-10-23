@@ -10,31 +10,38 @@
   gap: 20px;
 }
 
+/* Permite que las tarjetas se achiquen. */
 .dashboard-grid > * { min-width: 0; }
 
+/* La tarjeta izquierda es un poco mas ancha. */
 .control-grid { grid-template-columns: 1.1fr 1fr; }
 
 /* Tarjetas de "Control manual" y del alimentador. */
 .control-card { padding: 24px; }
 
+/* Bloques de la tarjeta, uno debajo de otro. */
 .control-actions {
   display: grid;
   gap: 22px;
 }
 
+/* Campo y boton en el mismo renglon. */
 .control-inline {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
+/* El campo ocupa el espacio libre y el boton solo lo que necesita. */
 .control-inline .form-control { flex: 1; }
 .control-form .btn { width: auto; }
 
+/* Textos de aclaracion. */
 .toggle-copy { color: var(--text-muted); }
 .toggle-copy strong { color: var(--text-primary); }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets: una columna, y el boton debajo del campo. */
 @media (max-width: 768px) {
   .control-grid { grid-template-columns: 1fr; }
 
@@ -46,6 +53,7 @@
   .control-inline .btn { width: 100%; }
 }
 
+/* Celulares chicos: menos espacio interior. */
 @media (max-width: 480px) {
   .control-card { padding: 20px; }
 }

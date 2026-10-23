@@ -3,16 +3,19 @@
    Estilos de la vista app/Views/home/secciones/caracteristicas.php: las 5 tarjetas.
    =================================================== */
 
+/* Grilla de cinco tarjetas. */
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
 }
 
+/* Titulo de cada tarjeta. */
 .feature-tile h3 { font-size: 1.04rem; }
 
 /* Iconos dibujados con CSS: icon-<nombre> (ver caracteristicas.php).
    El cuadradito que los contiene (.icon-badge) esta en home/index.css. */
+/* Icono de monitoreo. */
 .icon-pulse::before {
   width: 26px;
   height: 14px;
@@ -21,6 +24,7 @@
   transform: skewX(-18deg);
 }
 
+/* Icono de alimentacion. */
 .icon-feed::before {
   width: 22px;
   height: 22px;
@@ -35,6 +39,7 @@
   transform: translateX(14px) rotate(-28deg);
 }
 
+/* Icono de alerta. */
 .icon-alert::before {
   width: 24px;
   height: 24px;
@@ -49,6 +54,7 @@
   box-shadow: 0 10px 0 -1px var(--aqua-amber);
 }
 
+/* Icono de modo ausencia. */
 .icon-away::before {
   width: 25px;
   height: 25px;
@@ -64,6 +70,7 @@
   transform: rotate(-42deg) translate(1px, 3px);
 }
 
+/* Icono de bajo consumo. */
 .icon-energy::before {
   width: 15px;
   height: 26px;
@@ -72,10 +79,12 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: tres por fila. */
 @media (max-width: 1180px) {
   .feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
+/* Celulares y tablets: una por fila. */
 @media (max-width: 768px) {
   .feature-grid { grid-template-columns: 1fr; }
 }

@@ -1,4 +1,5 @@
 @echo off
+REM Las variables de este archivo no quedan guardadas al terminar.
 setlocal
 title AquaControl - Lanzador
 REM Inicia MySQL (XAMPP) y la pagina, y abre el panel.
@@ -9,13 +10,16 @@ REM   wifi = el ESP32 habla directo con la pagina (firmware\aquacontrol_esp32)
 REM   usb  = el ESP32 va por cable y hace falta el puente (firmware\aquacontrol_esp32_usb)
 set "MODO=wifi"
 
+REM Carpeta del proyecto: la misma donde esta este archivo.
 set "PROJ=%~dp0"
 cd /d "%PROJ%"
 
 echo [1/4] Cerrando el puente USB anterior (libera el puerto COM)...
+REM Cierra un puente USB que haya quedado abierto de antes.
 powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'powershell.exe' -and $_.CommandLine -like '*puente_usb*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }" >nul 2>&1
 
 echo [2/4] Verificando MySQL...
+REM Mira si MySQL ya esta escuchando en el puerto 3306. Si no, lo arranca.
 netstat -ano | findstr ":3306" | findstr "LISTENING" >nul
 if errorlevel 1 (
   if exist "C:\xampp\mysql_start.bat" (
@@ -34,6 +38,7 @@ REM "spark servir" cierra solo los servidores viejos de esta pagina y atiende po
 start "AquaControl - Servidor" cmd /k php spark servir
 timeout /t 3 >nul
 
+REM Solo en modo usb se abre tambien el puente del ESP32.
 if /i "%MODO%"=="usb" (
   echo [4/4] Iniciando el puente USB del ESP32 ^(cerra el Monitor Serie del Arduino IDE^)...
   if not exist "%PROJ%firmware\config.local.ps1" (
@@ -44,6 +49,7 @@ if /i "%MODO%"=="usb" (
   echo [4/4] Modo WiFi: el ESP32 se conecta solo a la pagina ^(no hace falta el puente^).
 )
 
+REM Abre el panel en el navegador.
 start "" "http://localhost:8080/dashboard"
 echo.
 echo Listo. Deja abierta la ventana "AquaControl - Servidor".

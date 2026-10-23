@@ -88,5 +88,6 @@ class Autoload extends AutoloadConfig
      *
      * @var list<string>
      */
+    // Ayudas que se cargan en todas las paginas: formularios y hojas de estilo.
     public $helpers = ['form', 'formulario', 'estilos'];
 }

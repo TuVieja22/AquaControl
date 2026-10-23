@@ -4,6 +4,7 @@
    Se suman a la base que comparte con la demo de la portada (layouts/main.css, bloque 8).
    =================================================== */
 
+/* Panel grande de arriba. */
 .dashboard-live-panel {
   overflow: hidden;
   padding: 28px;
@@ -15,8 +16,10 @@
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22), 0 0 60px rgba(0, 212, 255, 0.1);
 }
 
+/* Encabezado alineado arriba. */
 .dashboard-live-panel .dashboard-preview-header { align-items: flex-start; }
 
+/* Titulo "Acuario principal". */
 .dashboard-live-panel .dashboard-title {
   margin: 14px 0 0;
   font-size: 2.35rem;
@@ -24,31 +27,37 @@
   letter-spacing: 0;
 }
 
+/* Texto de la ultima sincronizacion. */
 .dashboard-live-panel .dashboard-preview-header p {
   font-weight: 700;
   text-align: right;
 }
 
+/* Cartel "En vivo". */
 .dashboard-live-panel .dashboard-chip {
   border-color: rgba(0, 212, 255, 0.22);
   background: rgba(0, 212, 255, 0.08);
 }
 
+/* Fila de cuatro tarjetas. */
 .dashboard-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
+/* Altura minima de las tarjetas. */
 .dashboard-live-panel .live-stat,
 .dashboard-live-panel .ecosystem-state { min-height: 128px; }
 
+/* Numero grande. */
 .dashboard-live-panel .live-stat strong,
 .dashboard-live-panel .ecosystem-state strong {
   font-size: 2.3rem;
   letter-spacing: 0;
 }
 
+/* Aclaracion de abajo. */
 .dashboard-live-panel .live-stat small,
 .dashboard-live-panel .ecosystem-state small {
   display: block;
@@ -57,6 +66,7 @@
   line-height: 1.35;
 }
 
+/* Lugar para el anillo. */
 .dashboard-live-panel .ecosystem-state { padding-right: 86px; }
 
 /* Borde de color segun el estado de la lectura (ok / atencion / problema). */
@@ -64,6 +74,7 @@
 .sensor-status-warn { border-color: rgba(239,159,39,0.35); }
 .sensor-status-danger { border-color: rgba(226,75,74,0.35); }
 
+/* Grafico a la izquierda y estados a la derecha. */
 .dashboard-live-area {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 288px;
@@ -71,40 +82,48 @@
   margin-top: 14px;
 }
 
+/* Altura minima del grafico. */
 .dashboard-live-panel .chart-panel { min-height: 310px; }
 
+/* El canvas ocupa toda la caja. */
 .live-chart-panel canvas {
   width: 100% !important;
   height: 242px !important;
   display: block;
 }
 
+/* Columna de tres tarjetas de estado. */
 .live-status-stack {
   display: grid;
   gap: 14px;
 }
 
+/* Altura y texto de cada tarjeta de estado. */
 .dashboard-live-panel .alert-stack article { min-height: 94px; }
 .dashboard-live-panel .alert-stack strong { line-height: 1.25; }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: los estados pasan debajo del grafico. */
 @media (max-width: 1180px) {
   .dashboard-live-area { grid-template-columns: 1fr; }
   .live-status-stack { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
+/* Menos de 980 px: dos tarjetas por fila. */
 @media (max-width: 980px) {
   .dashboard-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-live-panel .dashboard-preview-header { flex-direction: column; }
   .dashboard-live-panel .dashboard-preview-header p { text-align: left; }
 }
 
+/* Celulares y tablets. */
 @media (max-width: 768px) {
   .dashboard-live-panel { padding: 20px; }
   .dashboard-live-panel .dashboard-title { font-size: 2rem; }
   .live-status-stack { grid-template-columns: 1fr; }
 }
 
+/* Celulares chicos: una tarjeta por fila. */
 @media (max-width: 480px) {
   .dashboard-stat-grid { grid-template-columns: 1fr; }
 

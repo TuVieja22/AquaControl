@@ -5,11 +5,24 @@
    un elemento con la clase logout-button-wrap (ver la barra en layouts/main.php).
    =================================================== */
 
-.logout-button-wrap { display: inline-flex; }
+/* Envoltura del boton: guarda siempre el lugar del circulo (45 px). Asi, al estirarse,
+   el boton pasa por encima y no empuja los otros links ni salta al renglon de abajo. */
+.logout-button-wrap {
+  position: relative;
+  width: 45px;
+  height: 45px;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+/* El formulario no agrega espacio. */
 .logout-button-wrap .logout-form { display: inline-flex; margin: 0; }
 
+/* Boton: un circulo que solo muestra el icono, pegado a la derecha de su lugar. */
 .logout-button-wrap .Btn {
-  position: relative;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
   width: 45px;
   height: 45px;
   display: flex;
@@ -27,6 +40,7 @@
   transition-duration: .3s;
 }
 
+/* Zona del icono. */
 .logout-button-wrap .sign {
   width: 100%;
   display: flex;
@@ -35,9 +49,11 @@
   transition-duration: .3s;
 }
 
+/* Medida y color del dibujo. */
 .logout-button-wrap .sign svg { width: 17px; }
 .logout-button-wrap .sign svg path { fill: white; }
 
+/* Texto "Salir": escondido hasta pasar el mouse. */
 .logout-button-wrap .text {
   position: absolute;
   right: 0%;
@@ -50,12 +66,15 @@
   transition-duration: .3s;
 }
 
+/* Al pasar el mouse el circulo se estira. */
 .logout-button-wrap .Btn:hover {
   width: 125px;
   border-radius: 40px;
   box-shadow: 0 10px 24px rgba(29, 158, 117, 0.28);
 }
 
+/* El icono se corre a la izquierda y aparece el texto. */
 .logout-button-wrap .Btn:hover .sign { width: 30%; padding-left: 20px; }
 .logout-button-wrap .Btn:hover .text { width: 70%; opacity: 1; padding-right: 10px; }
+/* Al apretarlo se mueve apenas. */
 .logout-button-wrap .Btn:active { transform: translate(2px, 2px); }

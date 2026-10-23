@@ -3,8 +3,10 @@
    Estilos de la vista app/Views/home/secciones/testimonios.php: el carrusel.
    =================================================== */
 
+/* Contenedor del carrusel. */
 .testimonial-shell { position: relative; }
 
+/* Cinta de tarjetas que se desliza. */
 .testimonial-track {
   display: grid;
   grid-auto-flow: column;
@@ -17,12 +19,14 @@
   scrollbar-color: rgba(0,212,255,0.4) transparent;
 }
 
+/* Tarjeta de un testimonio. */
 .testimonial-card {
   min-height: 300px;
   padding: 26px;
   scroll-snap-align: start;
 }
 
+/* Circulo con las iniciales. */
 .avatar-photo {
   width: 64px;
   height: 64px;
@@ -39,6 +43,7 @@
   box-shadow: 0 0 34px rgba(0,212,255,0.18);
 }
 
+/* La frase. */
 .testimonial-card blockquote {
   min-height: 92px;
   margin: 0 0 22px;
@@ -48,11 +53,13 @@
   line-height: 1.45;
 }
 
+/* Nombre de la persona. */
 .testimonial-card strong {
   display: block;
   margin-bottom: 2px;
 }
 
+/* Fila de flechas. */
 .testimonial-controls {
   display: flex;
   justify-content: flex-end;
@@ -60,6 +67,7 @@
   margin-top: 12px;
 }
 
+/* Cada flecha. */
 .testimonial-controls button {
   width: 42px;
   height: 42px;
@@ -72,6 +80,7 @@
   transition: transform var(--transition), border-color var(--transition), background var(--transition);
 }
 
+/* Flecha al pasar el mouse. */
 .testimonial-controls button:hover,
 .testimonial-controls button:focus-visible {
   border-color: rgba(0,212,255,0.44);
@@ -80,10 +89,12 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: dos tarjetas a la vista. */
 @media (max-width: 1180px) {
   .testimonial-track { grid-auto-columns: calc((100% - 16px) / 2); }
 }
 
+/* Celulares y tablets: una tarjeta a la vista. */
 @media (max-width: 768px) {
   .testimonial-track { grid-auto-columns: minmax(280px, 88%); }
 }

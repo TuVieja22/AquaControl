@@ -3,8 +3,10 @@
    Estilos de la vista app/Views/dashboard/partes/alimentador.php: "Alimentar ahora" y los horarios.
    =================================================== */
 
+/* Separacion con el bloque de arriba. */
 .feeder-grid { margin-top: 20px; }
 
+/* Caja del estado del alimentador. */
 .feeder-status {
   display: flex;
   align-items: flex-start;
@@ -15,13 +17,16 @@
   background: rgba(255,255,255,0.04);
 }
 
+/* Texto principal del estado. */
 .feeder-status strong {
   display: block;
   color: var(--text-primary);
 }
 
+/* Texto de la ultima orden. */
 .feeder-status small { color: var(--text-muted); }
 
+/* Punto de color. */
 .feeder-status-dot {
   width: 10px;
   height: 10px;
@@ -31,38 +36,46 @@
   background: var(--text-faint);
 }
 
+/* Color del punto: conectado, atencion o problema. */
 .feeder-status-ok .feeder-status-dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
 .feeder-status-warn .feeder-status-dot { background: var(--warn); }
 .feeder-status-danger .feeder-status-dot { background: var(--danger); }
 
+/* Formulario de horarios. */
 .feeder-schedule-form {
   display: grid;
   gap: 14px;
 }
 
+/* Los tres campos en una fila. */
 .feeder-schedule-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
+/* Sin margenes de mas. */
 .feeder-schedule-fields .form-group,
 .feeder-schedule-form .toggle-copy { margin: 0; }
 
+/* Mensaje de respuesta del servidor. */
 .feeder-feedback {
   margin: 0;
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
+/* En rojo si es un error. */
 .feeder-feedback.is-error { color: var(--danger); }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets. */
 @media (max-width: 768px) {
   /* "Guardar horarios" ocupa todo el ancho, como el resto de los botones del panel. */
   .feeder-schedule-form .management-form-actions .btn { width: 100%; }
 }
 
+/* Celulares: los campos uno debajo de otro. */
 @media (max-width: 560px) {
   .feeder-schedule-fields { grid-template-columns: 1fr; }
 }

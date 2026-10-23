@@ -15,6 +15,7 @@
 #  usar el puerto COM a la vez).
 # ============================================================================
 
+# Si algo falla el script se detiene; los numeros se escriben siempre con punto decimal.
 $ErrorActionPreference = 'Stop'
 $inv = [System.Globalization.CultureInfo]::InvariantCulture
 
@@ -27,21 +28,26 @@ $INTERVALO_LECTURA_S = 5           # cada cuanto se guarda una lectura en la pag
 $INTERVALO_ORDENES_S = 2           # cada cuanto se consulta si hay que alimentar
 $TIMEOUT_ALIMENTACION_S = 60       # si el ESP32 no confirma en este tiempo, se marca fallida
 
+# Si existe config.local.ps1, sus valores reemplazan a los de arriba.
 $configLocal = Join-Path $PSScriptRoot 'config.local.ps1'
 if (Test-Path $configLocal) { . $configLocal }
 
+# Sin API key no se puede hablar con la pagina.
 if ($API_KEY -eq '') {
     Write-Host 'Falta la API key. Copia firmware\config.example.ps1 como config.local.ps1 y completala.' -ForegroundColor Red
     exit 1
 }
 
+# Header que identifica al dispositivo en cada pedido.
 $headers = @{ 'X-Device-Key' = $API_KEY }
 # ----------------------------------------------------------------------------
 
+# Escribe un renglon en pantalla con la hora adelante.
 function Log([string]$texto, [string]$color = 'Gray') {
     Write-Host ('{0}  {1}' -f (Get-Date -Format 'HH:mm:ss'), $texto) -ForegroundColor $color
 }
 
+# Busca en que puerto COM esta enchufado el ESP32.
 function Find-EspPort {
     $candidato = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'CP210|CH340|CH910|CH9102|USB.*UART|USB Serial|Espressif' -and $_.Name -match '\((COM\d+)\)' } |
@@ -50,6 +56,7 @@ function Find-EspPort {
     return $null
 }
 
+# Abre el puerto del ESP32; si no puede, reintenta cada 3 segundos.
 function Open-Port {
     while ($true) {
         $nombre = if ($PORT -eq 'auto') { Find-EspPort } else { $PORT }
@@ -59,6 +66,7 @@ function Open-Port {
             continue
         }
 
+        # Configura el puerto serie (velocidad y formato).
         $p = New-Object System.IO.Ports.SerialPort($nombre, $BAUD, 'None', 8, 'One')
         $p.ReadTimeout = 200
         $p.NewLine = "`n"
@@ -77,6 +85,7 @@ function Open-Port {
     }
 }
 
+# Hace un pedido a la pagina (con la API key) y devuelve la respuesta.
 function Invoke-Api([string]$method, [string]$path, $body = $null) {
     $params = @{ Method = $method; Uri = "$BASE_URL$path"; Headers = $headers; TimeoutSec = 5 }
     if ($null -ne $body) {
@@ -86,6 +95,7 @@ function Invoke-Api([string]$method, [string]$path, $body = $null) {
     return Invoke-RestMethod @params
 }
 
+# Avisa un error de la pagina (como mucho una vez cada 30 segundos).
 function Report-ApiError([string]$contexto, $err) {
     $status = $null
     try { $status = [int]$err.Exception.Response.StatusCode } catch {}
@@ -97,6 +107,7 @@ function Report-ApiError([string]$contexto, $err) {
     }
 }
 
+# Le confirma a la pagina como termino una orden.
 function Send-Ack([long]$id, [string]$estado, [string]$mensaje = $null) {
     $body = @{ estado = $estado }
     if ($mensaje) { $body.mensaje = $mensaje }
@@ -109,10 +120,12 @@ function Send-Ack([long]$id, [string]$estado, [string]$mensaje = $null) {
     }
 }
 
+# Arranque: titulo y datos de la configuracion.
 Write-Host 'AquaControl - Puente USB' -ForegroundColor Yellow
 Write-Host "Pagina: $BASE_URL  |  lecturas cada $INTERVALO_LECTURA_S s  |  ordenes cada $INTERVALO_ORDENES_S s"
 Write-Host "Ctrl+C para detener.`n"
 
+# Conexion con el ESP32 y variables que llevan la cuenta de los tiempos.
 $port = Open-Port
 $ultimoErrorApi = (Get-Date).AddMinutes(-5)
 $ultimaLinea = Get-Date
@@ -122,6 +135,7 @@ $ultimoEnvio = (Get-Date).AddSeconds(-$INTERVALO_LECTURA_S)
 $ultimaConsulta = (Get-Date).AddSeconds(-$INTERVALO_ORDENES_S)
 $pendientes = @{}   # id de orden -> momento en que se le envio al ESP32
 
+# Ciclo principal: se repite hasta cerrar la ventana.
 while ($true) {
     # ---------- 1) Leer lo que manda el ESP32 ----------
     try {
@@ -151,19 +165,23 @@ while ($true) {
         } elseif ($linea -eq 'T:ERR') {
             Log 'El ESP32 no detecta el sensor DS18B20 (revisar cables / resistencia de 4.7k).' 'Yellow'
         } elseif ($linea -match '^ACK:(\d+):OK$') {
+            # El ESP32 termino de alimentar: se confirma a la pagina.
             $id = [long]$matches[1]
             $pendientes.Remove($id)
             Send-Ack $id 'ejecutado'
         } elseif ($linea -match '^ACK:(\d+):ERR:(.*)$') {
+            # El ESP32 no pudo alimentar: se avisa a la pagina con el motivo.
             $id = [long]$matches[1]
             $pendientes.Remove($id)
             Send-Ack $id 'fallido' $matches[2]
         } elseif ($linea -match '^[\x20-\x7E]+$' -and $linea -notmatch '\?{6,}') {
+            # Cualquier otro texto legible se muestra como mensaje del ESP32.
             Log "[esp32] $linea" 'DarkGray'
         }
         # Lineas con bytes no imprimibles: ruido del arranque del ESP32, se ignoran.
     }
 
+    # El ESP32 se considera vivo si hablo en los ultimos 10 segundos.
     $ahora = Get-Date
     $espVivo = ($ahora - $ultimaLinea).TotalSeconds -lt 10
 
@@ -184,6 +202,7 @@ while ($true) {
         $ultimaConsulta = $ahora
         try {
             $respuesta = Invoke-Api 'GET' '/dashboard/api/commands'
+            # Cada orden de alimentar se le pasa al ESP32 y se anota como pendiente.
             foreach ($orden in @($respuesta.comandos)) {
                 if ($null -eq $orden) { continue }
                 $id = [long]$orden.id

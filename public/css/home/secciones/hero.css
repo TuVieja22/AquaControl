@@ -3,6 +3,7 @@
    Estilos de la vista app/Views/home/secciones/hero.php: la portada con la foto de fondo.
    =================================================== */
 
+/* Bloque de la portada: ocupa casi toda la pantalla. */
 .landing-hero {
   position: relative;
   min-height: calc(100svh - 132px);
@@ -13,6 +14,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
+/* Dos capas de fondo. */
 .landing-hero::before,
 .landing-hero::after {
   content: '';
@@ -21,6 +23,7 @@
   z-index: -2;
 }
 
+/* Capa 1: la foto del producto. */
 .landing-hero::before {
   background-image: url('../../../img/aquacontrol-product.webp');
   background-size: cover;
@@ -30,6 +33,7 @@
   animation: heroImageIn 1200ms ease both;
 }
 
+/* Capa 2: oscurece la foto para que se lea el texto. */
 .landing-hero::after {
   z-index: -1;
   background:
@@ -38,11 +42,13 @@
     linear-gradient(105deg, transparent 0 48%, rgba(0,212,255,0.14) 55%, transparent 66%);
 }
 
+/* Columna del texto. */
 .hero-content {
   padding-top: clamp(86px, 12vh, 132px);
   padding-bottom: clamp(78px, 11vh, 130px);
 }
 
+/* Titulo principal. */
 .hero-content h1 {
   max-width: 980px;
   margin: 0 0 24px;
@@ -56,6 +62,7 @@
   text-shadow: 0 24px 80px rgba(0,0,0,0.62);
 }
 
+/* Subtitulo. */
 .hero-subtitle {
   max-width: 680px;
   margin: 0 0 34px;
@@ -64,8 +71,10 @@
   line-height: 1.75;
 }
 
+/* Texto chico de arriba, mas claro. */
 .hero-eyebrow { color: #aaf4ff; }
 
+/* Fila de botones. */
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -73,6 +82,7 @@
   gap: 14px;
 }
 
+/* Cartel "Ecosistema estable" con el punto que late. */
 .hero-signal {
   width: fit-content;
   display: inline-flex;
@@ -88,12 +98,14 @@
   backdrop-filter: blur(16px);
 }
 
+/* Animacion de entrada de la foto: se aleja apenas. */
 @keyframes heroImageIn {
   from { transform: scale(1.075); opacity: 0.66; }
   to { transform: scale(1.025); opacity: 1; }
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets: texto y botones a todo el ancho. */
 @media (max-width: 768px) {
   .landing-hero { min-height: calc(100svh - 118px); }
 
@@ -116,6 +128,7 @@
   }
 }
 
+/* Celulares chicos. */
 @media (max-width: 520px) {
   /* En celulares chicos la portada ya ocupa toda la pantalla: sin espacio extra arriba y abajo. */
   .hero-content {
@@ -126,6 +139,7 @@
   .hero-content h1 { font-size: clamp(2.25rem, 13vw, 3.75rem); }
 }
 
+/* Si se pidio menos movimiento, la foto no se anima. */
 @media (prefers-reduced-motion: reduce) {
   .landing-hero::before { animation: none !important; }
 }

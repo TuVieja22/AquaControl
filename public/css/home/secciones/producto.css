@@ -3,6 +3,7 @@
    Estilos de la vista app/Views/home/secciones/producto.php: "Producto en accion" (la galeria).
    =================================================== */
 
+/* Grilla de la galeria. */
 .product-gallery {
   display: grid;
   grid-template-columns: 1.16fr 0.84fr;
@@ -10,6 +11,7 @@
   gap: 16px;
 }
 
+/* Tarjeta de la galeria. */
 .gallery-card {
   position: relative;
   min-height: 300px;
@@ -21,6 +23,7 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Borde luminoso, apagado al principio. */
 .gallery-card::before {
   content: '';
   position: absolute;
@@ -32,11 +35,13 @@
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 
+/* El borde se enciende al pasar el mouse. */
 .gallery-card:hover::before {
   border-color: rgba(0,212,255,0.52);
   box-shadow: inset 0 0 36px rgba(0,212,255,0.18), 0 0 36px rgba(0,212,255,0.16);
 }
 
+/* Foto de la tarjeta: la cubre entera. */
 .gallery-card img {
   width: 100%;
   height: 100%;
@@ -45,19 +50,23 @@
   transition: transform 700ms ease, filter 700ms ease;
 }
 
+/* La foto se acerca al pasar el mouse. */
 .gallery-card:hover img {
   filter: saturate(1.08) contrast(1.05);
   transform: scale(1.045);
 }
 
+/* Tarjeta grande del producto (ocupa dos filas). */
 .gallery-product {
   grid-row: span 2;
   min-height: 620px;
 }
 
+/* Que parte de la foto muestra cada tarjeta. */
 .gallery-product img { object-position: center; }
 .gallery-sensors img { object-position: left center; }
 
+/* Textos sobre la tarjeta, abajo. */
 .gallery-copy {
   position: absolute;
   inset: auto 16px 16px;
@@ -77,8 +86,10 @@
   padding: 28px;
 }
 
+/* Fondo del mini panel. */
 .mini-dashboard { background: linear-gradient(145deg, rgba(15,23,42,0.98), rgba(5,7,13,0.9)), #0f172a; }
 
+/* Barrita de arriba del mini panel. */
 .mini-dashboard-top {
   width: 58%;
   height: 12px;
@@ -87,6 +98,7 @@
   background: linear-gradient(90deg, var(--aqua-cyan), transparent);
 }
 
+/* Grafico de barritas. */
 .mini-chart {
   height: 150px;
   display: flex;
@@ -99,6 +111,7 @@
   background-size: 100% 34px;
 }
 
+/* Cada barrita (sube y baja). */
 .mini-chart span {
   flex: 1;
   border-radius: 999px 999px 4px 4px;
@@ -107,6 +120,7 @@
   animation: metricFloat 2.8s ease-in-out infinite alternate;
 }
 
+/* Las barritas pares arrancan un poco despues. */
 .mini-chart span:nth-child(2n) { animation-delay: 240ms; }
 
 /* Altura de cada barrita del grafico de muestra. */
@@ -116,6 +130,7 @@
 .mini-chart span:nth-child(4) { height: 78%; }
 .mini-chart span:nth-child(5) { height: 62%; }
 
+/* Dos numeros debajo del grafico. */
 .mini-metrics {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -123,6 +138,7 @@
   margin-top: 16px;
 }
 
+/* Cada numero. */
 .mini-metrics span {
   padding: 16px;
   border: 1px solid rgba(0,212,255,0.14);
@@ -131,12 +147,14 @@
   color: var(--text-primary);
 }
 
+/* Fondo del acuario dibujado. */
 .aquarium-visual {
   background:
     linear-gradient(180deg, rgba(0,212,255,0.18), transparent 22%),
     linear-gradient(180deg, rgba(5, 46, 73, 0.95), rgba(5, 7, 13, 0.96));
 }
 
+/* Luz de arriba. */
 .aquarium-light {
   position: absolute;
   top: 28px;
@@ -147,6 +165,7 @@
   box-shadow: 0 0 32px rgba(0,212,255,0.5);
 }
 
+/* Cuerpo de un pez. */
 .aquarium-fish {
   position: absolute;
   width: 52px;
@@ -156,6 +175,7 @@
   box-shadow: 0 0 22px rgba(248,189,85,0.18);
 }
 
+/* Cola del pez. */
 .aquarium-fish::after {
   content: '';
   position: absolute;
@@ -166,12 +186,14 @@
   border-bottom: 8px solid transparent;
 }
 
+/* Primer pez: posicion, color y recorrido. */
 .fish-one {
   top: 33%;
   left: 19%;
   animation: glideOne 7s ease-in-out infinite alternate;
 }
 
+/* Segundo pez. */
 .fish-two {
   top: 47%;
   right: 18%;
@@ -182,8 +204,10 @@
   animation: glideTwo 8s ease-in-out infinite alternate;
 }
 
+/* Cola del segundo pez. */
 .fish-two::after { border-left-color: #65a9ff; }
 
+/* Planta (se mece). */
 .aquarium-plant {
   position: absolute;
   bottom: 0;
@@ -195,9 +219,11 @@
   animation: plantWave 3.6s ease-in-out infinite alternate;
 }
 
+/* Posicion de cada planta. */
 .plant-one { left: 18%; }
 .plant-two { right: 22%; height: 128px; animation-delay: 500ms; }
 
+/* Burbuja (sube y desaparece). */
 .aquarium-bubble {
   position: absolute;
   width: 9px;
@@ -208,38 +234,46 @@
   animation: bubbleRise 4s ease-in infinite;
 }
 
+/* Posicion de cada burbuja. */
 .bubble-one { left: 30%; bottom: 40px; }
 .bubble-two { left: 37%; bottom: 70px; animation-delay: 800ms; }
 .bubble-three { right: 33%; bottom: 46px; animation-delay: 1500ms; }
 
 /* ── ANIMACIONES ─────────────────────────────────────── */
+/* Las barritas se estiran y se encogen. */
 @keyframes metricFloat {
   from { transform: scaleY(0.86); }
   to { transform: scaleY(1); }
 }
 
+/* Recorrido del primer pez. */
 @keyframes glideOne {
   to { transform: translate(42px, 12px); }
 }
 
+/* Recorrido del segundo pez (mira para el otro lado). */
 @keyframes glideTwo {
   to { transform: scaleX(-1) translate(38px, -14px); }
 }
 
+/* Vaiven de las plantas. */
 @keyframes plantWave {
   to { transform: skewX(-7deg); }
 }
 
+/* Subida de las burbujas. */
 @keyframes bubbleRise {
   to { transform: translateY(-140px); opacity: 0; }
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: la galeria en una columna. */
 @media (max-width: 980px) {
   .product-gallery { grid-template-columns: 1fr; }
   .gallery-product { min-height: 440px; }
 }
 
+/* Celulares y tablets: tarjetas mas bajas. */
 @media (max-width: 768px) {
   .gallery-card,
   .gallery-product { min-height: 360px; }
@@ -250,6 +284,7 @@
   }
 }
 
+/* Si se pidio menos movimiento, nada se anima. */
 @media (prefers-reduced-motion: reduce) {
   .mini-chart span,
   .aquarium-fish,

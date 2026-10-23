@@ -9,6 +9,7 @@ use CodeIgniter\Model;
  */
 class SensorModel extends Model
 {
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'lecturas_sensores';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -26,6 +27,7 @@ class SensorModel extends Model
     ];
     protected $useTimestamps = false;
 
+    // Lectura mas reciente del usuario.
     public function ultimaLectura(int $userId): ?array
     {
         return $this->where('usuario_id', $userId)
@@ -44,6 +46,7 @@ class SensorModel extends Model
      */
     public function serieParaGrafico(int $userId, string $desde, string $hasta, ?int $deviceId, int $maxPuntos): array
     {
+        // Condiciones de la consulta: usuario, rango de fechas y (opcional) dispositivo.
         $filtro = 'usuario_id = ? AND created_at BETWEEN ? AND ?';
         $valores = [$userId, $desde, $hasta];
         if ($deviceId !== null) {
@@ -51,9 +54,11 @@ class SensorModel extends Model
             $valores[] = $deviceId;
         }
 
+        // Cuantas lecturas hay y de a cuantas hay que agruparlas.
         $total = (int) $this->db->query("SELECT COUNT(*) AS total FROM {$this->table} WHERE {$filtro}", $valores)->getRow()->total;
         $tanda = max(1, (int) ceil($total / $maxPuntos));
 
+        // Promedio de temperatura y pH de cada grupo.
         $puntos = $this->db->query(
             "SELECT MIN(created_at) AS created_at, ROUND(AVG(temperatura), 2) AS temperatura, ROUND(AVG(ph), 2) AS ph
              FROM (

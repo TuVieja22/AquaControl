@@ -12,5 +12,6 @@
   margin-bottom: 8px;
 }
 
+/* Sin margenes de mas dentro del renglon, y el link un poco mas chico. */
 .auth-label-row .form-label { margin: 0; }
 .auth-label-row .auth-link { font-size: 0.8rem; }

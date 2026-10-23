@@ -4,6 +4,7 @@
    rangos optimos vigentes.
    =================================================== */
 
+/* Renglon del modo vacaciones: texto y boton. */
 .toggle-row {
   display: flex;
   align-items: center;
@@ -15,12 +16,14 @@
   background: rgba(255,255,255,0.04);
 }
 
+/* Grilla de los rangos configurados. */
 .config-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
+/* Cada rango. */
 .config-metric {
   padding: 18px;
   border: 1px solid rgba(93,202,165,0.08);
@@ -28,8 +31,10 @@
   background: rgba(255,255,255,0.04);
 }
 
+/* Nombre del rango. */
 .config-metric span { color: var(--text-muted); }
 
+/* Valor. */
 .config-metric strong {
   display: block;
   margin-top: 8px;
@@ -40,6 +45,7 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets: una columna y el boton a todo el ancho. */
 @media (max-width: 768px) {
   .config-metrics { grid-template-columns: 1fr; }
 

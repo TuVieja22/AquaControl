@@ -1,6 +1,8 @@
 <?php usar_css('css/devices/edit.css') ?>
+<?php // Usa el molde del panel (menu lateral). ?>
 <?= $this->extend('layouts/panel') ?>
 
+<?php // Titulo y descripcion que van arriba del menu. ?>
 <?= $this->section('lateral') ?>
   <p class="dashboard-kicker">AquaControl IoT</p>
   <h1>Editar</h1>
@@ -8,7 +10,9 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('panel') ?>
+  <?php // Formulario de edicion. ?>
   <section class="management-card glass-card management-narrow">
+    <?php // Titulo y boton para volver. ?>
     <div class="panel-head">
       <div>
         <p class="section-tag">Dispositivo</p>
@@ -17,15 +21,18 @@
       <a class="btn btn-outline" href="<?= base_url('dispositivos') ?>">Volver</a>
     </div>
 
+    <?php // Manda los cambios a dispositivos/editar. ?>
     <form class="management-form" action="<?= base_url('dispositivos/editar/' . $device['id']) ?>" method="POST" novalidate>
       <?= csrf_field() ?>
 
+      <?php // Nombre. ?>
       <div class="form-group">
         <label class="form-label" for="nombre">Nombre del dispositivo</label>
         <input class="form-control<?= clase_error($errors, 'nombre') ?>" id="nombre" name="nombre" type="text" value="<?= esc($device['nombre']) ?>" required>
         <?= error_campo($errors, 'nombre') ?>
       </div>
 
+      <?php // Tipo. ?>
       <div class="form-group">
         <label class="form-label" for="tipo">Tipo de dispositivo</label>
         <select class="form-control<?= clase_error($errors, 'tipo') ?>" id="tipo" name="tipo" required>
@@ -36,12 +43,14 @@
         <?= error_campo($errors, 'tipo') ?>
       </div>
 
+      <?php // Ubicacion. ?>
       <div class="form-group">
         <label class="form-label" for="ubicacion">Ubicacion o corresponde a</label>
         <input class="form-control<?= clase_error($errors, 'ubicacion') ?>" id="ubicacion" name="ubicacion" type="text" value="<?= esc($device['ubicacion']) ?>" required>
         <?= error_campo($errors, 'ubicacion') ?>
       </div>
 
+      <?php // Botones: guardar y cancelar. ?>
       <div class="management-form-actions">
         <button class="btn btn-primary" type="submit">Guardar cambios</button>
         <a class="btn btn-outline" href="<?= base_url('dispositivos') ?>">Cancelar</a>

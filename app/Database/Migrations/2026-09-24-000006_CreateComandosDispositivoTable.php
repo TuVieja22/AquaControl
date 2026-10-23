@@ -10,6 +10,7 @@ use CodeIgniter\Database\Migration;
  */
 class CreateComandosDispositivoTable extends Migration
 {
+    // Crea la tabla comandos_dispositivo.
     public function up(): void
     {
         $this->forge->addField([
@@ -19,6 +20,7 @@ class CreateComandosDispositivoTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            // Usuario y (opcional) dispositivo que tiene que ejecutar la orden.
             'usuario_id' => [
                 'type'       => 'INT',
                 'constraint' => 11,
@@ -31,6 +33,7 @@ class CreateComandosDispositivoTable extends Migration
                 'null'       => true,
                 'comment'    => 'NULL = lo toma el primer actuador del usuario que consulte',
             ],
+            // Que hay que hacer y con que datos (por ejemplo, los gramos).
             'accion' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 30,
@@ -39,6 +42,7 @@ class CreateComandosDispositivoTable extends Migration
                 'type' => 'TEXT',
                 'null' => true,
             ],
+            // De donde salio la orden y en que estado esta.
             'origen' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 20,
@@ -51,6 +55,7 @@ class CreateComandosDispositivoTable extends Migration
                 'default'    => 'pendiente',
                 'comment'    => 'pendiente | enviado | ejecutado | fallido | expirado',
             ],
+            // Fechas: horario programado, vencimiento, envio y finalizacion.
             'programado_para' => [
                 'type' => 'DATETIME',
                 'null' => true,
@@ -66,6 +71,7 @@ class CreateComandosDispositivoTable extends Migration
                 'type' => 'DATETIME',
                 'null' => true,
             ],
+            // Mensaje que devuelve el dispositivo (por ejemplo, el motivo de una falla).
             'mensaje' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
@@ -81,15 +87,18 @@ class CreateComandosDispositivoTable extends Migration
             ],
         ]);
 
+        // Claves e indices.
         $this->forge->addKey('id', true);
         $this->forge->addKey(['usuario_id', 'estado']);
         // Evita crear dos veces el mismo horario programado (NULL no colisiona: los manuales quedan libres).
         $this->forge->addUniqueKey(['usuario_id', 'accion', 'programado_para'], 'comandos_programado_unique');
+        // Si se borra el usuario se borran sus ordenes; si se borra el dispositivo, quedan sin dispositivo.
         $this->forge->addForeignKey('usuario_id', 'usuarios', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('dispositivo_id', 'dispositivos', 'id', 'CASCADE', 'SET NULL');
         $this->forge->createTable('comandos_dispositivo', true);
     }
 
+    // Deshace la migracion: borra la tabla.
     public function down(): void
     {
         $this->forge->dropTable('comandos_dispositivo', true);

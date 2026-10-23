@@ -28,13 +28,16 @@ class PanelPecera
     /** Puntaje de cada estado para el "Estado del ecosistema" (%). */
     private const PUNTAJES = ['ok' => 98, 'neutral' => 96, 'warn' => 78, 'danger' => 44];
 
+    // Modelos y configuracion que usa el panel.
     private ConfiguracionPeceraModel $configModel;
     private DispositivoModel $dispositivoModel;
     private ComandoDispositivoModel $comandoModel;
     private Feeding $feeding;
+    // Datos ya consultados en este pedido (para no ir dos veces a la base).
     private ?array $config = null;
     private ?array $dispositivos = null;
 
+    // Se crea para un usuario: todo lo que arma es de su pecera.
     public function __construct(private readonly int $userId)
     {
         $this->configModel = new ConfiguracionPeceraModel();
@@ -43,17 +46,20 @@ class PanelPecera
         $this->feeding = config(Feeding::class);
     }
 
+    // Configuracion de la pecera (se consulta una sola vez).
     public function config(): array
     {
         return $this->config ??= $this->configModel->deUsuario($this->userId);
     }
 
+    // Guarda cambios de configuracion y descarta la copia vieja.
     public function guardarConfig(array $cambios): void
     {
         $this->configModel->guardar($this->userId, $cambios);
         $this->config = null;
     }
 
+    // Dispositivos del usuario (se consultan una sola vez).
     public function dispositivos(): array
     {
         return $this->dispositivos ??= $this->dispositivoModel->porUsuario($this->userId);
@@ -69,6 +75,7 @@ class PanelPecera
     public function alimentadorEnLinea(): ?array
     {
         foreach ($this->alimentadores() as $device) {
+            // En linea = se comunico hace menos que el limite configurado.
             $ultima = strtotime((string) ($device['ultima_conexion'] ?? '')) ?: 0;
             if (time() - $ultima <= $this->feeding->onlineThresholdSeconds) {
                 return $device;
@@ -78,6 +85,7 @@ class PanelPecera
         return null;
     }
 
+    // Orden de alimentar que todavia no termino, si hay alguna.
     public function alimentacionPendiente(): ?array
     {
         return $this->comandoModel->alimentacionPendiente($this->userId);
@@ -89,6 +97,7 @@ class PanelPecera
      */
     public function filtrosHistorial(string $desde, string $hasta, int $deviceId): array
     {
+        // Sin filtros se muestran las ultimas 24 horas.
         $hoy = date('Y-m-d');
         $filtros = [
             'custom'      => false,
@@ -100,6 +109,7 @@ class PanelPecera
             'query'       => [],
         ];
 
+        // Filtro por dispositivo: tiene que ser uno del usuario.
         if ($deviceId > 0) {
             if (in_array($deviceId, array_map('intval', array_column($this->dispositivos(), 'id')), true)) {
                 $filtros['dispositivo'] = $deviceId;
@@ -109,10 +119,12 @@ class PanelPecera
             }
         }
 
+        // Sin fechas no hay nada mas que revisar.
         if ($desde === '' && $hasta === '') {
             return $filtros;
         }
 
+        // Las fechas tienen que estar bien escritas.
         $desdeFecha = $this->fechaValida($desde);
         $hastaFecha = $this->fechaValida($hasta);
 
@@ -122,6 +134,7 @@ class PanelPecera
             return $filtros;
         }
 
+        // Si falta una de las dos, se completa con la otra (o con hoy).
         $desdeFecha ??= $hastaFecha;
         $hastaFecha ??= $hoy;
 
@@ -131,6 +144,7 @@ class PanelPecera
             return $filtros;
         }
 
+        // Rango elegido: se guardan las fechas y el texto que se muestra.
         $filtros['custom'] = true;
         $filtros['desde'] = $desdeFecha;
         $filtros['hasta'] = $hastaFecha;
@@ -146,6 +160,7 @@ class PanelPecera
     /** Texto del rango del grafico, p. ej. "24 h" o "29/09 - 01/10/2026 · ESP32 Pecera". */
     public function textoRango(array $filtros): string
     {
+        // Si se filtro por un dispositivo, se agrega su nombre.
         foreach ($this->dispositivos() as $device) {
             if ((int) $device['id'] === $filtros['dispositivo']) {
                 return $filtros['label'] . ' · ' . $device['nombre'];
@@ -158,12 +173,14 @@ class PanelPecera
     /** Todo lo que muestra el panel. */
     public function datos(array $filtros): array
     {
+        // Consulta la ultima lectura, las alimentaciones y las alertas, y arma las tarjetas.
         $config = $this->config();
         $ultima = (new SensorModel())->ultimaLectura($this->userId);
         $alimentaciones = array_map([$this, 'alimentacion'], (new AlimentacionModel())->ultimasPorUsuario($this->userId, 10));
         $alertas = $this->alertas();
         $tarjetas = $this->tarjetas($ultima, $config, $alimentaciones[0] ?? $this->alimentacion(null));
 
+        // Con estos nombres los leen la vista y funciones/dashboard.js.
         return [
             'config'          => $config,
             'cards'           => $tarjetas,
@@ -176,8 +193,10 @@ class PanelPecera
         ];
     }
 
+    // Arma las tarjetas: valor, estado (ok, warn, danger o neutral) y texto de abajo.
     private function tarjetas(?array $ultima, array $config, array $ultimaAlimentacion): array
     {
+        // Valores de la ultima lectura y de la configuracion.
         $temperatura = $ultima['temperatura'] ?? null;
         $ph = $ultima['ph'] ?? null;
         $estadoPh = $this->estadoSegunRango($ph, (float) $config['ph_min'], (float) $config['ph_max']);
@@ -186,27 +205,33 @@ class PanelPecera
         $vacaciones = (int) ($config['modo_vacaciones'] ?? 0) === 1;
 
         return [
+            // Temperatura.
             'temperature' => [
                 'value'  => $temperatura !== null ? number_format((float) $temperatura, 1) . ' °C' : '--',
                 'status' => $this->estadoSegunRango($temperatura, (float) $config['temp_min'], (float) $config['temp_max']),
                 'meta'   => sprintf('Rango ideal %.1f - %.1f °C', $config['temp_min'], $config['temp_max']),
             ],
+            // pH.
             'ph' => [
                 'value'  => $ph !== null ? number_format((float) $ph, 2) : '--',
                 'status' => $estadoPh,
                 'meta'   => $estadoPh === 'ok' ? 'Agua estable' : sprintf('Rango ideal %.2f - %.2f', $config['ph_min'], $config['ph_max']),
             ],
+            // Nivel de agua.
             'waterLevel' => [
                 'value'  => $aguaOk ? 'OK' : 'Bajo',
                 'status' => $aguaOk ? 'ok' : 'danger',
                 'meta'   => $aguaOk ? 'Nivel estable' : 'Revisar rellenado',
             ],
+            // Calefactor.
             'heater' => [
                 'value'  => $calefactor ? 'Encendido' : 'Apagado',
                 'status' => $calefactor ? 'ok' : 'neutral',
                 'meta'   => 'Control termico automatico',
             ],
+            // Ultima alimentacion.
             'lastFeeding'  => $ultimaAlimentacion,
+            // Modo vacaciones.
             'vacationMode' => [
                 'value'  => $vacaciones ? 'Activo' : 'Inactivo',
                 'status' => $vacaciones ? 'ok' : 'neutral',
@@ -218,6 +243,7 @@ class PanelPecera
     /** Textos de resumen del panel (estado del ecosistema, alertas y tarjetas de estado). */
     private function resumen(array $tarjetas, int $cantidadAlertas): array
     {
+        // Estado de cada tarjeta, convertido en puntaje y promediado.
         $estados = array_map(
             static fn (string $tarjeta): string => $tarjetas[$tarjeta]['status'],
             ['temperature', 'ph', 'waterLevel', 'heater', 'vacationMode']
@@ -228,11 +254,13 @@ class PanelPecera
 
         return [
             'alertsCount'   => $cantidadAlertas,
+            // Texto segun cuantas alertas hay.
             'alertsMeta'    => match ($cantidadAlertas) {
                 0       => 'Sin eventos criticos',
                 1       => '1 evento pendiente',
                 default => "{$cantidadAlertas} eventos pendientes",
             },
+            // Salud del ecosistema: el promedio menos 6 puntos por cada alerta (entre 0 y 100).
             'health'        => max(0, min(100, (int) round($promedio) - $cantidadAlertas * 6)),
             'waterTitle'    => $tarjetas['waterLevel']['status'] === 'ok' ? 'Agua clara' : 'Revisar nivel',
             'feedingTitle'  => $sinAlimentar ? 'Alimentacion pendiente' : 'Ultima alimentacion',
@@ -241,18 +269,23 @@ class PanelPecera
         ];
     }
 
+    // Datos del grafico: etiquetas (horas), temperaturas y pH.
     private function grafico(array $filtros): array
     {
+        // Rango de fechas pedido, o las ultimas 24 horas.
         if ($filtros['custom']) {
             [$desde, $hasta] = [$filtros['desde'] . ' 00:00:00', $filtros['hasta'] . ' 23:59:59'];
         } else {
             [$desde, $hasta] = [date('Y-m-d H:i:s', strtotime('-24 hours')), date('Y-m-d H:i:s')];
         }
 
+        // Lecturas del rango, ya agrupadas si son muchas.
         $serie = (new SensorModel())->serieParaGrafico($this->userId, $desde, $hasta, $filtros['dispositivo'], self::MAX_PUNTOS_GRAFICO);
+        // Con varios dias, la etiqueta lleva tambien la fecha.
         $formato = ($filtros['custom'] && $filtros['desde'] !== $filtros['hasta']) ? 'd/m H:i' : 'H:i';
         $grafico = ['labels' => [], 'temperature' => [], 'ph' => [], 'count' => $serie['total']];
 
+        // Pasa cada punto a las tres listas.
         foreach ($serie['puntos'] as $punto) {
             $grafico['labels'][] = date($formato, strtotime($punto['created_at']));
             $grafico['temperature'][] = $punto['temperatura'] !== null ? (float) $punto['temperatura'] : null;
@@ -262,6 +295,7 @@ class PanelPecera
         return $grafico;
     }
 
+    // Alertas sin leer, con la hora lista para mostrar.
     private function alertas(): array
     {
         return array_map(static fn (array $alerta): array => [
@@ -290,6 +324,7 @@ class PanelPecera
             ];
         }
 
+        // Nombre del tipo y gramos de esa alimentacion.
         $tipo = AlimentacionModel::TIPOS[$fila['tipo']] ?? ucfirst($fila['tipo']);
         $gramos = (float) $fila['cantidad_gramos'];
 
@@ -305,14 +340,17 @@ class PanelPecera
         ];
     }
 
+    // Estado del alimentador: conectado o no, orden en curso, ultima orden y horarios.
     private function estadoAlimentador(array $config): array
     {
+        // Lo que hace falta saber: alimentadores, cual esta en linea, orden en curso y la ultima.
         $alimentadores = $this->alimentadores();
         $enLinea = $this->alimentadorEnLinea();
         $pendiente = $this->alimentacionPendiente();
         $ultima = $this->comandoModel->ultimaAlimentacion($this->userId);
         $nombre = ($enLinea ?? $alimentadores[0] ?? [])['nombre'] ?? null;
 
+        // Texto y color del estado, segun el caso.
         if ($alimentadores === []) {
             [$nivel, $texto] = ['danger', 'Sin alimentador vinculado. Registra el ESP32 en Dispositivos y generale una API key.'];
         } elseif ($pendiente !== null) {
@@ -325,6 +363,7 @@ class PanelPecera
             [$nivel, $texto] = ['warn', $nombre . ' sin contacto reciente (offline).'];
         }
 
+        // Texto de la ultima orden terminada (ejecutada, fallida o vencida).
         $resultados = ['ejecutado' => 'ejecutada', 'fallido' => 'fallo', 'expirado' => 'expiro sin respuesta'];
         $ultimaTexto = null;
         if ($ultima !== null && isset($resultados[$ultima['estado']])) {
@@ -336,6 +375,7 @@ class PanelPecera
             );
         }
 
+        // Horarios programados.
         $horarios = ComandoDispositivoModel::horasConfiguradas($config);
 
         return [
@@ -368,6 +408,7 @@ class PanelPecera
             return 'ok';
         }
 
+        // Margen de tolerancia: un cuarto del ancho del rango (0,2 como minimo).
         $margen = max(($max - $min) * 0.25, 0.2);
 
         return ($valor >= $min - $margen && $valor <= $max + $margen) ? 'warn' : 'danger';
@@ -401,6 +442,7 @@ class PanelPecera
             ->format('d/m H:i');
     }
 
+    // Devuelve la fecha si esta bien escrita (AAAA-MM-DD); si no, null.
     private function fechaValida(string $valor): ?string
     {
         $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);

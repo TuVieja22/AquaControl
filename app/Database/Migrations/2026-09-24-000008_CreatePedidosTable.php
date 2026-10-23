@@ -10,6 +10,7 @@ use CodeIgniter\Database\Migration;
  */
 class CreatePedidosTable extends Migration
 {
+    // Crea la tabla pedidos.
     public function up(): void
     {
         $this->forge->addField([
@@ -19,11 +20,13 @@ class CreatePedidosTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            // Codigo unico del pedido.
             'referencia' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 40,
                 'comment'    => 'external_reference enviada a Mercado Pago',
             ],
+            // Quien compro: su cuenta (si tenia sesion) y su correo.
             'usuario_id' => [
                 'type'       => 'INT',
                 'constraint' => 11,
@@ -34,6 +37,7 @@ class CreatePedidosTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => 150,
             ],
+            // Que compro: producto, cantidad, precio, total y moneda.
             'producto_sku' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 60,
@@ -59,6 +63,7 @@ class CreatePedidosTable extends Migration
                 'type'       => 'CHAR',
                 'constraint' => 3,
             ],
+            // Datos del cobro en Mercado Pago.
             'proveedor' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 20,
@@ -74,6 +79,7 @@ class CreatePedidosTable extends Migration
                 'constraint' => 40,
                 'null'       => true,
             ],
+            // Estado del pedido y su detalle.
             'estado' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 20,
@@ -85,6 +91,7 @@ class CreatePedidosTable extends Migration
                 'constraint' => 80,
                 'null'       => true,
             ],
+            // Cuanto se pago y cuando.
             'monto_pagado' => [
                 'type'       => 'DECIMAL',
                 'constraint' => '12,2',
@@ -104,6 +111,7 @@ class CreatePedidosTable extends Migration
             ],
         ]);
 
+        // Claves e indices; si se borra el usuario, sus pedidos quedan (sin usuario).
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('referencia');
         $this->forge->addKey('estado');
@@ -112,6 +120,7 @@ class CreatePedidosTable extends Migration
         $this->forge->createTable('pedidos', true);
     }
 
+    // Deshace la migracion: borra la tabla.
     public function down(): void
     {
         $this->forge->dropTable('pedidos', true);

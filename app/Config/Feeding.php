@@ -34,6 +34,7 @@ class Feeding extends BaseConfig
      */
     public int $onlineThresholdSeconds = 30;
 
+    // Gramos minimos y maximos por racion.
     public float $minGrams = 0.1;
     public float $maxGrams = 20.0;
 }

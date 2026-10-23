@@ -4,6 +4,7 @@
    centrada, el logo y los links que comparten login, registro, recuperar y nueva contrasena.
    =================================================== */
 
+/* Centra la tarjeta en la pantalla. */
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -12,6 +13,7 @@
   padding: 40px 24px;
 }
 
+/* Tarjeta de las pantallas de cuenta (aparece subiendo). */
 .auth-card {
   width: 100%;
   max-width: 440px;
@@ -23,11 +25,13 @@
   animation: fadeInUp 0.5s ease both;
 }
 
+/* Bloque del logo, centrado. */
 .auth-logo {
   margin-bottom: 36px;
   text-align: center;
 }
 
+/* Cuadrado con las letras AC. */
 .auth-logo .logo-mark {
   width: 64px;
   height: 64px;
@@ -41,6 +45,7 @@
   box-shadow: 0 4px 20px rgba(29,158,117,0.3);
 }
 
+/* Titulo de la tarjeta. */
 .auth-logo h2 {
   color: var(--text-primary);
   font-family: var(--font-display);
@@ -49,6 +54,7 @@
   letter-spacing: -0.02em;
 }
 
+/* Aclaracion debajo del titulo. */
 .auth-logo p {
   margin-top: 4px;
   color: var(--text-muted);
@@ -61,11 +67,13 @@
   transition: color var(--transition);
 }
 
+/* Link al pasar el mouse. */
 .auth-link:hover {
   color: var(--teal-100);
   text-decoration: underline;
 }
 
+/* Renglon de abajo de la tarjeta. */
 .auth-footer {
   margin-top: 24px;
   color: rgba(159,225,203,0.45);
@@ -73,15 +81,18 @@
   text-align: center;
 }
 
+/* Animacion de entrada: aparece subiendo. */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Celulares y tablets: menos espacio interior. */
 @media (max-width: 768px) {
   .auth-card { padding: 36px 28px; }
 }
 
+/* Celulares chicos. */
 @media (max-width: 480px) {
   .auth-card {
     padding: 28px 20px;

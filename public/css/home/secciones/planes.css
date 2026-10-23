@@ -3,6 +3,7 @@
    Estilos de la vista app/Views/home/secciones/planes.php: las dos tarjetas de precio.
    =================================================== */
 
+/* Los dos planes lado a lado. */
 .pricing-grid {
   max-width: 980px;
   display: grid;
@@ -11,12 +12,14 @@
   margin: 0 auto;
 }
 
+/* Tarjeta de un plan. */
 .price-card {
   position: relative;
   overflow: hidden;
   padding: clamp(24px, 4vw, 38px);
 }
 
+/* Plan destacado. */
 .price-card.highlighted {
   border-color: rgba(0,212,255,0.42);
   background:
@@ -25,8 +28,10 @@
   box-shadow: var(--shadow-card), 0 0 52px rgba(0,212,255,0.16);
 }
 
+/* Nombre del plan. */
 .price-card h3 { font-size: clamp(1.5rem, 2.4vw, 2.15rem); }
 
+/* Precio. */
 .price-value {
   margin: 18px 0 10px;
   color: var(--text-primary) !important;
@@ -36,12 +41,14 @@
   line-height: 1;
 }
 
+/* Lista de lo que incluye. */
 .price-card ul {
   display: grid;
   gap: 10px;
   margin: 24px 0 28px;
 }
 
+/* Cada renglon de la lista. */
 .price-card li {
   display: flex;
   align-items: center;
@@ -49,6 +56,7 @@
   color: var(--text-secondary);
 }
 
+/* Tilde de cada renglon. */
 .price-card li::before {
   content: '';
   width: 10px;
@@ -59,6 +67,7 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: un plan debajo del otro. */
 @media (max-width: 980px) {
   .pricing-grid { grid-template-columns: 1fr; }
 }

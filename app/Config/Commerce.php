@@ -13,6 +13,7 @@ use CodeIgniter\Config\BaseConfig;
  */
 class Commerce extends BaseConfig
 {
+    // Codigo, nombre y descripcion del producto.
     public string $productSku = 'aquacontrol';
     public string $productName = 'AquaControl';
     public string $productDescription = 'Elegi la cantidad, revisa tu pedido y continua con el medio de pago que prefieras sin salir de la experiencia AquaControl.';
@@ -20,6 +21,7 @@ class Commerce extends BaseConfig
     /** Precio por unidad. Vacio = "Consultar" y el checkout queda deshabilitado. */
     public string $unitPrice = '';
 
+    // Moneda, cantidad maxima por compra, aviso de entrega y formato de los numeros.
     public string $currency = 'ARS';
     public int $maxQuantity = 6;
     public string $deliveryMessage = 'La entrega y activacion se coordinan al confirmar el pago.';
@@ -31,11 +33,13 @@ class Commerce extends BaseConfig
         return is_numeric($this->unitPrice) && (float) $this->unitPrice > 0 ? round((float) $this->unitPrice, 2) : null;
     }
 
+    // Moneda en mayusculas (por ejemplo ARS).
     public function moneda(): string
     {
         return strtoupper($this->currency);
     }
 
+    // Cantidad maxima por compra (1 como minimo).
     public function cantidadMaxima(): int
     {
         return max(1, $this->maxQuantity);

@@ -3,37 +3,41 @@
    Estilos de la vista app/Views/dashboard/partes/perfil.php: "Mi cuenta".
    =================================================== */
 
+/* Formulario a la izquierda y resumen a la derecha. */
 .profile-grid { grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr); }
 
+/* Espacio interior de las tarjetas. */
 .profile-card { padding: 24px; }
 
+/* Formulario de la cuenta. */
 .profile-form {
   display: grid;
   gap: 20px;
 }
 
+/* Campos en dos columnas. */
 .profile-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
+/* Sin margen de abajo. */
 .profile-form .form-group { margin-bottom: 0; }
 
+/* Aclaraciones con los renglones mas juntos. */
 .profile-form .field-help { line-height: 1.45; }
 
-.profile-form .form-control[readonly] {
-  color: var(--text-muted);
-  cursor: default;
-}
-
+/* Fila del boton. */
 .profile-form-actions {
   display: flex;
   justify-content: flex-start;
 }
 
+/* El boton ocupa solo lo que necesita. */
 .profile-form-actions .btn { width: auto; }
 
+/* Circulo, nombre y correo. */
 .profile-identity {
   display: flex;
   align-items: center;
@@ -41,6 +45,7 @@
   margin-bottom: 22px;
 }
 
+/* Circulo con la inicial. */
 .profile-avatar {
   width: 58px;
   height: 58px;
@@ -57,22 +62,26 @@
   font-weight: 900;
 }
 
+/* Nombre. */
 .profile-identity h3 {
   font-size: 1.35rem;
   line-height: 1.2;
 }
 
+/* Correo. */
 .profile-identity span:not(.profile-avatar) {
   display: block;
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
 
+/* Lista del resumen. */
 .profile-summary {
   display: grid;
   gap: 14px;
 }
 
+/* Cada dato del resumen. */
 .profile-summary-item {
   padding: 16px;
   border: 1px solid rgba(93,202,165,0.08);
@@ -80,11 +89,13 @@
   background: rgba(255,255,255,0.04);
 }
 
+/* Nombre del dato. */
 .profile-summary-item span {
   color: var(--text-muted);
   font-size: 0.82rem;
 }
 
+/* Valor. */
 .profile-summary-item strong {
   display: block;
   margin-top: 6px;
@@ -93,6 +104,7 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets: una columna y boton a todo el ancho. */
 @media (max-width: 768px) {
   .profile-grid,
   .profile-form-grid { grid-template-columns: 1fr; }
@@ -100,6 +112,7 @@
   .profile-form-actions .btn { width: 100%; }
 }
 
+/* Celulares chicos: menos espacio interior. */
 @media (max-width: 480px) {
   .profile-card { padding: 20px; }
 }

@@ -3,6 +3,7 @@
    Estilos de la vista app/Views/home/secciones/comparacion.php: la tabla comparativa.
    =================================================== */
 
+/* Marco de la tabla. */
 .comparison-table {
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.1);
@@ -11,6 +12,7 @@
   box-shadow: var(--shadow-card);
 }
 
+/* Cada fila: tres columnas. */
 .comparison-row {
   min-height: 68px;
   display: grid;
@@ -21,16 +23,20 @@
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
+/* La ultima fila no lleva linea de abajo. */
 .comparison-row:last-child { border-bottom: 0; }
 
+/* Fila de encabezado. */
 .comparison-head {
   background: linear-gradient(90deg, rgba(0,212,255,0.14), rgba(255,255,255,0.04));
   color: var(--text-primary);
   font-weight: 900;
 }
 
+/* Textos en gris. */
 .comparison-row span { color: var(--text-muted); }
 
+/* Columna de AquaControl, destacada. */
 .comparison-row > strong:nth-child(2) {
   width: fit-content;
   min-width: 112px;
@@ -42,15 +48,18 @@
   text-align: center;
 }
 
+/* Tildes. */
 .check-cell,
 .check-muted {
   color: var(--aqua-green);
   font-weight: 900;
 }
 
+/* Guion cuando no tiene esa ventaja. */
 .empty-muted { color: rgba(255,255,255,0.28); }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Celulares y tablets: la tabla se desliza hacia el costado. */
 @media (max-width: 768px) {
   .comparison-table { overflow-x: auto; }
   .comparison-row { min-width: 620px; }

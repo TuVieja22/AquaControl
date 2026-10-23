@@ -8,6 +8,7 @@
  *   app/Views/auth/login.php  ->  public/css/auth/login.css
  */
 
+// Se define una sola vez, aunque el archivo se cargue dos veces.
 if (! function_exists('usar_css')) {
     /**
      * Anota la hoja de estilos de una vista. Va en la primera linea de la vista:
@@ -21,8 +22,10 @@ if (! function_exists('usar_css')) {
      */
     function usar_css(?string $archivo = null): array
     {
+        // Lista que se conserva entre una llamada y la siguiente.
         static $anotadas = [];
 
+        // Sin argumento: entrega la lista y la deja vacia.
         if ($archivo === null) {
             [$lista, $anotadas] = [$anotadas, []];
 
@@ -48,6 +51,7 @@ if (! function_exists('enlaces_css')) {
      */
     function enlaces_css(): string
     {
+        // Se separan en tres grupos para escribirlas en orden.
         $moldes = $componentes = $vistas = [];
 
         foreach (usar_css() as $archivo) {
@@ -61,6 +65,7 @@ if (! function_exists('enlaces_css')) {
             }
         }
 
+        // Una etiqueta link por cada hoja.
         $links = array_map(
             static fn (string $archivo): string => '<link rel="stylesheet" href="' . base_url($archivo) . '">',
             [...$moldes, ...$componentes, ...$vistas]

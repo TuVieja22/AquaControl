@@ -6,32 +6,41 @@
    El dibujo del grafico (colores, lineas) esta aparte, en js/animaciones/grafico.js.
    =================================================== */
 
+// Modo estricto: el navegador avisa de mas errores.
 'use strict';
 
+// Todo va dentro de una funcion para no mezclar sus nombres con los de otros archivos.
 (function () {
+  // Los datos del panel vienen escritos en la pagina (script dashboard-data).
   const dataNode = document.getElementById('dashboard-data');
   if (!dataNode) return;
 
+  // Estado actual del panel, tiempos de actualizacion y clase CSS de cada estado.
   const state = JSON.parse(dataNode.textContent || '{}');
   const REFRESH_MS = 5000;
   const REFRESH_FEEDING_MS = 2000;
   const STATUS_DOTS = { ok: 'status-ok', neutral: 'status-info', warn: 'status-warn', danger: 'status-danger' };
 
+  // Reloj de la proxima actualizacion.
   let refreshTimer = null;
 
+  // Atajo para buscar un elemento por su id.
   const $ = id => document.getElementById(id);
 
+  // Escribe un texto en un elemento (si existe).
   function setText(id, value) {
     const node = $(id);
     if (node) node.textContent = value ?? '';
   }
 
+  // Convierte un texto en HTML seguro (para que no se interprete como etiquetas).
   function escapeHtml(value) {
     const div = document.createElement('div');
     div.textContent = value ?? '';
     return div.innerHTML;
   }
 
+  // Cambia el color de un puntito de estado.
   function setStatusDot(id, status) {
     const node = $(id);
     if (node) node.className = STATUS_DOTS[status] || 'status-info';
@@ -54,6 +63,7 @@
 
   /* ── Tarjetas, resumen y listas ── */
   function renderCards() {
+    // Cada tarjeta: color segun su estado, valor y texto de abajo.
     document.querySelectorAll('[data-card]').forEach(node => {
       const card = state.cards?.[node.dataset.card];
       if (!card) return;
@@ -67,6 +77,7 @@
     setText('vacationStateLabel', state.cards?.vacationMode?.value);
   }
 
+  // Resumen de arriba y las tres tarjetas de estado.
   function renderSummary() {
     const summary = state.summary || {};
     const cards = state.cards || {};
@@ -90,6 +101,7 @@
     setText('vacationStatusMeta', cards.vacationMode?.meta);
   }
 
+  // Lista de alertas (o un texto si no hay ninguna).
   function renderAlerts() {
     const list = $('alertsList');
     if (!list) return;
@@ -107,6 +119,7 @@
       : '<p class="empty-state">No hay alertas pendientes.</p>';
   }
 
+  // Tabla de las ultimas alimentaciones.
   function renderFeedings() {
     const body = $('feedingsTableBody');
     if (!body) return;
@@ -121,6 +134,7 @@
       : '<tr><td colspan="3" class="table-empty">Sin registros.</td></tr>';
   }
 
+  // Rangos configurados y campo de temperatura objetivo.
   function renderConfig() {
     const config = state.config || {};
     setText('configTempMin', `${Number(config.temp_min).toFixed(1)} °C`);
@@ -136,6 +150,7 @@
     }
   }
 
+  // Estado del alimentador; el boton se apaga si no se puede alimentar.
   function renderFeeder() {
     const feeder = state.feeder;
     const statusNode = $('feederStatus');
@@ -150,6 +165,7 @@
     if (feedButton) feedButton.disabled = !feeder.hasDevice || !feeder.online || feeder.pending;
   }
 
+  // Vuelve a poner todos los datos en pantalla.
   function renderAll() {
     renderFeeder();
     renderCards();
@@ -161,6 +177,7 @@
     window.AquaGrafico?.dibujar(state.charts);
   }
 
+  // Muestra el mensaje que respondio el servidor (marcado como error si lo es).
   function showFeedback(id, payload) {
     const node = $(id);
     if (!node) return;
@@ -171,6 +188,7 @@
   }
 
   /* ── Pedidos al servidor ── */
+  // Hace un pedido al servidor y devuelve su respuesta ya convertida.
   async function requestJson(url, options = {}) {
     const response = await fetch(url, options);
     window.AquaCsrf?.refresh(response);
@@ -180,6 +198,7 @@
     return response.ok || payload?.message ? payload : null;
   }
 
+  // Envia datos al servidor como un formulario, con el token de seguridad.
   function postForm(url, data = {}) {
     return requestJson(url, {
       method: 'POST',
@@ -191,6 +210,7 @@
     });
   }
 
+  // Espera una respuesta, guarda los datos nuevos, redibuja y programa la proxima consulta.
   async function applyRequest(promise) {
     const payload = await promise.catch(() => null);
     if (payload) {
@@ -203,34 +223,40 @@
     return payload;
   }
 
+  // Pide los datos actualizados.
   function refreshLatest() {
     // Con la pestana oculta no se pregunta nada: se retoma al volver (ver visibilitychange).
     if (document.hidden) return;
     applyRequest(requestJson(state.endpoints.latest, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }));
   }
 
+  // Programa la proxima consulta: a los 2 s si hay una orden en curso, si no a los 5 s.
   function scheduleRefresh() {
     window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(refreshLatest, state.feeder?.pending ? REFRESH_FEEDING_MS : REFRESH_MS);
   }
 
+  // Al volver a la pestana, consulta enseguida.
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) refreshLatest();
   });
 
   /* ── Botones y formularios ── */
   document.addEventListener('click', event => {
+    // Boton "Marcar leida" de una alerta.
     const alertButton = event.target.closest('.mark-alert-btn');
     if (alertButton) {
       applyRequest(postForm(state.endpoints.markAlertTemplate.replace('__id__', alertButton.dataset.alertId)));
       return;
     }
 
+    // Boton del modo vacaciones.
     if (event.target.closest('#vacationToggleBtn')) {
       applyRequest(postForm(state.endpoints.vacationToggle));
     }
   });
 
+  // Formulario "Alimentar ahora": manda la orden sin recargar la pagina.
   $('feedNowForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     $('feedNowBtn').disabled = true;
@@ -242,6 +268,7 @@
     renderFeeder();
   });
 
+  // Formulario de horarios.
   $('feedingScheduleForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     const payload = await applyRequest(postForm(state.endpoints.feedingSchedule, {
@@ -252,11 +279,13 @@
     showFeedback('feedingScheduleFeedback', payload || { success: false, message: 'No se pudieron guardar los horarios.' });
   });
 
+  // Formulario de temperatura objetivo.
   $('targetTemperatureForm')?.addEventListener('submit', event => {
     event.preventDefault();
     applyRequest(postForm(state.endpoints.targetTemperature, { temp_objetivo: $('temp_objetivo')?.value || '' }));
   });
 
+  // Al cargar: dibuja todo y programa la primera consulta.
   renderAll();
   scheduleRefresh();
 }());

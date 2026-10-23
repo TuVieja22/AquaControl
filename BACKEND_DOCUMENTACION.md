@@ -12,7 +12,6 @@ La aplicacion combina:
 - CRUD de dispositivos por usuario, con API key propia para cada ESP32.
 - API para dispositivos IoT (ingesta de lecturas y cola de comandos del alimentador con servo).
 - Alimentacion manual y programada por horario.
-- Administracion de usuarios y pedidos por rol.
 - Integracion de checkout con Mercado Pago, con registro de pedidos y webhook.
 
 Como se reparte el trabajo:
@@ -81,8 +80,6 @@ app/
     Perfil.php                (formulario "Mi cuenta")
     DeviceApi.php             (API del ESP32)
     Dispositivos.php          (ABM de dispositivos y API keys)
-    Usuarios.php              (administracion de cuentas)
-    Pedidos.php               (listado de pedidos)
     Checkout.php              (Mercado Pago)
   Filters/
     AuthFilter.php            (sesion iniciada y, opcionalmente, rol)
@@ -300,9 +297,6 @@ Definidas en `app/Config/Routes.php`.
 | POST | `/dispositivos/eliminar/{id}` | `Dispositivos::delete` | `auth` | Elimina dispositivo. |
 | POST | `/dispositivos/api-key/{id}` | `Dispositivos::generateApiKey` | `auth` | Genera o regenera la API key (se muestra una sola vez). |
 | POST | `/dispositivos/api-key/{id}/revocar` | `Dispositivos::revokeApiKey` | `auth` | Revoca la API key. |
-| GET | `/usuarios` | `Usuarios::index` | `auth:administrador` | Lista usuarios. |
-| GET/POST | `/usuarios/editar/{id}` | `Usuarios::edit` | `auth:administrador` | Edita usuario. |
-| GET | `/pedidos` | `Pedidos::index` | `auth:administrador` | Lista pedidos de la tienda (`?estado=` filtra). |
 
 Existe override 404 que renderiza `app/Views/errors/404.php`.
 
@@ -317,7 +311,7 @@ Protege las paginas que requieren iniciar sesion:
 - Verifica `session()->get('logged_in')`. Si falta, setea flash `error` y redirige a `auth/login`.
 - Si la ruta indica roles (`auth:administrador`, o varios: `auth:administrador,tecnico`), compara con `session()->get('user_role')`. Si no coincide, redirige al panel con un mensaje de error.
 
-Se aplica a los grupos `dashboard` y `dispositivos` (cualquier usuario) y a `usuarios` y `pedidos` (solo administradores).
+Se aplica a los grupos `dashboard` y `dispositivos`. Hoy ninguna ruta pide un rol: todas las paginas son para el usuario.
 
 ### `app/Filters/DeviceAuthFilter.php`
 
@@ -367,7 +361,7 @@ Constantes:
 - `MAX_LOGIN_ATTEMPTS = 5`.
 - `LOGIN_LOCK_MINUTES = 15`.
 
-La regla de contrasena segura esta en `UserModel::PASSWORD_RULE` (minimo 8, minuscula, mayuscula, numero y caracter especial) y la comparten registro, reset y la edicion de usuarios.
+La regla de contrasena segura esta en `UserModel::PASSWORD_RULE` (minimo 8, minuscula, mayuscula, numero y caracter especial) y la comparten registro y reset.
 
 Metodos publicos:
 
@@ -545,10 +539,6 @@ Endpoints que consume el ESP32 (filtro `deviceauth`). **Las direcciones, los cam
 - `commands()`: genera los comandos programados que correspondan (`ComandoDispositivoModel::programarAlimentaciones`) y entrega los pendientes, marcandolos `enviado`. Los dispositivos tipo `sensor` no reciben comandos.
 - `ack($id)`: recibe `{"estado": "ejecutado" | "fallido", "mensaje": "..."}`. Si fue `ejecutado`, registra la alimentacion (`manual`, `automatica` o `vacaciones` segun origen y modo). Responde `404` si el comando no existe o ya estaba finalizado.
 
-### `Pedidos.php`
-
-Panel de administracion (`auth:administrador`) con el listado de pedidos, resumen por estado y filtro `?estado=`.
-
 ### `Dispositivos.php`
 
 Responsabilidad: CRUD de dispositivos del usuario autenticado.
@@ -563,17 +553,6 @@ Logica:
 - `revokeApiKey($id)` borra la key: el dispositivo deja de poder enviar datos.
 
 Los tipos permitidos estan en `DispositivoModel::TIPOS`: `sensor`, `actuador`, `controlador`, `kit_iot`, `otro`.
-
-### `Usuarios.php`
-
-Responsabilidad: administracion de usuarios. Solo accesible a administradores (`auth:administrador`).
-
-Logica:
-
-- `index()` lista usuarios por fecha de creacion descendente.
-- `edit($id)` muestra el formulario o procesa el POST: valida nombre, rol y password opcional.
-- Impide que el ultimo administrador activo pierda su rol (`UserModel::administradoresActivos()`).
-- Si el admin edita su propia cuenta, actualiza `user_nombre` y `user_role` en sesion.
 
 ## Modelos
 
@@ -590,7 +569,7 @@ login_intentos, bloqueado_hasta,
 activo, created_at, updated_at
 ```
 
-Roles (`UserModel::ROLES`): `administrador`, `usuario`, `tecnico`.
+Roles guardados en la columna `rol`: `administrador`, `usuario`, `tecnico`. Ninguna pagina los usa hoy: la pagina es solo para el usuario.
 
 Constantes: `PASSWORD_RULE` (se le antepone `required|` o `permit_empty|`) y `PASSWORD_MESSAGES`.
 
@@ -614,8 +593,6 @@ Metodos de negocio:
 - `registrarIntentoFallido()`: contador DB y bloqueo temporal.
 - `resetearSeguridadLogin()`.
 - `segundosBloqueoRestantes($user)`.
-- `roleLabel($role)`.
-- `administradoresActivos()`.
 
 ### `SensorModel.php`
 
@@ -732,9 +709,9 @@ Ciclo de vida: `pendiente` -> `enviado` (el ESP32 lo tomo) -> `ejecutado` | `fal
 
 ### `PedidoModel.php`
 
-Tabla: `pedidos`. Estados (`PedidoModel::ESTADOS`): `pendiente`, `en_proceso`, `aprobado`, `rechazado`, `cancelado`, `reembolsado`.
+Tabla: `pedidos`. Estados: `pendiente`, `en_proceso`, `aprobado`, `rechazado`, `cancelado`, `reembolsado`. No hay pagina para verlos: se consultan en la base (por ejemplo con phpMyAdmin).
 
-- `porReferencia($ref)`, `listado($estado)`, `resumen()`.
+- `porReferencia($ref)`.
 - `aplicarPagoMercadoPago($pago)`: actualiza el pedido con un pago consultado a la API.
 
 ## Base de datos
@@ -1081,7 +1058,6 @@ Si el usuario no existe, igual se registra throttle en cache por email+IP.
 ### Autorizacion
 
 - Rutas `dashboard` y `dispositivos`: requieren `logged_in`.
-- Rutas `usuarios` y `pedidos`: requieren rol `administrador`.
 - API de dispositivos (`dashboard/api/data`, `dashboard/api/commands*`): requieren API key de dispositivo; el usuario sale del dispositivo, no de la sesion.
 - Dispositivos se consultan por `id` + `usuario_id`, evitando editar recursos de otros usuarios.
 - Alertas se marcan leidas solo si pertenecen al usuario en sesion.
@@ -1093,7 +1069,7 @@ Si el usuario no existe, igual se registra throttle en cache por email+IP.
 | Passwords | bcrypt cost 12. |
 | Sesion | Server-side file session, cookie HTTPOnly, SameSite Lax. |
 | Regeneracion de sesion | Al login y al actualizar perfil. |
-| Roles | `administrador`, `usuario`, `tecnico`. |
+| Roles | Guardados en la base, pero ninguna pagina los pide. |
 | Lockout login | Cache por email/IP y campos DB por usuario. |
 | Tokens recovery | Token aleatorio, solo se guarda el hash, expiracion 1 hora. |
 | CSRF | Filtro global activo; formularios con `csrf_field()` y AJAX con header `X-CSRF-TOKEN`. |
@@ -1112,10 +1088,8 @@ flowchart LR
     Home --> Commerce[Config Commerce / MercadoPago]
     Checkout --> Commerce
     Checkout --> PedidoModel
-    Pedidos --> PedidoModel
     Auth --> UserModel
     Perfil --> UserModel
-    Usuarios --> UserModel
     Dashboard --> PanelPecera
     Dashboard --> ComandoDispositivoModel
     Dashboard --> AlertaModel

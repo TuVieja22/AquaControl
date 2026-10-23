@@ -2,11 +2,13 @@
 <?php
 // Panel "En vivo": temperatura, pH, alertas, estado del ecosistema, grafico y tarjetas de estado.
 // Los ids (temperatura, alertsMetric, etc.) los usa funciones/dashboard.js para actualizar sin recargar.
+// Atajos a los datos, y clase CSS del puntito segun cada estado.
 $cards = $dashboardData['cards'];
 $resumen = $dashboardData['summary'];
 $puntos = ['ok' => 'status-ok', 'neutral' => 'status-info', 'warn' => 'status-warn', 'danger' => 'status-danger'];
 ?>
 <section class="dashboard-preview dashboard-live-panel" id="panel-principal">
+  <?php // Encabezado: cartel "En vivo", titulo y ultima sincronizacion. ?>
   <div class="dashboard-preview-header">
     <div>
       <span class="dashboard-chip"><span class="signal-dot"></span> En vivo</span>
@@ -15,25 +17,30 @@ $puntos = ['ok' => 'status-ok', 'neutral' => 'status-info', 'warn' => 'status-wa
     <p>Ultima sincronizacion <strong id="latestTimestamp"><?= esc($resumen['syncText']) ?></strong></p>
   </div>
 
+  <?php // Cuatro tarjetas: temperatura, pH, alertas y estado del ecosistema. ?>
   <div class="dashboard-preview-grid dashboard-stat-grid">
+    <?php // Temperatura (el color depende de su estado). ?>
     <article class="live-stat sensor-status-<?= esc($cards['temperature']['status']) ?>" data-card="temperature">
       <span>Temperatura</span>
       <strong data-field="value"><?= esc($cards['temperature']['value']) ?></strong>
       <small data-field="meta"><?= esc($cards['temperature']['meta']) ?></small>
     </article>
 
+    <?php // pH. ?>
     <article class="live-stat sensor-status-<?= esc($cards['ph']['status']) ?>" data-card="ph">
       <span>pH</span>
       <strong data-field="value"><?= esc($cards['ph']['value']) ?></strong>
       <small data-field="meta"><?= esc($cards['ph']['meta']) ?></small>
     </article>
 
+    <?php // Cantidad de alertas sin leer. ?>
     <article class="live-stat" data-summary="alerts">
       <span>Alertas</span>
       <strong id="alertsMetric"><?= esc((string) $resumen['alertsCount']) ?></strong>
       <small id="alertsMetricMeta"><?= esc($resumen['alertsMeta']) ?></small>
     </article>
 
+    <?php // Estado del ecosistema, en porcentaje. ?>
     <article class="ecosystem-state" data-summary="health">
       <span>Estado del ecosistema</span>
       <strong id="ecosystemHealth"><?= esc((string) $resumen['health']) ?>%</strong>
@@ -42,7 +49,9 @@ $puntos = ['ok' => 'status-ok', 'neutral' => 'status-info', 'warn' => 'status-wa
     </article>
   </div>
 
+  <?php // Grafico y, al costado, tres tarjetas de estado. ?>
   <div class="dashboard-chart-area dashboard-live-area">
+    <?php // Grafico (lo dibuja animaciones/grafico.js dentro del canvas). ?>
     <article class="chart-panel live-chart-panel">
       <div class="chart-head">
         <span>Temperatura / pH</span>
@@ -51,6 +60,7 @@ $puntos = ['ok' => 'status-ok', 'neutral' => 'status-info', 'warn' => 'status-wa
       <canvas id="ecosystemChart"></canvas>
     </article>
 
+    <?php // Estado del agua, de la alimentacion y del modo vacaciones. ?>
     <div class="alert-stack live-status-stack">
       <article data-status-card="water">
         <span id="waterStatusDot" class="<?= $puntos[$cards['waterLevel']['status']] ?>"></span>

@@ -9,6 +9,7 @@ use CodeIgniter\Model;
  */
 class AlertaModel extends Model
 {
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'alertas';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -23,6 +24,7 @@ class AlertaModel extends Model
     ];
     protected $useTimestamps = false;
 
+    // Alertas sin leer del usuario, de la mas nueva a la mas vieja.
     public function noLeidasPorUsuario(int $userId, int $limit = 5): array
     {
         return $this->where('usuario_id', $userId)

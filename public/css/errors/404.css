@@ -3,6 +3,7 @@
    Estilos de la vista app/Views/errors/404.php ("pagina no encontrada").
    =================================================== */
 
+/* Centra el cartel en la pantalla. */
 .not-found {
   min-height: 100vh;
   display: flex;
@@ -12,9 +13,12 @@
   text-align: center;
 }
 
+/* Caja del cartel. */
 .not-found-box { max-width: 460px; margin: auto; }
+/* El pez grande. */
 .not-found-fish { margin-bottom: 16px; font-size: 80px; opacity: 0.6; }
 
+/* El numero 404. */
 .not-found h1 {
   margin-bottom: 8px;
   color: var(--teal-300);
@@ -24,6 +28,7 @@
   letter-spacing: -0.04em;
 }
 
+/* Titulo. */
 .not-found h2 {
   margin-bottom: 12px;
   color: #fff;
@@ -31,6 +36,7 @@
   font-size: 1.4rem;
 }
 
+/* Texto. */
 .not-found p {
   margin-bottom: 36px;
   color: rgba(159,225,203,0.5);
@@ -38,4 +44,5 @@
   line-height: 1.7;
 }
 
+/* Boton para volver. */
 .not-found .btn { display: inline-flex; width: auto; padding: 14px 32px; }

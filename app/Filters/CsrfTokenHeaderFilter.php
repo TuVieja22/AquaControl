@@ -14,10 +14,12 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class CsrfTokenHeaderFilter implements FilterInterface
 {
+    // Antes de la pagina no hace nada.
     public function before(RequestInterface $request, $arguments = null)
     {
     }
 
+    // Despues de la pagina agrega el header con el token actual.
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
         $response->setHeader(csrf_header(), csrf_hash());

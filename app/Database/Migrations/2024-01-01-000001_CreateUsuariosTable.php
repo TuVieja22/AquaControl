@@ -12,32 +12,38 @@ use CodeIgniter\Database\Migration;
  */
 class CreateUsuariosTable extends Migration
 {
+    // Crea las cuatro tablas iniciales: usuarios, lecturas, alimentaciones y alertas.
     public function up(): void
     {
         // ── TABLA: usuarios ─────────────────────────────────────
         $this->forge->addField([
+            // Numero de usuario (se asigna solo).
             'id' => [
                 'type'           => 'INT',
                 'constraint'     => 11,
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            // Nombre y apellido.
             'nombre' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
                 'null'       => false,
             ],
+            // Correo: con el se inicia sesion.
             'email' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 150,
                 'null'       => false,
             ],
+            // Contrasena, guardada como hash.
             'password' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
                 'null'       => false,
                 'comment'    => 'bcrypt hash cost=12',
             ],
+            // Codigo para recuperar la contrasena y hasta cuando vale.
             'token_recuperacion' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 64,
@@ -49,12 +55,14 @@ class CreateUsuariosTable extends Migration
                 'null'    => true,
                 'default' => null,
             ],
+            // Cuenta activa o desactivada.
             'activo' => [
                 'type'       => 'TINYINT',
                 'constraint' => 1,
                 'default'    => 1,
                 'comment'    => '1=activo, 0=inactivo',
             ],
+            // Fechas de alta y de ultimo cambio.
             'created_at' => [
                 'type' => 'DATETIME',
                 'null' => true,
@@ -65,6 +73,7 @@ class CreateUsuariosTable extends Migration
             ],
         ]);
 
+        // Clave primaria, correo sin repetir, indice para buscar por codigo, y se crea la tabla.
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('email');
         $this->forge->addKey('token_recuperacion');
@@ -79,12 +88,14 @@ class CreateUsuariosTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            // Usuario al que pertenece la lectura.
             'usuario_id' => [
                 'type'       => 'INT',
                 'constraint' => 11,
                 'unsigned'   => true,
                 'null'       => false,
             ],
+            // Lo que miden los sensores: temperatura, pH y turbidez.
             'temperatura' => [
                 'type'       => 'DECIMAL',
                 'constraint' => '5,2',
@@ -103,6 +114,7 @@ class CreateUsuariosTable extends Migration
                 'null'       => true,
                 'comment'    => 'NTU',
             ],
+            // Estados: nivel de agua, calefactor y modo vacaciones.
             'nivel_agua' => [
                 'type'       => 'TINYINT',
                 'constraint' => 1,
@@ -120,12 +132,14 @@ class CreateUsuariosTable extends Migration
                 'constraint' => 1,
                 'default'    => 0,
             ],
+            // Fecha y hora de la lectura.
             'created_at' => [
                 'type' => 'DATETIME',
                 'null' => false,
             ],
         ]);
 
+        // Claves e indices; si se borra el usuario, se borran sus lecturas.
         $this->forge->addKey('id', true);
         $this->forge->addKey('usuario_id');
         $this->forge->addKey('created_at');
@@ -141,12 +155,14 @@ class CreateUsuariosTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            // Usuario al que pertenece.
             'usuario_id' => [
                 'type'       => 'INT',
                 'constraint' => 11,
                 'unsigned'   => true,
                 'null'       => false,
             ],
+            // Gramos entregados y tipo de alimentacion.
             'cantidad_gramos' => [
                 'type'       => 'DECIMAL',
                 'constraint' => '5,2',
@@ -157,12 +173,14 @@ class CreateUsuariosTable extends Migration
                 'constraint' => ['manual', 'automatica', 'vacaciones'],
                 'default'    => 'automatica',
             ],
+            // Fecha y hora de la alimentacion.
             'created_at' => [
                 'type' => 'DATETIME',
                 'null' => false,
             ],
         ]);
 
+        // Claves e indices; si se borra el usuario, se borran sus alimentaciones.
         $this->forge->addKey('id', true);
         $this->forge->addKey('usuario_id');
         $this->forge->addForeignKey('usuario_id', 'usuarios', 'id', 'CASCADE', 'CASCADE');
@@ -177,12 +195,14 @@ class CreateUsuariosTable extends Migration
                 'unsigned'       => true,
                 'auto_increment' => true,
             ],
+            // Usuario al que se le avisa.
             'usuario_id' => [
                 'type'       => 'INT',
                 'constraint' => 11,
                 'unsigned'   => true,
                 'null'       => false,
             ],
+            // Gravedad, tipo y texto del aviso.
             'nivel' => [
                 'type'       => 'TINYINT',
                 'constraint' => 1,
@@ -200,6 +220,7 @@ class CreateUsuariosTable extends Migration
                 'constraint' => 255,
                 'null'       => false,
             ],
+            // Si el usuario ya la marco como leida.
             'leida' => [
                 'type'       => 'TINYINT',
                 'constraint' => 1,
@@ -211,12 +232,14 @@ class CreateUsuariosTable extends Migration
             ],
         ]);
 
+        // Claves e indices; si se borra el usuario, se borran sus alertas.
         $this->forge->addKey('id', true);
         $this->forge->addKey('usuario_id');
         $this->forge->addForeignKey('usuario_id', 'usuarios', 'id', 'CASCADE', 'CASCADE');
         $this->forge->createTable('alertas', true);
     }
 
+    // Deshace la migracion: borra las cuatro tablas (primero las que dependen de usuarios).
     public function down(): void
     {
         $this->forge->dropTable('alertas',           true);

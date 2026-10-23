@@ -9,12 +9,14 @@ use CodeIgniter\Model;
  */
 class AlimentacionModel extends Model
 {
+    // Nombre que se muestra de cada tipo de alimentacion.
     public const TIPOS = [
         'manual'     => 'Manual',
         'automatica' => 'Automatica',
         'vacaciones' => 'Vacaciones',
     ];
 
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'alimentaciones';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -27,6 +29,7 @@ class AlimentacionModel extends Model
     ];
     protected $useTimestamps = false;
 
+    // Ultimas alimentaciones del usuario.
     public function ultimasPorUsuario(int $userId, int $limit = 10): array
     {
         return $this->where('usuario_id', $userId)

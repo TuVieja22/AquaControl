@@ -19,12 +19,15 @@ use Throwable;
  */
 class DeviceApi extends BaseController
 {
+    // El ESP32 manda una lectura de los sensores y se guarda.
     public function data(): ResponseInterface
     {
+        // Dispositivo que llama (el filtro lo reconocio por su API key) y lo que mando.
         $device = service('deviceAuth')->device();
         $userId = (int) $device['usuario_id'];
         $input = $this->entrada();
 
+        // Cada dato es opcional, pero si viene tiene que estar dentro de limites razonables.
         $valido = is_array($input) && $input !== [] && $this->validateData($input, [
             'temperatura'     => 'permit_empty|decimal|greater_than[-10]|less_than[60]',
             'ph'              => 'permit_empty|decimal|greater_than_equal_to[0]|less_than_equal_to[14]',
@@ -34,6 +37,7 @@ class DeviceApi extends BaseController
             'modo_vacaciones' => 'permit_empty|in_list[0,1]',
         ]);
 
+        // Datos incorrectos: se responde con los errores.
         if (! $valido) {
             return $this->response->setStatusCode(422)->setJSON([
                 'success' => false,
@@ -41,6 +45,7 @@ class DeviceApi extends BaseController
             ]);
         }
 
+        // Guarda la lectura a nombre del usuario del dispositivo.
         $readingId = (new SensorModel())->insert([
             'usuario_id'      => $userId,
             'dispositivo_id'  => (int) $device['id'],
@@ -66,6 +71,7 @@ class DeviceApi extends BaseController
         ]);
     }
 
+    // El ESP32 pregunta si tiene ordenes pendientes (por ejemplo, mover el servo).
     public function commands(): ResponseInterface
     {
         $device = service('deviceAuth')->device();
@@ -75,10 +81,12 @@ class DeviceApi extends BaseController
             return $this->response->setJSON(['success' => true, 'comandos' => []]);
         }
 
+        // Si llego la hora de un horario programado, se crea su orden.
         $userId = (int) $device['usuario_id'];
         $comandoModel = new ComandoDispositivoModel();
         $comandoModel->programarAlimentaciones($userId, (new ConfiguracionPeceraModel())->porUsuario($userId) ?? []);
 
+        // Toma las ordenes pendientes y las deja marcadas como enviadas a este dispositivo.
         $comandos = array_map(static fn (array $comando): array => [
             'id'     => (int) $comando['id'],
             'accion' => $comando['accion'],
@@ -88,12 +96,14 @@ class DeviceApi extends BaseController
         return $this->response->setJSON(['success' => true, 'comandos' => $comandos]);
     }
 
+    // El ESP32 avisa como termino una orden (ejecutada o fallida).
     public function ack(int $commandId): ResponseInterface
     {
         $device = service('deviceAuth')->device();
         $input = $this->entrada();
         $estado = is_array($input) ? (string) ($input['estado'] ?? 'ejecutado') : '';
 
+        // Solo se aceptan esos dos resultados.
         if (! in_array($estado, ['ejecutado', 'fallido'], true)) {
             return $this->response->setStatusCode(422)->setJSON([
                 'success' => false,
@@ -101,6 +111,7 @@ class DeviceApi extends BaseController
             ]);
         }
 
+        // Cierra la orden (tiene que ser de este dispositivo y estar sin terminar).
         $comandoModel = new ComandoDispositivoModel();
         $comando = $comandoModel->finalizar($commandId, (int) $device['id'], $estado, isset($input['mensaje']) ? (string) $input['mensaje'] : null);
 
@@ -111,6 +122,7 @@ class DeviceApi extends BaseController
             ]);
         }
 
+        // Si se alimento de verdad, se anota en el historial de alimentaciones.
         if ($estado === 'ejecutado' && $comando['accion'] === ComandoDispositivoModel::ACCION_ALIMENTAR) {
             $this->registrarAlimentacion($comando);
         }
@@ -128,11 +140,13 @@ class DeviceApi extends BaseController
         }
     }
 
+    // Anota la alimentacion en el historial, con su tipo (manual, automatica o vacaciones).
     private function registrarAlimentacion(array $comando): void
     {
         $userId = (int) $comando['usuario_id'];
         $tipo = 'manual';
 
+        // Las programadas cuentan como "vacaciones" si ese modo esta activo.
         if ($comando['origen'] === 'programado') {
             $vacaciones = (int) ((new ConfiguracionPeceraModel())->porUsuario($userId)['modo_vacaciones'] ?? 0) === 1;
             $tipo = $vacaciones ? 'vacaciones' : 'automatica';

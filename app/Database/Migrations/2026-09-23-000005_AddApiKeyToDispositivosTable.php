@@ -4,17 +4,21 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
+// Agrega a los dispositivos su API key y la fecha de su ultima conexion.
 class AddApiKeyToDispositivosTable extends Migration
 {
+    // Agrega las columnas nuevas.
     public function up(): void
     {
         $this->forge->addColumn('dispositivos', [
+            // Hash de la API key (la clave en si no se guarda).
             'api_key_hash' => [
                 'type'       => 'CHAR',
                 'constraint' => 64,
                 'null'       => true,
                 'after'      => 'ubicacion',
             ],
+            // Comienzo de la clave (para reconocerla) y cuando se genero.
             'api_key_prefijo' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 16,
@@ -26,16 +30,19 @@ class AddApiKeyToDispositivosTable extends Migration
                 'null'  => true,
                 'after' => 'api_key_prefijo',
             ],
+            // Ultima vez que el dispositivo se comunico.
             'ultima_conexion' => [
                 'type'  => 'DATETIME',
                 'null'  => true,
                 'after' => 'api_key_generada_at',
             ],
         ]);
+        // Dos dispositivos no pueden tener la misma clave.
         $this->db->query('ALTER TABLE ' . $this->db->prefixTable('dispositivos') . ' ADD UNIQUE KEY dispositivos_api_key_hash_unique (api_key_hash)');
 
         // lecturas_sensores se creo fuera de las migraciones; solo se extiende si existe.
         if ($this->db->tableExists('lecturas_sensores') && ! $this->db->fieldExists('dispositivo_id', 'lecturas_sensores')) {
+            // Cada lectura anota que dispositivo la mando.
             $this->forge->addColumn('lecturas_sensores', [
                 'dispositivo_id' => [
                     'type'       => 'INT',
@@ -46,6 +53,7 @@ class AddApiKeyToDispositivosTable extends Migration
                 ],
             ]);
 
+            // Indice por dispositivo y fecha; si se borra el dispositivo, sus lecturas quedan.
             $table = $this->db->prefixTable('lecturas_sensores');
             $this->db->query("ALTER TABLE {$table} ADD KEY idx_dispositivo_fecha (dispositivo_id, created_at)");
             $this->db->query(
@@ -55,6 +63,7 @@ class AddApiKeyToDispositivosTable extends Migration
         }
     }
 
+    // Deshace la migracion: quita todo lo agregado.
     public function down(): void
     {
         if ($this->db->tableExists('lecturas_sensores') && $this->db->fieldExists('dispositivo_id', 'lecturas_sensores')) {

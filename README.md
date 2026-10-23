@@ -16,8 +16,6 @@ frameworks. El firmware del ESP32 esta en `firmware/`.
 4. Doble clic en `iniciar_aquacontrol.bat`: enciende MySQL, levanta la pagina y abre
    `http://localhost:8080`.
 
-La primera cuenta que se registra queda como administrador.
-
 ## Levantar la pagina a mano
 
 ```bash

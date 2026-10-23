@@ -15,8 +15,10 @@ if (! function_exists('error_campo')) {
      */
     function error_campo(array $errores, string $campo, string $id = ''): string
     {
+        // El id es opcional (sirve cuando hay que ubicar esta cajita desde el JavaScript).
         $atributoId = $id !== '' ? ' id="' . esc($id, 'attr') . '"' : '';
 
+        // Si el campo no tiene error, la cajita sale vacia.
         return '<div class="invalid-feedback"' . $atributoId . '>' . esc($errores[$campo] ?? '') . '</div>';
     }
 }

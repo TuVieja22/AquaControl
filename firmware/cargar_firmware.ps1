@@ -13,6 +13,7 @@
 #
 #  Cerra el Monitor Serie del Arduino IDE y el puente USB antes de cargar.
 # ============================================================================
+# Opciones del script: modo (wifi o usb), puerto y cuantos minutos esperar.
 param(
     [ValidateSet('wifi', 'usb')]
     [string]$Modo = 'wifi',
@@ -20,26 +21,32 @@ param(
     [int]$MinutosEspera = 10
 )
 
+# Si algo falla, el script se detiene.
 $ErrorActionPreference = 'Stop'
+# Que programa se carga segun el modo, y donde queda compilado.
 $sketchNombre = if ($Modo -eq 'wifi') { 'aquacontrol_esp32' } else { 'aquacontrol_esp32_usb' }
 $sketch = Join-Path $PSScriptRoot $sketchNombre
 $build = Join-Path $sketch 'build'   # ignorado por git
 
+# Busca arduino-cli, el programa que compila (viene con el Arduino IDE).
 $cli = Join-Path $env:LOCALAPPDATA 'Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe'
 if (-not (Test-Path $cli)) {
     $cmd = Get-Command arduino-cli -ErrorAction SilentlyContinue
     if ($cmd) { $cli = $cmd.Source } else { Write-Host 'No encuentro arduino-cli (instala el Arduino IDE 2).' -ForegroundColor Red; exit 1 }
 }
 
+# Busca esptool, el programa que graba el ESP32.
 $esptool = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Arduino15\packages\esp32\tools\esptool_py') -Recurse -Filter esptool.exe -ErrorAction SilentlyContinue |
     Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
 if (-not $esptool) { Write-Host 'No encuentro esptool: instala la placa "esp32" en el Arduino IDE.' -ForegroundColor Red; exit 1 }
 
+# En modo WiFi hace falta secrets.h (red y API key).
 if ($Modo -eq 'wifi' -and -not (Test-Path (Join-Path $sketch 'secrets.h'))) {
     Write-Host 'Falta firmware\aquacontrol_esp32\secrets.h: copia secrets.example.h y completalo.' -ForegroundColor Red
     exit 1
 }
 
+# Busca en que puerto COM esta enchufado el ESP32.
 function Find-EspPort {
     $d = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'CP210|CH340|CH910|USB.*UART' -and $_.Name -match '\((COM\d+)\)' } | Select-Object -First 1
@@ -47,11 +54,13 @@ function Find-EspPort {
     return $null
 }
 
+# Compila el programa.
 Write-Host "Compilando $sketchNombre ..." -ForegroundColor Yellow
 & $cli compile --fqbn esp32:esp32:esp32 --output-dir $build $sketch
 if ($LASTEXITCODE -ne 0) { Write-Host 'Error de compilacion.' -ForegroundColor Red; exit 1 }
 $bin = Join-Path $build "$sketchNombre.ino.merged.bin"
 
+# Espera al ESP32 y reintenta la carga hasta que salga bien o se termine el tiempo.
 $limite = (Get-Date).AddMinutes($MinutosEspera)
 while ((Get-Date) -lt $limite) {
     $port = if ($Puerto -eq 'auto') { Find-EspPort } else { $Puerto }

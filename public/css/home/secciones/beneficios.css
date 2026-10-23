@@ -3,17 +3,20 @@
    Estilos de la vista app/Views/home/secciones/beneficios.php: las 4 tarjetas con tilde.
    =================================================== */
 
+/* Grilla de cuatro tarjetas. */
 .benefit-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
+/* Tarjeta de beneficio. */
 .benefit-card {
   min-height: 240px;
   padding: 24px;
 }
 
+/* Circulo del tilde. */
 .benefit-mark {
   width: 34px;
   height: 34px;
@@ -21,6 +24,7 @@
   border-radius: 50%;
 }
 
+/* El tilde. */
 .benefit-mark::before {
   width: 14px;
   height: 7px;
@@ -30,10 +34,12 @@
 }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
+/* Pantallas medianas: dos por fila. */
 @media (max-width: 1180px) {
   .benefit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Celulares y tablets: una por fila. */
 @media (max-width: 768px) {
   .benefit-grid { grid-template-columns: 1fr; }
 }

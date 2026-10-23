@@ -4,17 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+// Pedidos de la tienda y su estado de pago.
 class PedidoModel extends Model
 {
-    public const ESTADOS = [
-        'pendiente'   => 'Pendiente',
-        'en_proceso'  => 'En proceso',
-        'aprobado'    => 'Aprobado',
-        'rechazado'   => 'Rechazado',
-        'cancelado'   => 'Cancelado',
-        'reembolsado' => 'Reembolsado',
-    ];
-
     /** Estados de pago de Mercado Pago -> estado del pedido. */
     private const ESTADOS_MERCADO_PAGO = [
         'approved'     => 'aprobado',
@@ -28,6 +20,7 @@ class PedidoModel extends Model
         'charged_back' => 'reembolsado',
     ];
 
+    // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'pedidos';
     protected $primaryKey       = 'id';
     protected $returnType       = 'array';
@@ -55,27 +48,10 @@ class PedidoModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 
+    // Pedido que tiene ese codigo de referencia.
     public function porReferencia(string $reference): ?array
     {
         return $this->where('referencia', $reference)->first();
-    }
-
-    public function listado(?string $status = null): array
-    {
-        if ($status !== null) {
-            $this->where('estado', $status);
-        }
-
-        return $this->orderBy('created_at', 'DESC')->findAll(200);
-    }
-
-    public function resumen(): array
-    {
-        $rows = $this->select('estado, COUNT(*) AS cantidad, SUM(total) AS total')
-            ->groupBy('estado')
-            ->findAll();
-
-        return array_column($rows, null, 'estado');
     }
 
     /**
@@ -86,11 +62,13 @@ class PedidoModel extends Model
      */
     public function aplicarPagoMercadoPago(array $payment): ?array
     {
+        // El pago trae la referencia del pedido al que pertenece.
         $order = $this->porReferencia((string) ($payment['external_reference'] ?? ''));
         if ($order === null) {
             return null;
         }
 
+        // Estado del pedido segun el estado del pago, y cuanto se pago.
         $status = self::ESTADOS_MERCADO_PAGO[$payment['status'] ?? ''] ?? 'pendiente';
         $detail = $payment['status_detail'] ?? null;
         $paid = isset($payment['transaction_amount']) ? round((float) $payment['transaction_amount'], 2) : null;
@@ -101,6 +79,7 @@ class PedidoModel extends Model
             $detail = 'monto_no_coincide';
         }
 
+        // Datos del pago que se guardan en el pedido.
         $changes = [
             'pago_id'        => (string) $payment['id'],
             'estado'         => $status,
@@ -108,6 +87,7 @@ class PedidoModel extends Model
             'monto_pagado'   => $paid,
         ];
 
+        // La primera vez que queda aprobado se anota la fecha de pago.
         if ($status === 'aprobado' && empty($order['pagado_at'])) {
             $changes['pagado_at'] = ! empty($payment['date_approved'])
                 ? date('Y-m-d H:i:s', strtotime((string) $payment['date_approved']))
