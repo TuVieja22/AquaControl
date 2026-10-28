@@ -42,6 +42,7 @@ class Auth extends BaseController
         // Reglas que tienen que cumplir los datos, con el mensaje de cada error.
         $valido = $this->validate([
             'nombre'           => 'required|min_length[2]|max_length[100]',
+            'apellido'         => 'required|min_length[2]|max_length[100]',
             'email'            => 'required|valid_email|max_length[150]|is_unique[usuarios.email]',
             'password'         => 'required|' . UserModel::PASSWORD_RULE,
             'password_confirm' => 'required|matches[password]',
@@ -50,18 +51,24 @@ class Auth extends BaseController
             'nombre' => [
                 'required'   => 'El nombre es obligatorio.',
                 'min_length' => 'El nombre debe tener al menos 2 caracteres.',
+                'max_length' => 'El nombre no puede superar los 100 caracteres.',
+            ],
+            'apellido' => [
+                'required'   => 'El apellido es obligatorio.',
+                'min_length' => 'El apellido debe tener al menos 2 caracteres.',
+                'max_length' => 'El apellido no puede superar los 100 caracteres.',
             ],
             'email' => [
-                'required'    => 'El correo electronico es obligatorio.',
-                'valid_email' => 'Ingresa un correo valido.',
-                'is_unique'   => 'Este correo ya esta registrado.',
+                'required'    => 'El correo electrónico es obligatorio.',
+                'valid_email' => 'Ingresa un correo válido.',
+                'is_unique'   => 'Este correo ya está registrado.',
             ],
             'password'         => UserModel::PASSWORD_MESSAGES,
             'password_confirm' => [
-                'required' => 'Confirma tu contrasena.',
-                'matches'  => 'Las contrasenas no coinciden.',
+                'required' => 'Confirma tu contraseña.',
+                'matches'  => 'Las contraseñas no coinciden.',
             ],
-            'terms' => ['required' => 'Debes aceptar los terminos y condiciones.'],
+            'terms' => ['required' => 'Debes aceptar los términos y condiciones.'],
         ]);
 
         // Con errores, vuelve al formulario y los muestra.
@@ -71,7 +78,8 @@ class Auth extends BaseController
 
         // Guarda la cuenta nueva (el modelo encripta la contrasena).
         $creado = $this->userModel->registrar([
-            'nombre'   => $this->request->getPost('nombre'),
+            'nombre'   => trim((string) $this->request->getPost('nombre')),
+            'apellido' => trim((string) $this->request->getPost('apellido')),
             'email'    => $this->request->getPost('email'),
             'password' => $this->request->getPost('password'),
         ]);
@@ -87,7 +95,7 @@ class Auth extends BaseController
         // Cuenta creada: lleva al login con un mensaje.
         return redirect()
             ->to(base_url('auth/login'))
-            ->with('success', 'Cuenta creada exitosamente. Por seguridad, inicia sesion con tus credenciales.');
+            ->with('success', 'Cuenta creada exitosamente. Por seguridad, inicia sesión con tus credenciales.');
     }
 
     // Inicio de sesion: muestra el formulario o revisa el correo y la contrasena.
@@ -100,7 +108,7 @@ class Auth extends BaseController
 
         // Si todavia no se envio el formulario, solo se muestra la pagina.
         if ($this->request->getMethod() !== 'POST') {
-            return view('auth/login', ['title' => 'Iniciar sesion']);
+            return view('auth/login', ['title' => 'Iniciar sesión']);
         }
 
         // Los dos campos son obligatorios.
@@ -108,13 +116,13 @@ class Auth extends BaseController
             'email'    => 'required|valid_email',
             'password' => 'required',
         ], [
-            'email'    => ['required' => 'El correo es obligatorio.', 'valid_email' => 'Correo invalido.'],
-            'password' => ['required' => 'La contrasena es obligatoria.'],
+            'email'    => ['required' => 'El correo es obligatorio.', 'valid_email' => 'Correo inválido.'],
+            'password' => ['required' => 'La contraseña es obligatoria.'],
         ]);
 
         // Con errores, vuelve al formulario y los muestra.
         if (! $valido) {
-            return view('auth/login', ['title' => 'Iniciar sesion', 'errors' => $this->validator->getErrors()]);
+            return view('auth/login', ['title' => 'Iniciar sesión', 'errors' => $this->validator->getErrors()]);
         }
 
         // Lo que escribio el usuario (el correo, en minusculas y sin espacios).
@@ -133,14 +141,14 @@ class Auth extends BaseController
         if ($user && ($segundos = $this->userModel->segundosBloqueoRestantes($user)) > 0) {
             $minutos = max(1, (int) ceil($segundos / 60));
 
-            return $this->volverAlLogin("La cuenta esta bloqueada temporalmente por intentos fallidos. Intenta nuevamente en {$minutos} minuto" . ($minutos === 1 ? '' : 's') . '.');
+            return $this->volverAlLogin("La cuenta está bloqueada temporalmente por intentos fallidos. Intenta nuevamente en {$minutos} minuto" . ($minutos === 1 ? '' : 's') . '.');
         }
 
         // Correo o contrasena incorrectos: se anota el intento y se avisa.
         if (! $user || ! $this->userModel->verifyPassword($password, $user['password'])) {
             $this->anotarIntentoFallido($email, $user);
 
-            return $this->volverAlLogin('Correo o contrasena incorrectos. Si el problema continua, usa la recuperacion de contrasena.');
+            return $this->volverAlLogin('Correo o contraseña incorrectos. Si el problema continúa, usa la recuperación de contraseña.');
         }
 
         // Datos correctos: se borran los intentos fallidos.
@@ -151,25 +159,24 @@ class Auth extends BaseController
         session()->set([
             'user_id'     => $user['id'],
             'user_email'  => $user['email'],
-            'user_nombre' => $user['nombre'],
-            'user_role'   => $user['rol'] ?? UserModel::DEFAULT_ROLE,
+            'user_nombre' => UserModel::nombreCompleto($user),
             'logged_in'   => true,
         ]);
         // Cambia el identificador de la sesion por seguridad.
         session()->regenerate(true);
 
         // Entra al panel con un saludo.
-        return redirect()->to(base_url('dashboard'))->with('success', 'Bienvenido/a, ' . $user['nombre'] . '!');
+        return redirect()->to(base_url('dashboard'))->with('success', '¡Bienvenido/a, ' . $user['nombre'] . '!');
     }
 
     // Cierre de sesion.
     public function logout(): RedirectResponse
     {
         // Se vacia la sesion (en vez de destruirla) para que llegue el mensaje de despedida.
-        session()->remove(['user_id', 'user_email', 'user_nombre', 'user_role', 'logged_in']);
+        session()->remove(['user_id', 'user_email', 'user_nombre', 'logged_in', 'prueba_hasta']);
         session()->regenerate(true);
 
-        return redirect()->to(base_url('auth/login'))->with('info', 'Sesion cerrada correctamente.');
+        return redirect()->to(base_url('auth/login'))->with('info', 'Sesión cerrada correctamente.');
     }
 
     // Recuperar contrasena: pide el correo y manda un enlace para cambiarla.
@@ -177,18 +184,18 @@ class Auth extends BaseController
     {
         // Si todavia no se envio el formulario, solo se muestra la pagina.
         if ($this->request->getMethod() !== 'POST') {
-            return view('auth/recover', ['title' => 'Recuperar contrasena']);
+            return view('auth/recover', ['title' => 'Recuperar contraseña']);
         }
 
         // El correo tiene que estar bien escrito.
         $valido = $this->validate(
             ['email' => 'required|valid_email'],
-            ['email' => ['required' => 'El correo es obligatorio.', 'valid_email' => 'Correo invalido.']]
+            ['email' => ['required' => 'El correo es obligatorio.', 'valid_email' => 'Correo inválido.']]
         );
 
         // Con errores, vuelve al formulario y los muestra.
         if (! $valido) {
-            return view('auth/recover', ['title' => 'Recuperar contrasena', 'errors' => $this->validator->getErrors()]);
+            return view('auth/recover', ['title' => 'Recuperar contraseña', 'errors' => $this->validator->getErrors()]);
         }
 
         // Si el correo existe, se le manda el enlace con un codigo de un solo uso.
@@ -200,7 +207,7 @@ class Auth extends BaseController
         // Siempre el mismo mensaje, para no revelar que emails estan registrados.
         return redirect()
             ->to(base_url('auth/recover'))
-            ->with('success', 'Si ese correo existe en nuestro sistema, recibiras un enlace en los proximos minutos.');
+            ->with('success', 'Si ese correo existe en nuestro sistema, recibirás un enlace en los próximos minutos.');
     }
 
     // Nueva contrasena: se llega desde el enlace del correo.
@@ -211,18 +218,18 @@ class Auth extends BaseController
 
         // Sin codigo no se puede seguir.
         if (! $token) {
-            return redirect()->to(base_url('auth/recover'))->with('error', 'Token invalido o expirado.');
+            return redirect()->to(base_url('auth/recover'))->with('error', 'Token inválido o expirado.');
         }
 
         // Busca de quien es el codigo (si todavia no vencio).
         $user = $this->userModel->findByTokenValido($token);
         if (! $user) {
-            return redirect()->to(base_url('auth/recover'))->with('error', 'El enlace expiro o ya fue usado. Solicita uno nuevo.');
+            return redirect()->to(base_url('auth/recover'))->with('error', 'El enlace expiró o ya fue usado. Solicita uno nuevo.');
         }
 
         // Muestra el formulario para escribir la contrasena nueva.
         if ($this->request->getMethod() !== 'POST') {
-            return view('auth/reset', ['title' => 'Nueva contrasena', 'token' => $token]);
+            return view('auth/reset', ['title' => 'Nueva contraseña', 'token' => $token]);
         }
 
         // La contrasena nueva tiene que ser segura y estar repetida igual.
@@ -231,18 +238,18 @@ class Auth extends BaseController
             'password_confirm' => 'required|matches[password]',
         ], [
             'password'         => UserModel::PASSWORD_MESSAGES,
-            'password_confirm' => ['required' => 'Confirma la contrasena.', 'matches' => 'Las contrasenas no coinciden.'],
+            'password_confirm' => ['required' => 'Confirma la contraseña.', 'matches' => 'Las contraseñas no coinciden.'],
         ]);
 
         // Con errores, vuelve al formulario y los muestra.
         if (! $valido) {
-            return view('auth/reset', ['title' => 'Nueva contrasena', 'token' => $token, 'errors' => $this->validator->getErrors()]);
+            return view('auth/reset', ['title' => 'Nueva contraseña', 'token' => $token, 'errors' => $this->validator->getErrors()]);
         }
 
         // Guarda la contrasena nueva y anula el codigo.
         $this->userModel->restablecerPassword((int) $user['id'], (string) $this->request->getPost('password'));
 
-        return redirect()->to(base_url('auth/login'))->with('success', 'Contrasena actualizada. Ya puedes iniciar sesion.');
+        return redirect()->to(base_url('auth/login'))->with('success', 'Contraseña actualizada. Ya puedes iniciar sesión.');
     }
 
     // Vuelve al login con un mensaje de error, conservando lo escrito.
@@ -298,7 +305,7 @@ class Auth extends BaseController
         $email = service('email');
         $email->setTo($user['email']);
         $email->setFrom(env('email.fromEmail', 'noreply@aquacontrol.com'), 'AquaControl');
-        $email->setSubject('Recuperacion de contrasena - AquaControl');
+        $email->setSubject('Recuperación de contraseña - AquaControl');
         $email->setMessage(view('emails/recuperar_contrasena', [
             'nombre' => $user['nombre'],
             'enlace' => base_url('auth/reset/' . $token),

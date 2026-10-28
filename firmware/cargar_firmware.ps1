@@ -40,12 +40,6 @@ $esptool = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Arduino15\packages\esp32\
     Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
 if (-not $esptool) { Write-Host 'No encuentro esptool: instala la placa "esp32" en el Arduino IDE.' -ForegroundColor Red; exit 1 }
 
-# En modo WiFi hace falta secrets.h (red y API key).
-if ($Modo -eq 'wifi' -and -not (Test-Path (Join-Path $sketch 'secrets.h'))) {
-    Write-Host 'Falta firmware\aquacontrol_esp32\secrets.h: copia secrets.example.h y completalo.' -ForegroundColor Red
-    exit 1
-}
-
 # Busca en que puerto COM esta enchufado el ESP32.
 function Find-EspPort {
     $d = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue |
@@ -56,7 +50,9 @@ function Find-EspPort {
 
 # Compila el programa.
 Write-Host "Compilando $sketchNombre ..." -ForegroundColor Yellow
-& $cli compile --fqbn esp32:esp32:esp32 --output-dir $build $sketch
+# El modo WiFi usa Bluetooth para configurarse y no entra en la particion comun: va con "Huge APP".
+$placa = if ($Modo -eq 'wifi') { 'esp32:esp32:esp32:PartitionScheme=huge_app' } else { 'esp32:esp32:esp32' }
+& $cli compile --fqbn $placa --output-dir $build $sketch
 if ($LASTEXITCODE -ne 0) { Write-Host 'Error de compilacion.' -ForegroundColor Red; exit 1 }
 $bin = Join-Path $build "$sketchNombre.ino.merged.bin"
 

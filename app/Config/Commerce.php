@@ -16,7 +16,7 @@ class Commerce extends BaseConfig
     // Codigo, nombre y descripcion del producto.
     public string $productSku = 'aquacontrol';
     public string $productName = 'AquaControl';
-    public string $productDescription = 'Elegi la cantidad, revisa tu pedido y continua con el medio de pago que prefieras sin salir de la experiencia AquaControl.';
+    public string $productDescription = 'Elegí la cantidad, revisá tu pedido y continuá con el medio de pago que prefieras sin salir de la experiencia AquaControl.';
 
     /** Precio por unidad. Vacio = "Consultar" y el checkout queda deshabilitado. */
     public string $unitPrice = '';
@@ -24,7 +24,7 @@ class Commerce extends BaseConfig
     // Moneda, cantidad maxima por compra, aviso de entrega y formato de los numeros.
     public string $currency = 'ARS';
     public int $maxQuantity = 6;
-    public string $deliveryMessage = 'La entrega y activacion se coordinan al confirmar el pago.';
+    public string $deliveryMessage = 'La entrega y activación se coordinan al confirmar el pago.';
     public string $locale = 'es-AR';
 
     /** Precio como numero, o null si no esta configurado (o no es mayor a cero). */

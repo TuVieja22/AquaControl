@@ -21,7 +21,7 @@
             <strong><?= esc($alert['mensaje']) ?></strong>
             <span><?= esc($alert['time']) ?></span>
           </div>
-          <button class="btn btn-outline mark-alert-btn" data-alert-id="<?= $alert['id'] ?>" type="button">Marcar leida</button>
+          <button class="btn btn-outline mark-alert-btn" data-alert-id="<?= $alert['id'] ?>" type="button">Marcar leída</button>
         </article>
       <?php endforeach; ?>
     </div>
@@ -32,7 +32,7 @@
     <div class="panel-head">
       <div>
         <p class="section-tag">Historial</p>
-        <h3>Ultimas 10 alimentaciones</h3>
+        <h3>Últimas 10 alimentaciones</h3>
       </div>
     </div>
     <?php // Tabla: fecha, cantidad y tipo. ?>

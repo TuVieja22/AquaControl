@@ -3,11 +3,8 @@
    Estilos de la vista app/Views/dashboard/partes/filtros.php: los filtros del historial.
    =================================================== */
 
-/* Tarjeta de los filtros. */
-.history-filters {
-  margin-bottom: 20px;
-  padding: 22px 24px;
-}
+/* Tarjeta de los filtros (la separacion con las otras tarjetas la pone la columna del panel). */
+.history-filters { padding: 22px 24px; }
 
 /* Los campos en una fila. */
 .history-filters-form {

@@ -1,0 +1,45 @@
+/* ===================================================
+   AquaControl — components/aviso_prueba.css
+   Estilos del componente app/Views/components/aviso_prueba.php: el aviso de cuenta de
+   prueba que aparece arriba del panel mientras la cuenta no tiene un AquaControl.
+   =================================================== */
+
+/* Recuadro en amarillo, con el texto a la izquierda y los botones a la derecha. */
+.trial-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid rgba(239,159,39,0.35);
+  border-radius: var(--radius);
+  background: rgba(239,159,39,0.1);
+}
+
+/* El texto. */
+.trial-notice p {
+  flex: 1 1 320px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+/* "Cuenta de prueba:" en amarillo. */
+.trial-notice strong { color: var(--aqua-amber); }
+
+/* Los dos botones, uno al lado del otro. */
+.trial-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Los botones ocupan solo lo que necesitan. */
+.trial-notice-actions .btn { width: auto; }
+
+/* Celulares: botones a todo el ancho. */
+@media (max-width: 768px) {
+  .trial-notice-actions,
+  .trial-notice-actions .btn { width: 100%; }
+}

@@ -39,26 +39,26 @@ $config = $dashboardData['config'];
   <article class="glass-card control-card">
     <div class="panel-head">
       <div>
-        <p class="section-tag">Configuracion</p>
-        <h3>Rangos optimos vigentes</h3>
+        <p class="section-tag">Configuración</p>
+        <h3>Rangos óptimos vigentes</h3>
       </div>
     </div>
 
     <div class="config-metrics">
       <div class="config-metric">
-        <span>Temperatura minima</span>
+        <span>Temperatura mínima</span>
         <strong id="configTempMin"><?= number_format((float) $config['temp_min'], 1) ?> &deg;C</strong>
       </div>
       <div class="config-metric">
-        <span>Temperatura maxima</span>
+        <span>Temperatura máxima</span>
         <strong id="configTempMax"><?= number_format((float) $config['temp_max'], 1) ?> &deg;C</strong>
       </div>
       <div class="config-metric">
-        <span>pH minimo</span>
+        <span>pH mínimo</span>
         <strong id="configPhMin"><?= number_format((float) $config['ph_min'], 2) ?></strong>
       </div>
       <div class="config-metric">
-        <span>pH maximo</span>
+        <span>pH máximo</span>
         <strong id="configPhMax"><?= number_format((float) $config['ph_max'], 2) ?></strong>
       </div>
       <div class="config-metric">

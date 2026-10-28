@@ -15,7 +15,7 @@
     <div class="hero-actions" data-reveal>
       <a class="landing-button landing-button-secondary" href="#demo">Ver Demo</a>
       <a class="landing-button landing-button-secondary" href="#checkout">Comprar Ahora</a>
-      <a class="landing-button landing-button-secondary" href="#funciona">como funciona</a>
+      <a class="landing-button landing-button-secondary" href="#funciona">Cómo funciona</a>
     </div>
     <?php // Indicador con el puntito que parpadea. ?>
     <div class="hero-signal" aria-label="Estado del sistema" data-reveal>

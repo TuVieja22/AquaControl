@@ -6,7 +6,7 @@
   <?php // Logo, titulo y aclaracion. ?>
   <div class="auth-logo">
     <div class="logo-mark">AC</div>
-    <h2>Recuperar contrasena</h2>
+    <h2>Recuperar contraseña</h2>
     <p>Te enviaremos un enlace para restablecerla</p>
   </div>
 
@@ -20,18 +20,18 @@
 
     <?php // Campo del correo, con su cartel de error. ?>
     <div class="form-group">
-      <label class="form-label" for="email">Correo electronico</label>
+      <label class="form-label" for="email">Correo electrónico</label>
       <input type="email" id="email" name="email" class="form-control<?= clase_error($errors ?? [], 'email') ?>"
         placeholder="correo@ejemplo.com" value="<?= set_value('email') ?>" autocomplete="email" required>
       <?= error_campo($errors ?? [], 'email') ?>
     </div>
 
     <?php // Boton de enviar. ?>
-    <button type="submit" class="btn btn-primary">Enviar enlace de recuperacion &rarr;</button>
+    <button type="submit" class="btn btn-primary">Enviar enlace de recuperación &rarr;</button>
   </form>
 
   <?php // Link para volver al login. ?>
   <div class="auth-footer">
-    <a href="<?= base_url('auth/login') ?>" class="auth-link">&larr; Volver a iniciar sesion</a>
+    <a href="<?= base_url('auth/login') ?>" class="auth-link">&larr; Volver a iniciar sesión</a>
   </div>
 <?= $this->endSection() ?>

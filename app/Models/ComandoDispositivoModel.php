@@ -11,7 +11,8 @@ use DateTimeZone;
  * Cola de comandos para los dispositivos IoT.
  *
  * Ciclo de vida: pendiente -> enviado (el ESP32 lo tomo) -> ejecutado | fallido.
- * Un pendiente que nadie toma antes de `expira_at` pasa a expirado. La entrega es
+ * Un pendiente que nadie toma antes de `expira_at` pasa a expirado, y un enviado que
+ * el ESP32 no confirma en SEGUNDOS_PARA_CONFIRMAR pasa a fallido. La entrega es
  * "a lo sumo una vez": un comando enviado no se reenvia (mejor saltear una racion
  * que alimentar dos veces).
  */
@@ -19,6 +20,14 @@ class ComandoDispositivoModel extends Model
 {
     // Unica orden que existe por ahora: mover el servo del alimentador.
     public const ACCION_ALIMENTAR = 'alimentar';
+    // Orden de prender su red WiFi (para conectar el AquaControl a otra red de la casa).
+    public const ACCION_CONFIGURAR = 'configurar';
+
+    /** Minutos que espera la orden de prender su red (el ESP32 pregunta cada 2 s). */
+    private const MINUTOS_PEDIDO_CONFIGURAR = 2;
+
+    /** Segundos que tiene el ESP32 para confirmar una orden enviada (el giro tarda unos 3 s). */
+    private const SEGUNDOS_PARA_CONFIRMAR = 60;
 
     // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'comandos_dispositivo';
@@ -29,7 +38,7 @@ class ComandoDispositivoModel extends Model
         'usuario_id',
         'dispositivo_id',
         'accion',
-        'parametros',
+        'cantidad_gramos',
         'origen',
         'estado',
         'programado_para',
@@ -81,12 +90,25 @@ class ComandoDispositivoModel extends Model
         $now = time();
 
         return (int) $this->insert([
-            'usuario_id' => $userId,
-            'accion'     => self::ACCION_ALIMENTAR,
-            'parametros' => json_encode(['gramos' => $grams]),
-            'origen'     => 'manual',
-            'estado'     => 'pendiente',
-            'expira_at'  => date('Y-m-d H:i:s', $now + $this->feeding->manualCommandTtlMinutes * 60),
+            'usuario_id'      => $userId,
+            'accion'          => self::ACCION_ALIMENTAR,
+            'cantidad_gramos' => round($grams, 2),
+            'origen'          => 'manual',
+            'estado'          => 'pendiente',
+            'expira_at'       => date('Y-m-d H:i:s', $now + $this->feeding->manualCommandTtlMinutes * 60),
+        ]);
+    }
+
+    // Crea la orden de prender su red WiFi para un dispositivo (boton "Cambiar WiFi").
+    public function crearPedidoConfiguracion(int $userId, int $deviceId): int
+    {
+        return (int) $this->insert([
+            'usuario_id'     => $userId,
+            'dispositivo_id' => $deviceId,
+            'accion'         => self::ACCION_CONFIGURAR,
+            'origen'         => 'manual',
+            'estado'         => 'pendiente',
+            'expira_at'      => date('Y-m-d H:i:s', time() + self::MINUTOS_PEDIDO_CONFIGURAR * 60),
         ]);
     }
 
@@ -112,7 +134,7 @@ class ComandoDispositivoModel extends Model
             $this->db->table($this->table)->ignore(true)->insert([
                 'usuario_id'      => $userId,
                 'accion'          => self::ACCION_ALIMENTAR,
-                'parametros'      => json_encode(['gramos' => $grams]),
+                'cantidad_gramos' => round($grams, 2),
                 'origen'          => 'programado',
                 'estado'          => 'pendiente',
                 'programado_para' => date('Y-m-d H:i:s', $scheduledAt),
@@ -233,22 +255,19 @@ class ComandoDispositivoModel extends Model
         return $this->db->affectedRows() === 1 ? $this->find($commandId) : null;
     }
 
-    // Datos extra de la orden (por ejemplo los gramos), guardados como texto JSON.
+    // Datos extra que se le mandan al dispositivo con la orden (hoy, los gramos).
     public static function parametros(array $command): array
     {
-        $params = json_decode((string) ($command['parametros'] ?? ''), true);
-
-        return is_array($params) ? $params : [];
+        return isset($command['cantidad_gramos']) ? ['gramos' => (float) $command['cantidad_gramos']] : [];
     }
 
-    // Horarios validos de la configuracion, como "HH:MM", sin repetir y ordenados.
+    // Horarios validos de la configuracion (su lista 'horarios'), como "HH:MM", sin repetir y ordenados.
     public static function horasConfiguradas(array $config): array
     {
         $hours = [];
-        foreach (['hora_alim_1', 'hora_alim_2'] as $field) {
-            $value = (string) ($config[$field] ?? '');
-            if (preg_match('/^([01]\d|2[0-3]):[0-5]\d/', $value)) {
-                $hours[] = substr($value, 0, 5);
+        foreach ($config['horarios'] ?? [] as $value) {
+            if (preg_match('/^([01]\d|2[0-3]):[0-5]\d/', (string) $value)) {
+                $hours[] = substr((string) $value, 0, 5);
             }
         }
 
@@ -258,7 +277,9 @@ class ComandoDispositivoModel extends Model
         return $hours;
     }
 
-    // Pasa a "expirado" las ordenes pendientes cuyo plazo ya vencio.
+    // Pasa a "expirado" las ordenes pendientes cuyo plazo ya vencio, y a "fallido" las enviadas
+    // que el ESP32 nunca confirmo (se reinicio o se desconecto a mitad del giro): si no, quedan
+    // "en curso" para siempre y no dejan pedir otra.
     private function expirarVencidos(int $userId): void
     {
         $this->db->table($this->table)
@@ -267,6 +288,17 @@ class ComandoDispositivoModel extends Model
             ->where('expira_at <', date('Y-m-d H:i:s'))
             ->update([
                 'estado'        => 'expirado',
+                'finalizado_at' => date('Y-m-d H:i:s'),
+                'updated_at'    => date('Y-m-d H:i:s'),
+            ]);
+
+        $this->db->table($this->table)
+            ->where('usuario_id', $userId)
+            ->where('estado', 'enviado')
+            ->where('enviado_at <', date('Y-m-d H:i:s', time() - self::SEGUNDOS_PARA_CONFIRMAR))
+            ->update([
+                'estado'        => 'fallido',
+                'mensaje'       => 'El AquaControl no confirmó la orden (se reinició o perdió la conexión).',
                 'finalizado_at' => date('Y-m-d H:i:s'),
                 'updated_at'    => date('Y-m-d H:i:s'),
             ]);

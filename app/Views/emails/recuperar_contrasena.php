@@ -7,20 +7,20 @@
     <h3 style="color:#fff;margin-bottom:12px;">Hola, <?= esc($nombre) ?></h3>
     <?php // Explicacion y aviso de vencimiento. ?>
     <p style="color:rgba(159,225,203,0.75);line-height:1.7;">
-        Recibimos una solicitud para restablecer la contrasena de tu cuenta.
-        Haz clic en el boton a continuacion para crear una nueva contrasena.
+        Recibimos una solicitud para restablecer la contraseña de tu cuenta.
+        Haz clic en el botón a continuación para crear una nueva contraseña.
         <br><br>
         <strong style="color:#EF9F27;">Este enlace expira en 1 hora.</strong>
     </p>
     <?php // Boton con el enlace para cambiar la contrasena. ?>
     <div style="text-align:center;margin:32px 0;">
         <a href="<?= esc($enlace, 'attr') ?>" style="background:#1D9E75;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block;">
-            Restablecer contrasena
+            Restablecer contraseña
         </a>
     </div>
     <?php // El mismo enlace escrito, por si el boton no funciona. ?>
     <p style="color:rgba(159,225,203,0.4);font-size:12px;line-height:1.6;">
-        Si no solicitaste este cambio, ignora este correo. Tu contrasena seguira siendo la misma.<br>
+        Si no solicitaste este cambio, ignora este correo. Tu contraseña seguirá siendo la misma.<br>
         O copia este enlace en tu navegador:<br>
         <a href="<?= esc($enlace, 'attr') ?>" style="color:#5DCAA5;word-break:break-all;"><?= esc($enlace) ?></a>
     </p>

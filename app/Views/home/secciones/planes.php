@@ -15,7 +15,7 @@
         <span>B&aacute;sico</span>
         <h3>Control inicial</h3>
         <p class="price-value">Gratis</p>
-        <p>Acceso a cuenta, vista general y configuracion inicial para explorar AquaControl.</p>
+        <p>Acceso a cuenta, vista general y configuración inicial para explorar AquaControl.</p>
         <ul>
           <li>Panel web responsive</li>
           <li>Registro de usuarios</li>
@@ -29,11 +29,11 @@
         <span>Pro</span>
         <h3>Kit AquaControl IoT</h3>
         <p class="price-value"><?= esc($producto['precioTarjeta']) ?></p>
-        <p>Sensores, alimentacion automatica, alertas y monitoreo inteligente listo para produccion.</p>
+        <p>Sensores, alimentación automática, alertas y monitoreo inteligente listo para producción.</p>
         <ul>
           <li>Monitoreo de temperatura, pH y nivel</li>
           <li>Alertas inteligentes</li>
-          <li>Soporte tecnico local</li>
+          <li>Soporte técnico local</li>
         </ul>
         <a class="landing-button landing-button-primary" href="#checkout">Obtener mi AquaControl</a>
       </article>

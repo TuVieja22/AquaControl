@@ -4,8 +4,8 @@
 // Los testimonios: nombre, descripcion, frase e iniciales.
 $testimonios = [
     ['name' => 'Martina Silva', 'role' => 'Acuario plantado, CABA', 'quote' => 'Ahora puedo viajar sin preocuparme por mi acuario.', 'avatar' => 'MS'],
-    ['name' => 'Nicolas Rivas', 'role' => 'Acuarista principiante', 'quote' => 'El sistema me alerto antes de que el agua se contaminara.', 'avatar' => 'NR'],
-    ['name' => 'Laura Medina', 'role' => 'Criadora de bettas', 'quote' => 'La vista del panel es clara, rapida y me evita revisar sensores a mano.', 'avatar' => 'LM'],
+    ['name' => 'Nicolás Rivas', 'role' => 'Acuarista principiante', 'quote' => 'El sistema me alertó antes de que el agua se contaminara.', 'avatar' => 'NR'],
+    ['name' => 'Laura Medina', 'role' => 'Criadora de bettas', 'quote' => 'La vista del panel es clara, rápida y me evita revisar sensores a mano.', 'avatar' => 'LM'],
 ];
 ?>
 <section class="landing-section testimonial-section">

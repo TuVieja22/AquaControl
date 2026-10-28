@@ -1,4 +1,17 @@
 <?php usar_css('css/devices/index.css') ?>
+<?php
+// Dispositivos: como conectar un AquaControl (su red WiFi, con el QR de "Conectar mi AquaControl"), los
+// AquaControl nuevos que aparecieron en la red del usuario (para agregarlos con un toque)
+// y la lista de equipos con su estado. funciones/dispositivos.js recarga la pagina sola
+// cuando aparece uno nuevo o cuando uno recien agregado se conecta.
+// Texto y color de cada estado de la lista.
+$estados = [
+    'conectado'    => ['online', 'Conectado'],
+    'sin_conexion' => ['offline', 'Sin conexión'],
+    'desvinculado' => ['off', 'Desvinculado'],
+    'sin_key'      => ['off', 'Sin API key'],
+];
+?>
 <?php // Usa el molde del panel (menu lateral). ?>
 <?= $this->extend('layouts/panel') ?>
 
@@ -6,162 +19,170 @@
 <?= $this->section('lateral') ?>
   <p class="dashboard-kicker">AquaControl IoT</p>
   <h1>Dispositivos</h1>
-  <p class="dashboard-intro">Registra y administra los equipos asociados a tu ecosistema acuatico.</p>
+  <p class="dashboard-intro">Conecta tu AquaControl al WiFi de tu casa y a tu cuenta, y mira si está funcionando.</p>
 <?= $this->endSection() ?>
 
 <?= $this->section('panel') ?>
-  <?php // Encabezado de la pagina. ?>
-  <section class="management-hero glass-card">
-    <div>
-      <p class="section-tag">Alta de dispositivo</p>
-      <h2 class="dashboard-title">Equipos registrados</h2>
-      <p class="dashboard-subtitle">Guarda nombre, tipo y ubicacion para tener trazabilidad de cada componente.</p>
-    </div>
-  </section>
-
-  <?php // Cartel con la API key recien generada (se muestra una sola vez). ?>
-  <?php if (! empty($newApiKey)): ?>
-    <section class="management-card glass-card api-key-panel" id="api-key-nueva">
+  <?php // AquaControl nuevos en la red del usuario: se agregan con un toque (la MAC se reconoce sola). ?>
+  <?php if ($nuevos !== []): ?>
+    <section class="management-card glass-card pairing-card found-card" id="encontrados">
       <div class="panel-head">
         <div>
-          <p class="section-tag">API key de dispositivo</p>
-          <h3><?= esc($newApiKey['nombre']) ?></h3>
+          <p class="section-tag">Encontrado en tu red</p>
+          <h3><?= count($nuevos) === 1 ? 'Hay un AquaControl nuevo en tu WiFi' : 'Hay ' . count($nuevos) . ' AquaControl nuevos en tu WiFi' ?></h3>
         </div>
       </div>
-      <p class="dashboard-subtitle">Copiala y cargala en el firmware del ESP32. Por seguridad solo se guarda un hash: si la perdes, genera una nueva.</p>
-      <?php // La clave y el boton para copiarla. ?>
-      <div class="api-key-value">
-        <code id="newApiKeyValue"><?= esc($newApiKey['key']) ?></code>
-        <button class="btn btn-outline" type="button" data-copy-target="newApiKeyValue">Copiar</button>
-      </div>
-      <?php // Ejemplo de como la usa el ESP32. ?>
-      <p class="api-key-help">Envia las lecturas con el header <code>X-Device-Key</code> (o <code>Authorization: Bearer</code>):</p>
-      <pre class="api-key-example"><code>POST <?= esc($apiEndpoint) ?>
-
-X-Device-Key: <?= esc($newApiKey['key']) ?>
-
-Content-Type: application/json
-
-{"temperatura": 25.4, "ph": 7.1, "nivel_agua": 1, "calefactor": 0}</code></pre>
+      <ul class="found-list">
+        <?php foreach ($nuevos as $nuevo): ?>
+          <li class="found-item">
+            <div>
+              <strong><?= esc($nuevo['nombre']) ?></strong>
+              <small class="device-place">MAC <?= esc($nuevo['macTexto']) ?></small>
+            </div>
+            <form action="<?= base_url('dispositivos/agregar/' . $nuevo['id']) ?>" method="POST">
+              <?= csrf_field() ?>
+              <button class="btn btn-primary" type="submit">Agregar a mi cuenta</button>
+            </form>
+          </li>
+        <?php endforeach; ?>
+      </ul>
     </section>
   <?php endif; ?>
 
-  <?php // Dos columnas: formulario de alta y listado. ?>
-  <section class="management-grid">
-    <?php // Formulario para registrar un dispositivo. ?>
-    <article class="management-card glass-card">
-      <div class="panel-head">
+  <?php // Como conectar un AquaControl nuevo (y la direccion que pregunta el JavaScript). ?>
+  <section class="management-card glass-card pairing-card" id="conectar" data-dispositivos
+    data-estado-url="<?= base_url('dispositivos/estado') ?>"
+    data-nuevos="<?= esc(implode(',', array_column($nuevos, 'id'))) ?>">
+    <div class="panel-head">
+      <div>
+        <p class="section-tag">Conectar</p>
+        <h3>Conecta tu AquaControl</h3>
+      </div>
+    </div>
+
+    <ol class="pairing-steps">
+      <li><strong>Enchufa tu AquaControl</strong> al cargador y espera unos segundos.</li>
+      <li>
+        <strong>Toca «Conectar mi AquaControl» y escanea el QR con la cámara del celular.</strong> El celular
+        se conecta a la red de tu AquaControl, como al WiFi de cualquier casa.
+      </li>
+      <li>
+        <strong>Se abre sola una página:</strong> elige el WiFi de tu casa y escribe su contraseña
+        (si no se abre, entra a <code>http://192.168.4.1</code>).
+      </li>
+      <li>
+        <strong>Vuelve a esta página</strong> con el celular en tu WiFi: tu AquaControl aparece arriba, con
+        su MAC, para agregarlo con un toque.
+      </li>
+    </ol>
+
+    <?php // El QR de la red del AquaControl (es el mismo para todos; tambien va en el manual). ?>
+    <details class="wifi-qr">
+      <summary class="btn btn-primary">Conectar mi AquaControl</summary>
+      <div class="wifi-qr-content">
+        <img src="<?= base_url('img/qr-red-aquacontrol.png') ?>" width="220" height="220"
+          alt="QR para conectarse a la red WiFi <?= esc($red->nombre) ?>">
         <div>
-          <p class="section-tag">Nuevo</p>
-          <h3>Registrar dispositivo</h3>
+          <p><strong>Escanea este QR con la cámara del celular.</strong></p>
+          <p class="wifi-qr-manual">
+            ¿Estás viendo esta página en el mismo celular? Conéctate a mano: en el WiFi del celular elige la
+            red <strong><?= esc($red->nombre) ?></strong> y escribe la contraseña <code><?= esc($red->clave) ?></code>.
+          </p>
+          <?php // Por si el celular no abre solo la pagina del AquaControl al conectarse (no necesita internet). ?>
+          <p class="wifi-qr-manual">
+            Al conectarte, el celular abre solo la página para elegir tu WiFi. Si no se abre, vuelve a esta
+            pestaña y toca:
+          </p>
+          <a class="btn btn-outline" href="http://192.168.4.1/">Ya me conecté: abrir la configuración</a>
         </div>
       </div>
+    </details>
 
-      <form class="management-form" action="<?= base_url('dispositivos/nuevo') ?>" method="POST" novalidate>
-        <?= csrf_field() ?>
+    <p class="pairing-status" role="status" aria-live="polite">
+      <span class="pairing-dot" aria-hidden="true"></span> Buscando AquaControl nuevos en tu red…
+    </p>
 
-        <?php // Nombre. ?>
-        <div class="form-group">
-          <label class="form-label" for="nombre">Nombre del dispositivo</label>
-          <input class="form-control<?= clase_error($errors, 'nombre') ?>" id="nombre" name="nombre" type="text" value="<?= esc($form['nombre']) ?>" placeholder="Ej: Sensor pH principal" required>
-          <?= error_campo($errors, 'nombre') ?>
-        </div>
-
-        <?php // Tipo (lista desplegable). ?>
-        <div class="form-group">
-          <label class="form-label" for="tipo">Tipo de dispositivo</label>
-          <select class="form-control<?= clase_error($errors, 'tipo') ?>" id="tipo" name="tipo" required>
-            <option value="">Seleccionar tipo</option>
-            <?php foreach ($typeOptions as $value => $label): ?>
-              <option value="<?= esc($value) ?>" <?= $form['tipo'] === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <?= error_campo($errors, 'tipo') ?>
-        </div>
-
-        <?php // Ubicacion. ?>
-        <div class="form-group">
-          <label class="form-label" for="ubicacion">Ubicacion o corresponde a</label>
-          <input class="form-control<?= clase_error($errors, 'ubicacion') ?>" id="ubicacion" name="ubicacion" type="text" value="<?= esc($form['ubicacion']) ?>" placeholder="Ej: Pecera living" required>
-          <?= error_campo($errors, 'ubicacion') ?>
-        </div>
-
-        <?php // Boton de guardar. ?>
-        <div class="management-form-actions">
-          <button class="btn btn-primary" type="submit">Guardar dispositivo</button>
-        </div>
-      </form>
-    </article>
-
-    <?php // Listado de dispositivos. ?>
-    <article class="management-card glass-card">
-      <div class="panel-head">
-        <div>
-          <p class="section-tag">Listado</p>
-          <h3>Dispositivos registrados</h3>
-        </div>
-        <span class="management-count"><?= count($devices) ?></span>
-      </div>
-
-      <?php // Tabla con una fila por dispositivo. ?>
-      <div class="table-wrap">
-        <table class="management-table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Ubicacion</th>
-              <th>API key</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php // Si no hay ninguno, una fila que lo dice. ?>
-            <?php if ($devices === []): ?>
-              <tr><td colspan="5" class="table-empty">Todavia no hay dispositivos registrados.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($devices as $device): ?>
-              <?php // Si este dispositivo ya tiene API key. ?>
-              <?php $tieneKey = ! empty($device['api_key_hash']); ?>
-              <tr>
-                <td><?= esc($device['nombre']) ?></td>
-                <td><span class="type-badge"><?= esc($typeOptions[$device['tipo']] ?? ucfirst((string) $device['tipo'])) ?></span></td>
-                <td><?= esc($device['ubicacion']) ?></td>
-                <?php // Comienzo de la clave y ultima conexion (o "Sin API key"). ?>
-                <td class="api-key-cell">
-                  <?php if ($tieneKey): ?>
-                    <code><?= esc($device['api_key_prefijo']) ?>&hellip;</code>
-                    <small><?= ! empty($device['ultima_conexion']) ? 'Ultima conexion ' . date('d/m/Y H:i', strtotime($device['ultima_conexion'])) : 'Sin conexiones aun' ?></small>
-                  <?php else: ?>
-                    <small>Sin API key</small>
-                  <?php endif; ?>
-                </td>
-                <td>
-                  <?php // Acciones: editar, generar o revocar la clave y eliminar (algunas piden confirmacion). ?>
-                  <div class="management-actions">
-                    <a class="btn btn-outline" href="<?= base_url('dispositivos/editar/' . $device['id']) ?>">Editar</a>
-                    <form action="<?= base_url('dispositivos/api-key/' . $device['id']) ?>" method="POST"
-                      <?= $tieneKey ? 'data-confirm="Regenerar la API key? La actual dejara de funcionar."' : '' ?>>
-                      <?= csrf_field() ?>
-                      <button class="btn btn-outline" type="submit"><?= $tieneKey ? 'Regenerar key' : 'Generar key' ?></button>
-                    </form>
-                    <?php if ($tieneKey): ?>
-                      <form action="<?= base_url('dispositivos/api-key/' . $device['id'] . '/revocar') ?>" method="POST" data-confirm="Revocar la API key? El dispositivo no podra enviar lecturas.">
-                        <?= csrf_field() ?>
-                        <button class="btn btn-ghost danger-action" type="submit">Revocar</button>
-                      </form>
-                    <?php endif; ?>
-                    <form action="<?= base_url('dispositivos/eliminar/' . $device['id']) ?>" method="POST" data-confirm="Eliminar este dispositivo?">
-                      <?= csrf_field() ?>
-                      <button class="btn btn-ghost danger-action" type="submit">Eliminar</button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-    </article>
+    <?php // Como cambiar de red mas adelante. ?>
+    <p class="pairing-note">
+      ¿Te mudaste o cambiaste el WiFi? Si tu AquaControl no encuentra su red, en más o menos un minuto
+      prende la suya: escanea de nuevo el QR. Si todavía está conectado y lo quieres pasar a otra red, usa
+      <strong>Cambiar WiFi</strong> en la lista de abajo. Tu WiFi tiene que ser de 2.4 GHz.
+    </p>
   </section>
+
+  <?php // Lista de dispositivos con su estado. ?>
+  <section class="management-card glass-card">
+    <div class="panel-head">
+      <div>
+        <p class="section-tag">Listado</p>
+        <h3>Mis dispositivos</h3>
+      </div>
+      <span class="management-count"><?= count($devices) ?></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="management-table device-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php // Si no hay ninguno, una fila que lo dice. ?>
+          <?php if ($devices === []): ?>
+            <tr><td colspan="3" class="table-empty">Todavía no conectaste ningún dispositivo.</td></tr>
+          <?php endif; ?>
+          <?php foreach ($devices as $device): ?>
+            <?php // Si este dispositivo esta vinculado (tiene API key), y el color y texto de su estado. ?>
+            <?php $vinculado = ! empty($device['api_key_hash']); ?>
+            <?php [$color, $textoEstado] = $estados[$device['estado']]; ?>
+            <tr>
+              <td>
+                <strong><?= esc($device['nombre']) ?></strong>
+                <small class="device-place"><?= esc($device['ubicacion']) ?></small>
+                <?php if ($device['macTexto'] !== ''): ?>
+                  <small class="device-place">MAC <?= esc($device['macTexto']) ?></small>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php // Conectado, sin conexion o desvinculado, con la ultima conexion debajo. ?>
+                <span class="device-state" data-state="<?= $color ?>"><?= $textoEstado ?></span>
+                <small class="device-place"><?= ! empty($device['ultima_conexion']) ? 'Última conexión ' . date('d/m/Y H:i', strtotime($device['ultima_conexion'])) : 'Nunca se conectó' ?></small>
+              </td>
+              <td>
+                <?php // Editar, cambiar WiFi (solo si esta conectado), desvincular y eliminar (estas dos piden confirmacion). ?>
+                <div class="management-actions">
+                  <a class="btn btn-outline" href="<?= base_url('dispositivos/editar/' . $device['id']) ?>">Editar</a>
+                  <?php if ($device['estado'] === 'conectado' && $device['macTexto'] !== ''): ?>
+                    <form action="<?= base_url('dispositivos/wifi/' . $device['id']) ?>" method="POST">
+                      <?= csrf_field() ?>
+                      <button class="btn btn-outline" type="submit">Cambiar WiFi</button>
+                    </form>
+                  <?php endif; ?>
+                  <?php if ($vinculado): ?>
+                    <form action="<?= base_url('dispositivos/desvincular/' . $device['id']) ?>" method="POST"
+                      data-confirm="¿Desvincular este dispositivo? Deja de enviar lecturas. Para usarlo de nuevo vas a tener que conectarlo otra vez desde esta página.">
+                      <?= csrf_field() ?>
+                      <button class="btn btn-ghost danger-action" type="submit">Desvincular</button>
+                    </form>
+                  <?php endif; ?>
+                  <form action="<?= base_url('dispositivos/eliminar/' . $device['id']) ?>" method="POST" data-confirm="¿Eliminar este dispositivo? También se borran todas sus lecturas.">
+                    <?= csrf_field() ?>
+                    <button class="btn btn-ghost danger-action" type="submit">Eliminar</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </section>
+<?= $this->endSection() ?>
+
+<?php // JavaScript de la pagina: se actualiza sola cuando aparece o se conecta un AquaControl. ?>
+<?= $this->section('scripts') ?>
+  <script src="<?= base_url('js/funciones/dispositivos.js') ?>"></script>
 <?= $this->endSection() ?>

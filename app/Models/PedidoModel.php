@@ -4,7 +4,8 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-// Pedidos de la tienda y su estado de pago.
+// Pedidos de la tienda y su estado de pago. El producto esta en la tabla productos y el
+// total no se guarda: es cantidad x precio_unitario (en phpMyAdmin se ve en vista_pedidos).
 class PedidoModel extends Model
 {
     /** Estados de pago de Mercado Pago -> estado del pedido. */
@@ -29,11 +30,9 @@ class PedidoModel extends Model
         'referencia',
         'usuario_id',
         'email',
-        'producto_sku',
-        'producto_nombre',
+        'producto_id',
         'cantidad',
         'precio_unitario',
-        'total',
         'moneda',
         'proveedor',
         'preferencia_id',
@@ -52,6 +51,12 @@ class PedidoModel extends Model
     public function porReferencia(string $reference): ?array
     {
         return $this->where('referencia', $reference)->first();
+    }
+
+    /** Total del pedido: cantidad x precio unitario, redondeado a centavos. */
+    public static function total(array $order): float
+    {
+        return round((int) $order['cantidad'] * (float) $order['precio_unitario'], 2);
     }
 
     /**
@@ -74,7 +79,7 @@ class PedidoModel extends Model
         $paid = isset($payment['transaction_amount']) ? round((float) $payment['transaction_amount'], 2) : null;
 
         // Un pago aprobado por otro monto u otra moneda no se da por bueno automaticamente.
-        if ($status === 'aprobado' && ($paid !== round((float) $order['total'], 2) || ($payment['currency_id'] ?? $order['moneda']) !== $order['moneda'])) {
+        if ($status === 'aprobado' && ($paid !== self::total($order) || ($payment['currency_id'] ?? $order['moneda']) !== $order['moneda'])) {
             $status = 'en_proceso';
             $detail = 'monto_no_coincide';
         }
@@ -95,6 +100,11 @@ class PedidoModel extends Model
         }
 
         $this->update($order['id'], $changes);
+
+        // Si lo compro alguien con cuenta, esa cuenta deja de ser de prueba (ya no se borra).
+        if ($status === 'aprobado' && ! empty($order['usuario_id'])) {
+            (new UserModel())->hacerPermanente((int) $order['usuario_id']);
+        }
 
         return $this->find($order['id']);
     }

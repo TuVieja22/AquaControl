@@ -4,18 +4,7 @@
    Las tarjetas, la tabla y las etiquetas estan en layouts/panel.css.
    =================================================== */
 
-/* Formulario de alta a la izquierda y listado a la derecha. */
-.management-grid {
-  display: grid;
-  grid-template-columns: minmax(320px, 0.75fr) minmax(0, 1.25fr);
-  align-items: start;
-  gap: 20px;
-}
-
-/* Sin esto, una tabla ancha estiraba la pagina en el celular (en vez de deslizarse dentro de su tarjeta). */
-.management-grid > * { min-width: 0; }
-
-/* Botones de cada fila: Editar, Generar key, Revocar y Eliminar. */
+/* Botones de cada fila: Editar, Cambiar WiFi, Desvincular y Eliminar. */
 .management-actions {
   display: flex;
   flex-wrap: wrap;
@@ -27,7 +16,7 @@
 .management-actions .btn { width: auto; }
 .management-actions form { margin: 0; }
 
-/* Acciones delicadas (revocar, eliminar), en rojo. */
+/* Acciones delicadas (desvincular, eliminar), en rojo. */
 .danger-action {
   border-color: rgba(226,75,74,0.28);
   color: #f7b2b1;
@@ -40,78 +29,189 @@
   background: rgba(226,75,74,0.1);
 }
 
-/* API key recien generada. */
-.api-key-panel {
+/* ── CONECTAR UN AQUACONTROL ─────────────────────────── */
+/* Pasos numerados, uno debajo de otro. */
+.pairing-steps {
   display: grid;
   gap: 14px;
-  margin-bottom: 20px;
-  border-color: var(--surface-border-strong);
+  margin: 0 0 18px;
+  padding-left: 22px;
+  color: var(--text-secondary);
 }
 
-/* La clave y el boton de copiar. */
-.api-key-value {
+/* Lo importante de cada paso, en blanco. */
+.pairing-steps strong { color: var(--text-primary); }
+
+/* Textos con letra de codigo (la direccion 192.168.4.1). */
+.pairing-card code { color: var(--teal-100); }
+
+/* "Buscando...", con un punto que titila. */
+.pairing-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--teal-100);
+}
+
+/* El punto que titila. */
+.pairing-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--aqua-cyan);
+  animation: pairingPulse 1.4s ease-in-out infinite;
+}
+
+/* Titileo del punto. */
+@keyframes pairingPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.75); }
+}
+
+/* Sin animaciones si el usuario las desactivo en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .pairing-dot { animation: none; }
+}
+
+/* Aclaracion chica (cambiar de red). */
+.pairing-note {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* ── QR DE LA RED DEL AQUACONTROL ────────────────────── */
+/* El boton "Conectar mi AquaControl" (es el titulo del desplegable): sin la flechita de siempre. */
+.wifi-qr { margin-bottom: 16px; }
+.wifi-qr summary {
+  display: inline-flex;
+  width: auto;
+  list-style: none;
+  cursor: pointer;
+}
+.wifi-qr summary::-webkit-details-marker { display: none; }
+
+/* Abierto: el QR a la izquierda y la explicacion a la derecha. */
+.wifi-qr-content {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-}
-
-/* La clave, con letra de codigo. */
-.api-key-value code {
-  min-width: 0;
-  flex: 1 1 280px;
-  padding: 12px 14px;
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius);
-  background: var(--input-bg);
-  color: var(--text-primary);
-  font-size: 0.92rem;
-  overflow-wrap: anywhere;
-}
-
-/* Boton de copiar. */
-.api-key-value .btn { width: auto; }
-
-/* Texto de ayuda. */
-.api-key-help {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-/* Ejemplo de pedido. */
-.api-key-example {
-  margin: 0;
-  padding: 14px;
-  overflow-x: auto;
+  gap: 20px;
+  margin-top: 16px;
+  padding: 18px;
   border: 1px solid var(--surface-border);
   border-radius: var(--radius);
   background: var(--input-bg);
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  line-height: 1.5;
 }
 
-/* Comienzo de la clave, en la tabla. */
-.api-key-cell code {
+/* El QR, con fondo blanco para que la camara lo lea bien. */
+.wifi-qr-content img {
+  flex: none;
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+/* La explicacion ocupa el resto del ancho. */
+.wifi-qr-content div { flex: 1 1 220px; }
+
+/* El boton "Ya me conecte" ocupa solo lo que necesita. */
+.wifi-qr-content .btn { width: auto; }
+.wifi-qr-content p { margin: 0 0 8px; color: var(--text-secondary); }
+
+/* Como conectarse a mano (si la pagina esta abierta en el mismo celular). */
+.wifi-qr-manual { font-size: 0.88rem; }
+
+/* ── ENCONTRADO EN TU RED ────────────────────────────── */
+/* La tarjeta del aviso, con un borde verde para que se note. */
+.found-card { border-color: rgba(64,242,191,0.32); }
+
+/* Uno debajo de otro, sin vinetas. */
+.found-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada AquaControl: nombre y MAC a la izquierda, boton a la derecha. */
+.found-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+}
+
+/* El boton ocupa solo lo que necesita. */
+.found-item .btn { width: auto; }
+
+/* ── LISTA DE DISPOSITIVOS ───────────────────────────── */
+/* Ubicacion y ultima conexion, debajo del nombre y del estado. */
+.device-place {
   display: block;
-  color: var(--text-primary);
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
-/* Ultima conexion. */
-.api-key-cell small {
-  color: var(--text-muted);
-  font-size: 0.78rem;
+/* Estado: un punto de color y el texto. */
+.device-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
 }
+
+/* El punto de color. */
+.device-state::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+/* Conectado: verde. */
+.device-state[data-state="online"] { color: var(--aqua-green); }
+.device-state[data-state="online"]::before { background: var(--aqua-green); }
+
+/* Sin conexion: amarillo. */
+.device-state[data-state="offline"] { color: var(--aqua-amber); }
+.device-state[data-state="offline"]::before { background: var(--warn); }
+
+/* Desvinculado: gris. */
+.device-state[data-state="off"] { color: var(--text-muted); }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
-/* Pantallas medianas: una columna. */
-@media (max-width: 980px) {
-  .management-grid { grid-template-columns: 1fr; }
-}
-
 /* Celulares y tablets: botones a todo el ancho. */
 @media (max-width: 768px) {
   .management-actions .btn,
   .management-actions form { width: 100%; }
+
+  /* El boton de "Agregar a mi cuenta" pasa abajo, a todo el ancho. */
+  .found-item form,
+  .found-item .btn { width: 100%; }
+
+  /* Lista de dispositivos: cada uno como una tarjeta (nombre, estado y botones uno debajo de otro). */
+  .device-table thead { display: none; }
+  .device-table tr,
+  .device-table td { display: block; }
+  .device-table tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--surface-border);
+  }
+  .device-table td {
+    padding: 6px 0;
+    border-bottom: 0;
+  }
 }

@@ -114,7 +114,7 @@
             <strong>${escapeHtml(alert.mensaje)}</strong>
             <span>${escapeHtml(alert.time)}</span>
           </div>
-          <button class="btn btn-outline mark-alert-btn" data-alert-id="${Number(alert.id)}" type="button">Marcar leida</button>
+          <button class="btn btn-outline mark-alert-btn" data-alert-id="${Number(alert.id)}" type="button">Marcar leída</button>
         </article>`).join('')
       : '<p class="empty-state">No hay alertas pendientes.</p>';
   }

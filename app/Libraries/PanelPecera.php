@@ -76,8 +76,7 @@ class PanelPecera
     {
         foreach ($this->alimentadores() as $device) {
             // En linea = se comunico hace menos que el limite configurado.
-            $ultima = strtotime((string) ($device['ultima_conexion'] ?? '')) ?: 0;
-            if (time() - $ultima <= $this->feeding->onlineThresholdSeconds) {
+            if (DispositivoModel::enLinea($device, $this->feeding->onlineThresholdSeconds)) {
                 return $device;
             }
         }
@@ -227,7 +226,7 @@ class PanelPecera
             'heater' => [
                 'value'  => $calefactor ? 'Encendido' : 'Apagado',
                 'status' => $calefactor ? 'ok' : 'neutral',
-                'meta'   => 'Control termico automatico',
+                'meta'   => 'Control térmico automático',
             ],
             // Ultima alimentacion.
             'lastFeeding'  => $ultimaAlimentacion,
@@ -235,7 +234,7 @@ class PanelPecera
             'vacationMode' => [
                 'value'  => $vacaciones ? 'Activo' : 'Inactivo',
                 'status' => $vacaciones ? 'ok' : 'neutral',
-                'meta'   => $vacaciones ? 'Rutinas automaticas habilitadas' : 'Modo manual activo',
+                'meta'   => $vacaciones ? 'Rutinas automáticas habilitadas' : 'Modo manual activo',
             ],
         ];
     }
@@ -256,14 +255,14 @@ class PanelPecera
             'alertsCount'   => $cantidadAlertas,
             // Texto segun cuantas alertas hay.
             'alertsMeta'    => match ($cantidadAlertas) {
-                0       => 'Sin eventos criticos',
+                0       => 'Sin eventos críticos',
                 1       => '1 evento pendiente',
                 default => "{$cantidadAlertas} eventos pendientes",
             },
             // Salud del ecosistema: el promedio menos 6 puntos por cada alerta (entre 0 y 100).
             'health'        => max(0, min(100, (int) round($promedio) - $cantidadAlertas * 6)),
             'waterTitle'    => $tarjetas['waterLevel']['status'] === 'ok' ? 'Agua clara' : 'Revisar nivel',
-            'feedingTitle'  => $sinAlimentar ? 'Alimentacion pendiente' : 'Ultima alimentacion',
+            'feedingTitle'  => $sinAlimentar ? 'Alimentación pendiente' : 'Última alimentación',
             'feedingMeta'   => $sinAlimentar ? $alimentacion['meta'] : $alimentacion['value'] . ' - ' . $alimentacion['meta'],
             'vacationTitle' => $tarjetas['vacationMode']['value'] === 'Activo' ? 'Modo Ausencia listo' : 'Modo manual activo',
         ];
@@ -352,10 +351,10 @@ class PanelPecera
 
         // Texto y color del estado, segun el caso.
         if ($alimentadores === []) {
-            [$nivel, $texto] = ['danger', 'Sin alimentador vinculado. Registra el ESP32 en Dispositivos y generale una API key.'];
+            [$nivel, $texto] = ['danger', 'Sin alimentador vinculado. Conecta tu AquaControl en Dispositivos.'];
         } elseif ($pendiente !== null) {
             [$nivel, $texto] = ['warn', $pendiente['estado'] === 'enviado'
-                ? 'El alimentador recibio la orden y esta moviendo el servo...'
+                ? 'El alimentador recibió la orden y está moviendo el servo...'
                 : 'Orden en cola: esperando que el alimentador la tome.'];
         } elseif ($enLinea !== null) {
             [$nivel, $texto] = ['ok', 'Conectado: ' . $nombre];
@@ -364,11 +363,11 @@ class PanelPecera
         }
 
         // Texto de la ultima orden terminada (ejecutada, fallida o vencida).
-        $resultados = ['ejecutado' => 'ejecutada', 'fallido' => 'fallo', 'expirado' => 'expiro sin respuesta'];
+        $resultados = ['ejecutado' => 'ejecutada', 'fallido' => 'falló', 'expirado' => 'expiró sin respuesta'];
         $ultimaTexto = null;
         if ($ultima !== null && isset($resultados[$ultima['estado']])) {
             $ultimaTexto = sprintf(
-                'Ultima orden (%s): %s %s',
+                'Última orden (%s): %s %s',
                 $ultima['origen'] === 'programado' ? 'programada' : 'manual',
                 $resultados[$ultima['estado']],
                 $this->horaLocal($ultima['finalizado_at'] ?? $ultima['created_at'])
@@ -388,7 +387,7 @@ class PanelPecera
             'scheduleText' => $horarios === []
                 ? 'Sin horarios programados.'
                 : sprintf(
-                    'Programado: %s (%s g por racion, hora Argentina). Proxima: %s.',
+                    'Programado: %s (%s g por ración, hora Argentina). Próxima: %s.',
                     implode(' y ', $horarios),
                     rtrim(rtrim(number_format((float) $config['cantidad_alim_gramos'], 2, '.', ''), '0'), '.'),
                     $this->comandoModel->proximoHorario($config)

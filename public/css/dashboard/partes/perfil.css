@@ -103,13 +103,40 @@
   font-size: 1.05rem;
 }
 
+/* ── NOTIFICACIONES ──────────────────────────────────── */
+/* Bloque separado del resumen por una linea. */
+.profile-push {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--surface-border);
+}
+
+/* Explicacion o estado (activadas, bloqueadas...). */
+.profile-push-text {
+  margin-bottom: 14px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Botones, uno al lado del otro (o abajo si no entran). */
+.profile-push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Los botones ocupan solo lo que necesitan; los escondidos no se ven. */
+.profile-push-actions .btn { width: auto; }
+.profile-push-actions [hidden] { display: none; }
+
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
 /* Celulares y tablets: una columna y boton a todo el ancho. */
 @media (max-width: 768px) {
   .profile-grid,
   .profile-form-grid { grid-template-columns: 1fr; }
 
-  .profile-form-actions .btn { width: 100%; }
+  .profile-form-actions .btn,
+  .profile-push-actions .btn { width: 100%; }
 }
 
 /* Celulares chicos: menos espacio interior. */

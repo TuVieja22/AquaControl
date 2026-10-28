@@ -6,7 +6,7 @@
       <?php // Columna izquierda: titulo, descripcion y tres datos destacados. ?>
       <div class="checkout-copy" data-reveal>
         <p class="eyebrow">Compra segura</p>
-        <h2>Configura tu pedido y deja listo el checkout.</h2>
+        <h2>Configurá tu pedido y dejá listo el checkout.</h2>
         <p><?= esc($producto['descripcion']) ?></p>
         <div class="trust-row">
           <span>Desarrollado en Argentina</span>
@@ -56,7 +56,7 @@
 
           <?php // Medio de pago (por ahora solo Mercado Pago). ?>
           <fieldset class="purchase-methods">
-            <legend class="form-label">Metodo de pago</legend>
+            <legend class="form-label">Método de pago</legend>
             <label class="purchase-method-card">
               <input type="radio" name="payment_method" value="mercadopago" checked>
               <span class="purchase-method-copy">

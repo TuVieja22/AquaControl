@@ -32,6 +32,7 @@ class DispositivoModel extends Model
     protected $useAutoIncrement = true;
     protected $allowedFields    = [
         'usuario_id',
+        'mac',
         'nombre',
         'tipo',
         'ubicacion',
@@ -63,11 +64,11 @@ class DispositivoModel extends Model
         ],
         'tipo' => [
             'required' => 'Selecciona el tipo de dispositivo.',
-            'in_list'  => 'Selecciona un tipo de dispositivo valido.',
+            'in_list'  => 'Selecciona un tipo de dispositivo válido.',
         ],
         'ubicacion' => [
-            'required'   => 'La ubicacion es obligatoria.',
-            'min_length' => 'La ubicacion debe tener al menos 2 caracteres.',
+            'required'   => 'La ubicación es obligatoria.',
+            'min_length' => 'La ubicación debe tener al menos 2 caracteres.',
         ],
     ];
 
@@ -85,6 +86,69 @@ class DispositivoModel extends Model
         return $this->where('id', $deviceId)
             ->where('usuario_id', $userId)
             ->first();
+    }
+
+    // Un dispositivo por su MAC (12 caracteres, sin dos puntos), sea de quien sea.
+    public function buscarPorMac(string $mac): ?array
+    {
+        return $this->where('mac', $mac)->first();
+    }
+
+    // Agrega un AquaControl a la cuenta con su MAC (el nombre se cambia despues desde "Editar").
+    public function agregarPorMac(int $userId, string $mac): int
+    {
+        return (int) $this->insert([
+            'usuario_id' => $userId,
+            'mac'        => $mac,
+            'nombre'     => 'AquaControl ' . substr($mac, -4),
+            'tipo'       => 'kit_iot',
+            'ubicacion'  => 'Mi pecera',
+        ]);
+    }
+
+    /**
+     * Deja la MAC como la guarda la base: 12 caracteres hexadecimales en mayuscula.
+     * Acepta "a4:cf:12:9b:e5:f6", "A4-CF-12-9B-E5-F6" o "A4CF129BE5F6". Null si no es una MAC.
+     */
+    public static function normalizarMac(string $texto): ?string
+    {
+        // Si tiene algo que no sea hexadecimal, dos puntos, guiones o espacios, no es una MAC.
+        if (preg_match('/[^0-9A-Fa-f:\-\s]/', $texto)) {
+            return null;
+        }
+        $mac = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', $texto) ?? '');
+        if (strlen($mac) !== 12 || $mac === '000000000000' || $mac === 'FFFFFFFFFFFF') {
+            return null;
+        }
+
+        return $mac;
+    }
+
+    // La MAC como se escribe normalmente: A4:CF:12:9B:E5:F6.
+    public static function mostrarMac(string $mac): string
+    {
+        return implode(':', str_split($mac, 2));
+    }
+
+    /**
+     * Estado para la lista: 'desvinculado' (un AquaControl al que se le quito la API key),
+     * 'sin_key' (cargado a mano, sin API key), 'conectado' o 'sin_conexion'.
+     */
+    public static function estado(array $device, int $segundos): string
+    {
+        if (empty($device['api_key_hash'])) {
+            return empty($device['mac']) ? 'sin_key' : 'desvinculado';
+        }
+
+        return self::enLinea($device, $segundos) ? 'conectado' : 'sin_conexion';
+    }
+
+    /** Si el dispositivo se comunico hace menos de $segundos (esta "en linea"). */
+    public static function enLinea(array $device, int $segundos): bool
+    {
+        $ultima = strtotime((string) ($device['ultima_conexion'] ?? '')) ?: 0;
+
+        return time() - $ultima <= $segundos;
     }
 
     /** Puede recibir ordenes del alimentador: tiene API key y no es un sensor puro. */

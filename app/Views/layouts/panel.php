@@ -11,8 +11,8 @@
 // Links del menu lateral: direccion, texto y si es la pagina actual.
 $menu = [
     ['url' => 'dashboard', 'texto' => 'Panel principal', 'activo' => url_is('dashboard')],
-    ['url' => 'dashboard/history', 'texto' => 'Historial', 'activo' => url_is('dashboard/history')],
-    ['url' => 'dashboard/settings#configuracion', 'texto' => 'Configuracion', 'activo' => url_is('dashboard/settings')],
+    ['url' => 'dashboard/history#filtros-historial', 'texto' => 'Historial', 'activo' => url_is('dashboard/history')],
+    ['url' => 'dashboard/settings#configuracion', 'texto' => 'Configuración', 'activo' => url_is('dashboard/settings')],
     ['url' => 'dashboard/settings#alimentador', 'texto' => 'Alimentador', 'activo' => false],
     ['url' => 'dashboard/profile#perfil', 'texto' => 'Mi cuenta', 'activo' => url_is('dashboard/profile')],
     ['url' => 'dispositivos', 'texto' => 'Dispositivos', 'activo' => url_is('dispositivos*')],
@@ -36,8 +36,9 @@ $menu = [
       </nav>
     </aside>
 
-    <?php // Columna derecha: mensajes y contenido de la pagina. ?>
+    <?php // Columna derecha: aviso de cuenta de prueba, mensajes y contenido de la pagina. ?>
     <div class="dashboard-main">
+      <?= view('components/aviso_prueba') ?>
       <?= view('components/flash_messages') ?>
 
       <?= $this->renderSection('panel') ?>

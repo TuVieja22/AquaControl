@@ -45,7 +45,7 @@
 
       <?php // Ubicacion. ?>
       <div class="form-group">
-        <label class="form-label" for="ubicacion">Ubicacion o corresponde a</label>
+        <label class="form-label" for="ubicacion">Ubicación o corresponde a</label>
         <input class="form-control<?= clase_error($errors, 'ubicacion') ?>" id="ubicacion" name="ubicacion" type="text" value="<?= esc($device['ubicacion']) ?>" required>
         <?= error_campo($errors, 'ubicacion') ?>
       </div>

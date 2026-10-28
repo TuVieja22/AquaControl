@@ -1,7 +1,7 @@
 /* ===================================================
    AquaControl — funciones/aqua.js
    Se carga en TODAS las paginas. Aca solo hay funciones (nada visual): el token CSRF,
-   la confirmacion antes de enviar un formulario y el boton "Copiar".
+   y la confirmacion antes de enviar un formulario.
    Lo visual de todas las paginas (cartel de "cargando" y mensajes que se desvanecen)
    esta en js/animaciones/generales.js.
    =================================================== */
@@ -58,24 +58,3 @@ document.addEventListener('submit', event => {
     event.preventDefault();
   }
 }, true);
-
-/* ── BOTON "COPIAR" ────────────────────────────────────
-   data-copy-target="id" copia el texto de ese elemento (p. ej. la API key nueva). */
-document.addEventListener('click', async event => {
-  // Boton que se toco y elemento que tiene el texto a copiar.
-  const button = event.target.closest('[data-copy-target]');
-  const source = button && document.getElementById(button.dataset.copyTarget);
-  if (!source) return;
-
-  // Copia el texto; si el navegador no deja, lo selecciona para copiarlo a mano.
-  const originalLabel = button.textContent;
-  try {
-    await navigator.clipboard.writeText(source.textContent.trim());
-    button.textContent = 'Copiada';
-  } catch (error) {
-    window.getSelection()?.selectAllChildren(source);
-    button.textContent = 'Selecciona y copia';
-  }
-  // A los 2 segundos el boton vuelve a su texto original.
-  window.setTimeout(() => { button.textContent = originalLabel; }, 2000);
-});

@@ -39,6 +39,9 @@ $routes->group('auth', static function ($routes) {
     $routes->match(['GET', 'POST'], 'reset', 'Auth::reset');
 });
 
+// El ESP32 recien conectado pregunta si ya lo agregaron a una cuenta (todavia no tiene API key).
+$routes->post('dashboard/api/vincular', 'DeviceApi::vincular');
+
 // API del ESP32 (se autentica con la API key del dispositivo, no con la sesion web).
 $routes->group('dashboard/api', ['filter' => 'deviceauth'], static function ($routes) {
     // El ESP32 manda una lectura.
@@ -67,16 +70,23 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     $routes->post('control/vacation-toggle', 'Dashboard::toggleVacation');
     $routes->post('control/target-temperature', 'Dashboard::updateTargetTemperature');
     $routes->post('control/feeding-schedule', 'Dashboard::updateFeedingSchedule');
+    // Notificaciones de alertas en este navegador: activar, desactivar y mandar una de prueba.
+    $routes->post('notificaciones', 'Notificaciones::guardar');
+    $routes->post('notificaciones/borrar', 'Notificaciones::borrar');
+    $routes->post('notificaciones/probar', 'Notificaciones::probar');
 });
 
-// Dispositivos del usuario: lista, alta, edicion, baja y API keys.
+// Dispositivos del usuario: lista, vinculacion, edicion, cambio de WiFi, desvincular y baja.
 $routes->group('dispositivos', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Dispositivos::index');
-    $routes->post('nuevo', 'Dispositivos::create');
+    // Agregar un AquaControl encontrado en la red del usuario; el JavaScript pregunta el estado.
+    $routes->post('agregar/(:num)', 'Dispositivos::agregar/$1');
+    $routes->get('estado', 'Dispositivos::estado');
     $routes->match(['GET', 'POST'], 'editar/(:num)', 'Dispositivos::edit/$1');
+    // Pedirle que prenda el Bluetooth para pasarlo a otra red.
+    $routes->post('wifi/(:num)', 'Dispositivos::cambiarWifi/$1');
+    $routes->post('desvincular/(:num)', 'Dispositivos::desvincular/$1');
     $routes->post('eliminar/(:num)', 'Dispositivos::delete/$1');
-    $routes->post('api-key/(:num)', 'Dispositivos::generateApiKey/$1');
-    $routes->post('api-key/(:num)/revocar', 'Dispositivos::revokeApiKey/$1');
 });
 
 // Pagina que se muestra cuando la direccion no existe.

@@ -16,15 +16,15 @@
   const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   // Mensaje de cada requisito de la contrasena.
   const PASSWORD_MESSAGES = {
-    short: 'La contrasena debe tener al menos 8 caracteres.',
-    uppercase: 'Debe contener al menos una letra mayuscula.',
-    lowercase: 'Debe contener al menos una letra minuscula.',
-    number: 'Debe contener al menos un numero.',
-    special: 'Debe contener al menos un caracter especial.'
+    short: 'La contraseña debe tener al menos 8 caracteres.',
+    uppercase: 'Debe contener al menos una letra mayúscula.',
+    lowercase: 'Debe contener al menos una letra minúscula.',
+    number: 'Debe contener al menos un número.',
+    special: 'Debe contener al menos un carácter especial.'
   };
 
   // Texto de la barra de seguridad segun el puntaje (0 a 5).
-  const strengthLabels = ['', 'Muy debil', 'Debil', 'Aceptable', 'Fuerte', 'Muy fuerte'];
+  const strengthLabels = ['', 'Muy débil', 'Débil', 'Aceptable', 'Fuerte', 'Muy fuerte'];
 
   // Busca un campo dentro de un formulario.
   function getField(form, selector) {
@@ -176,20 +176,26 @@
   function validateRegister(form) {
     let valid = true;
     const nameField = getField(form, '#nombre');
+    const lastNameField = getField(form, '#apellido');
     const emailField = getField(form, '#email');
     const passwordField = getField(form, '#password');
     const confirmField = getField(form, '#password_confirm');
     const termsField = getField(form, '#terms');
     const termsFeedback = form.querySelector('#terms-error');
 
-    // Nombre, correo, contrasena, repeticion y terminos: cada uno con su error.
-    if (!nameField.value.trim() || nameField.value.trim().length < 2) {
-      showFieldError(nameField, 'Ingresa tu nombre completo (minimo 2 caracteres).');
+    // Nombre, apellido, correo, contrasena, repeticion y terminos: cada uno con su error.
+    if (nameField.value.trim().length < 2) {
+      showFieldError(nameField, 'Ingresa tu nombre (mínimo 2 caracteres).');
+      valid = false;
+    }
+
+    if (lastNameField.value.trim().length < 2) {
+      showFieldError(lastNameField, 'Ingresa tu apellido (mínimo 2 caracteres).');
       valid = false;
     }
 
     if (!isValidEmail(emailField.value.trim())) {
-      showFieldError(emailField, 'Ingresa un correo electronico valido.');
+      showFieldError(emailField, 'Ingresa un correo electrónico válido.');
       valid = false;
     }
 
@@ -200,12 +206,12 @@
     }
 
     if (passwordField.value !== confirmField.value) {
-      showFieldError(confirmField, 'Las contrasenas no coinciden.');
+      showFieldError(confirmField, 'Las contraseñas no coinciden.');
       valid = false;
     }
 
     if (!termsField.checked) {
-      showFieldError(termsField, 'Debes aceptar los terminos y condiciones.', termsFeedback);
+      showFieldError(termsField, 'Debes aceptar los términos y condiciones.', termsFeedback);
       valid = false;
     }
 
@@ -219,12 +225,12 @@
     const passwordField = getField(form, '#password');
 
     if (!isValidEmail(emailField.value.trim())) {
-      showFieldError(emailField, 'Ingresa un correo electronico valido.');
+      showFieldError(emailField, 'Ingresa un correo electrónico válido.');
       valid = false;
     }
 
     if (!passwordField.value) {
-      showFieldError(passwordField, 'Ingresa tu contrasena.');
+      showFieldError(passwordField, 'Ingresa tu contraseña.');
       valid = false;
     }
 
@@ -239,7 +245,7 @@
       return true;
     }
 
-    showFieldError(emailField, 'Ingresa un correo electronico valido.');
+    showFieldError(emailField, 'Ingresa un correo electrónico válido.');
     return false;
   }
 
@@ -256,7 +262,7 @@
     }
 
     if (passwordField.value !== confirmField.value) {
-      showFieldError(confirmField, 'Las contrasenas no coinciden.');
+      showFieldError(confirmField, 'Las contraseñas no coinciden.');
       valid = false;
     }
 
@@ -286,7 +292,7 @@
       const mostrar = input.type === 'password';
       input.type = mostrar ? 'text' : 'password';
       button.classList.toggle('is-showing', mostrar);
-      button.setAttribute('aria-label', mostrar ? 'Ocultar contrasena' : 'Mostrar contrasena');
+      button.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
     });
   });
 
@@ -295,7 +301,7 @@
   if (registerEmail) {
     registerEmail.addEventListener('blur', function () {
       if (registerEmail.value.trim() && !isValidEmail(registerEmail.value.trim())) {
-        showFieldError(registerEmail, 'Formato de correo invalido.');
+        showFieldError(registerEmail, 'Formato de correo inválido.');
         return;
       }
 
@@ -309,7 +315,7 @@
   if (registerConfirm && registerPassword) {
     registerConfirm.addEventListener('input', function () {
       if (registerConfirm.value && registerConfirm.value !== registerPassword.value) {
-        showFieldError(registerConfirm, 'Las contrasenas no coinciden.');
+        showFieldError(registerConfirm, 'Las contraseñas no coinciden.');
         return;
       }
 

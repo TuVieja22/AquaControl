@@ -3,10 +3,10 @@
 // "Beneficios reales": 4 tarjetas con tilde.
 // Las cuatro tarjetas: titulo y texto.
 $beneficios = [
-    ['title' => 'Evit&aacute; la muerte de tus peces', 'copy' => 'Detecta cambios criticos antes de que el agua afecte la salud del ecosistema.'],
-    ['title' => 'Viaj&aacute; tranquilo', 'copy' => 'AquaControl mantiene rutinas y te avisa si necesita tu atencion.'],
-    ['title' => 'Ahorra tiempo y dinero', 'copy' => 'Menos controles manuales, menos emergencias y decisiones con datos.'],
-    ['title' => 'Control total desde cualquier lugar', 'copy' => 'Consulta el estado del acuario desde una interfaz web clara y responsive.'],
+    ['title' => 'Evit&aacute; la muerte de tus peces', 'copy' => 'Detecta cambios críticos antes de que el agua afecte la salud del ecosistema.'],
+    ['title' => 'Viaj&aacute; tranquilo', 'copy' => 'AquaControl mantiene rutinas y te avisa si necesita tu atención.'],
+    ['title' => 'Ahorrá tiempo y dinero', 'copy' => 'Menos controles manuales, menos emergencias y decisiones con datos.'],
+    ['title' => 'Control total desde cualquier lugar', 'copy' => 'Consultá el estado del acuario desde una interfaz web clara y responsive.'],
 ];
 ?>
 <section class="landing-section benefits-section">
@@ -14,7 +14,7 @@ $beneficios = [
     <?php // Titulo de la seccion. ?>
     <div class="section-heading centered" data-reveal>
       <p class="eyebrow">Beneficios reales</p>
-      <h2>Mas tranquilidad para vos. Mas estabilidad para tu acuario.</h2>
+      <h2>Más tranquilidad para vos. Más estabilidad para tu acuario.</h2>
     </div>
 
     <?php // Una tarjeta por cada beneficio de la lista. ?>

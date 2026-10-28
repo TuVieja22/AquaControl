@@ -24,14 +24,19 @@ if ($logueado) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AquaControl - Sistema inteligente de monitoreo y control de ecosistemas acuaticos basado en IoT con ESP32.">
+  <meta name="description" content="AquaControl - Sistema inteligente de monitoreo y control de ecosistemas acuáticos basado en IoT con ESP32.">
   <?php // Sello de seguridad (token CSRF): lo lee funciones/aqua.js. ?>
   <meta name="csrf-header" content="<?= esc(csrf_header()) ?>">
   <meta name="csrf-token" content="<?= esc(csrf_hash()) ?>" data-field-name="<?= esc(csrf_token()) ?>">
   <?php // Titulo de la pestana. ?>
-  <title><?= isset($title) ? esc($title) . ' | AquaControl' : 'AquaControl - Ecosistemas Acuaticos IoT' ?></title>
-  <?php // Icono de la pestana. ?>
-  <link rel="icon" type="image/x-icon" href="<?= base_url('favicon.ico') ?>">
+  <title><?= isset($title) ? esc($title) . ' | AquaControl' : 'AquaControl - Ecosistemas Acuáticos IoT' ?></title>
+  <?php // Icono de la pestana (el logo de AquaControl; el .png es para pantallas de mucha resolucion). ?>
+  <link rel="icon" href="<?= base_url('favicon.ico') ?>" sizes="48x48">
+  <link rel="icon" type="image/png" href="<?= base_url('img/iconos/icono-192.png') ?>" sizes="192x192">
+  <?php // Acceso directo en la pantalla del celular: icono, nombre y color de la barra. ?>
+  <link rel="apple-touch-icon" href="<?= base_url('img/iconos/icono-180.png') ?>">
+  <link rel="manifest" href="<?= base_url('manifest.json') ?>">
+  <meta name="theme-color" content="#070b14">
   <?php // Marca que hay JavaScript (lo usan las animaciones de aparicion y el cartel de cargando). ?>
   <script>document.documentElement.classList.add('js');</script>
   <!-- Tipografias: se cargan sin frenar el dibujo de la pagina (media="print" -> "all" al terminar). -->
@@ -68,7 +73,7 @@ if ($logueado) {
         <?php // Links a las secciones de la portada. ?>
         <div class="nav-section-links" aria-label="Secciones principales">
           <a href="<?= base_url('/') ?>#producto">Producto</a>
-          <a href="<?= base_url('/') ?>#caracteristicas">Caracteristicas</a>
+          <a href="<?= base_url('/') ?>#caracteristicas">Características</a>
           <a href="<?= base_url('/') ?>#demo">Demo</a>
           <a href="<?= base_url('/') ?>#planes">Planes</a>
         </div>
@@ -83,7 +88,7 @@ if ($logueado) {
           </div>
         <?php else: ?>
           <?php // Sin sesion: iniciar sesion y registrarse. ?>
-          <a href="<?= base_url('auth/login') ?>" class="btn-nav">Iniciar sesion</a>
+          <a href="<?= base_url('auth/login') ?>" class="btn-nav">Iniciar sesión</a>
           <a href="<?= base_url('auth/register') ?>" class="btn-nav primary">Registrarse</a>
         <?php endif; ?>
       </div>
@@ -102,14 +107,14 @@ if ($logueado) {
           <div class="brand-icon">AC</div>
           Aqua<span>Control</span>
         </a>
-        <p>Sistema inteligente IoT para monitoreo, alertas y automatizacion de acuarios.</p>
+        <p>Sistema inteligente IoT para monitoreo, alertas y automatización de acuarios.</p>
       </div>
 
       <?php // Tres datos destacados. ?>
       <div class="footer-trust">
         <span>Desarrollado en Argentina</span>
-        <span>Facil de instalar</span>
-        <span>Soporte tecnico local</span>
+        <span>Fácil de instalar</span>
+        <span>Soporte técnico local</span>
       </div>
 
       <?php // Redes y contacto. ?>

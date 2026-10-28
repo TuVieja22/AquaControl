@@ -4,9 +4,9 @@
 // Las cinco tarjetas: icono, titulo y texto.
 $caracteristicas = [
     ['icon' => 'pulse', 'title' => 'Monitoreo en Tiempo Real', 'copy' => 'Temperatura, pH, nivel y actividad del sistema actualizados desde tu panel web.'],
-    ['icon' => 'feed', 'title' => 'Alimentaci&oacute;n Autom&aacute;tica', 'copy' => 'Programa horarios y evita excesos con rutinas ajustadas al comportamiento del acuario.'],
-    ['icon' => 'alert', 'title' => 'Alertas Inteligentes', 'copy' => 'Recibi avisos claros cuando una variable sale del rango saludable.'],
-    ['icon' => 'away', 'title' => 'Modo Ausencia', 'copy' => 'Activa rutinas autonomas para mantener el acuario estable mientras no estas.'],
+    ['icon' => 'feed', 'title' => 'Alimentaci&oacute;n Autom&aacute;tica', 'copy' => 'Programá horarios y evitá excesos con rutinas ajustadas al comportamiento del acuario.'],
+    ['icon' => 'alert', 'title' => 'Alertas Inteligentes', 'copy' => 'Recibí avisos claros cuando una variable sale del rango saludable.'],
+    ['icon' => 'away', 'title' => 'Modo Ausencia', 'copy' => 'Activá rutinas autónomas para mantener el acuario estable mientras no estás.'],
     ['icon' => 'energy', 'title' => 'Bajo Consumo Energ&eacute;tico', 'copy' => 'Arquitectura eficiente sobre ESP32, sensores y actuadores optimizados.'],
 ];
 ?>
@@ -15,7 +15,7 @@ $caracteristicas = [
     <?php // Titulo de la seccion. ?>
     <div class="section-heading centered" data-reveal>
       <p class="eyebrow">Caracter&iacute;sticas principales</p>
-      <h2>Tecnologia invisible, cuidado constante.</h2>
+      <h2>Tecnología invisible, cuidado constante.</h2>
     </div>
 
     <?php // Una tarjeta por cada caracteristica de la lista. ?>

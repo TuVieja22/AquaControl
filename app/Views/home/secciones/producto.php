@@ -5,9 +5,9 @@
 $imagen = base_url('img/aquacontrol-product.webp');
 // Las cuatro tarjetas: clase CSS, etiqueta, titulo, texto y tipo.
 $tarjetas = [
-    ['class' => 'gallery-product', 'label' => 'Producto completo', 'title' => 'Kit AquaControl IoT', 'copy' => 'Modulo central, sensores y alimentador en una pieza visualmente integrada.', 'type' => 'image'],
+    ['class' => 'gallery-product', 'label' => 'Producto completo', 'title' => 'Kit AquaControl IoT', 'copy' => 'Módulo central, sensores y alimentador en una pieza visualmente integrada.', 'type' => 'image'],
     ['class' => 'gallery-sensors', 'label' => 'Sensores', 'title' => 'Lecturas precisas', 'copy' => 'pH, temperatura y nivel conectados al ecosistema en tiempo real.', 'type' => 'image'],
-    ['class' => 'gallery-dashboard', 'label' => 'Dashboard web', 'title' => 'Control remoto', 'copy' => 'Metricas claras para actuar antes de que aparezca un problema.', 'type' => 'dashboard'],
+    ['class' => 'gallery-dashboard', 'label' => 'Dashboard web', 'title' => 'Control remoto', 'copy' => 'Métricas claras para actuar antes de que aparezca un problema.', 'type' => 'dashboard'],
     ['class' => 'gallery-aquarium', 'label' => 'Acuario saludable', 'title' => 'Ecosistema estable', 'copy' => 'Condiciones constantes para viajar, trabajar o descansar sin incertidumbre.', 'type' => 'aquarium'],
 ];
 ?>

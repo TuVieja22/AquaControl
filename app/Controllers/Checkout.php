@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\PedidoModel;
+use App\Models\ProductoModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use Config\Commerce;
 use Config\MercadoPago;
@@ -40,7 +41,7 @@ class Checkout extends BaseController
         // Datos que manda el formulario de compra (funciones/purchase.js).
         $payload = $this->request->getJSON(true);
         if (! is_array($payload)) {
-            return $this->jsonError('Solicitud invalida.', 400);
+            return $this->jsonError('Solicitud inválida.', 400);
         }
 
         // Revisa el producto, la cantidad y el correo.
@@ -67,11 +68,9 @@ class Checkout extends BaseController
                 'referencia'      => $referencia,
                 'usuario_id'      => session()->get('user_id') ?: null,
                 'email'           => $pedido['email'],
-                'producto_sku'    => $this->tienda->productSku,
-                'producto_nombre' => $this->tienda->productName,
+                'producto_id'     => (new ProductoModel())->idPorSku($this->tienda->productSku, $this->tienda->productName),
                 'cantidad'        => $pedido['cantidad'],
                 'precio_unitario' => $this->tienda->precio(),
-                'total'           => round($this->tienda->precio() * $pedido['cantidad'], 2),
                 'moneda'          => $this->tienda->moneda(),
                 'proveedor'       => 'mercadopago',
                 'preferencia_id'  => $preference->id,
@@ -91,7 +90,7 @@ class Checkout extends BaseController
                 'content' => json_encode($exception->getApiResponse()->getContent()),
             ]);
 
-            return $this->jsonError('Mercado Pago rechazo la preferencia. Revisa credenciales y datos del pedido.', 502);
+            return $this->jsonError('Mercado Pago rechazó la preferencia. Revisa credenciales y datos del pedido.', 502);
         } catch (Throwable $exception) {
             // No hubo conexion con Mercado Pago.
             log_message('error', 'Mercado Pago SDK error: {message}', ['message' => $exception->getMessage()]);
@@ -168,11 +167,11 @@ class Checkout extends BaseController
 
         // Devuelve el primer problema que encuentre; si no hay ninguno, el pedido.
         return match (true) {
-            ($payload['paymentMethod'] ?? 'mercadopago') !== 'mercadopago'           => [null, 'Metodo de pago invalido.', 400],
+            ($payload['paymentMethod'] ?? 'mercadopago') !== 'mercadopago'           => [null, 'Método de pago inválido.', 400],
             $this->tienda->precio() === null                                        => [null, 'Configura commerce.unitPrice con un precio mayor a cero.', 503],
-            (string) ($producto['sku'] ?? '') !== $this->tienda->productSku         => [null, 'Producto invalido.', 400],
-            $cantidad < 1 || $cantidad > $this->tienda->cantidadMaxima()            => [null, 'Cantidad invalida.', 400],
-            ! filter_var($email, FILTER_VALIDATE_EMAIL)                              => [null, 'Email invalido.', 400],
+            (string) ($producto['sku'] ?? '') !== $this->tienda->productSku         => [null, 'Producto inválido.', 400],
+            $cantidad < 1 || $cantidad > $this->tienda->cantidadMaxima()            => [null, 'Cantidad inválida.', 400],
+            ! filter_var($email, FILTER_VALIDATE_EMAIL)                              => [null, 'Email inválido.', 400],
             default                                                                 => [['cantidad' => $cantidad, 'email' => $email], null, 200],
         };
     }
@@ -185,7 +184,7 @@ class Checkout extends BaseController
 
         if (! ctype_digit($paymentId)) {
             // El comprador volvio sin pagar (p. ej. "Volver al sitio").
-            return $this->volverAlCheckout('info', 'No se completo el pago. Podes intentarlo nuevamente cuando quieras.');
+            return $this->volverAlCheckout('info', 'No se completó el pago. Podés intentarlo nuevamente cuando quieras.');
         }
 
         // Consulta el estado real del pago.
@@ -193,14 +192,14 @@ class Checkout extends BaseController
 
         // Todavia no se pudo confirmar.
         if (! is_array($order)) {
-            return $this->volverAlCheckout('info', 'Recibimos tu pago y lo estamos verificando con Mercado Pago. La confirmacion puede demorar unos minutos.');
+            return $this->volverAlCheckout('info', 'Recibimos tu pago y lo estamos verificando con Mercado Pago. La confirmación puede demorar unos minutos.');
         }
 
         // Mensaje segun como termino el pago.
         return match ($order['estado']) {
-            'aprobado'              => $this->volverAlCheckout('success', 'Pago aprobado. Tu pedido ' . $order['referencia'] . ' esta confirmado.'),
-            'rechazado', 'cancelado' => $this->volverAlCheckout('error', 'El pago no fue aprobado. Podes intentarlo nuevamente con otro medio.'),
-            default                 => $this->volverAlCheckout('info', 'Tu pago quedo pendiente de acreditacion. Pedido ' . $order['referencia'] . '.'),
+            'aprobado'              => $this->volverAlCheckout('success', 'Pago aprobado. Tu pedido ' . $order['referencia'] . ' está confirmado.'),
+            'rechazado', 'cancelado' => $this->volverAlCheckout('error', 'El pago no fue aprobado. Podés intentarlo nuevamente con otro medio.'),
+            default                 => $this->volverAlCheckout('info', 'Tu pago quedó pendiente de acreditación. Pedido ' . $order['referencia'] . '.'),
         };
     }
 

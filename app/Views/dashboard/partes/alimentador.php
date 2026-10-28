@@ -6,6 +6,8 @@ $feeder = $dashboardData['feeder'];
 $config = $dashboardData['config'];
 $puedeAlimentar = $feeder['hasDevice'] && $feeder['online'] && ! $feeder['pending'];
 $gramosPorRacion = number_format((float) $config['cantidad_alim_gramos'], 1, '.', '');
+// Los horarios guardados ("HH:MM"); el formulario muestra dos casilleros.
+$horarios = $config['horarios'] ?? [];
 ?>
 <section class="dashboard-grid control-grid feeder-grid" id="alimentador">
   <?php // Alimentar ahora. ?>
@@ -44,8 +46,8 @@ $gramosPorRacion = number_format((float) $config['cantidad_alim_gramos'], 1, '.'
   <article class="glass-card control-card">
     <div class="panel-head">
       <div>
-        <p class="section-tag">Programacion</p>
-        <h3>Horarios de alimentacion</h3>
+        <p class="section-tag">Programación</p>
+        <h3>Horarios de alimentación</h3>
       </div>
     </div>
 
@@ -54,20 +56,20 @@ $gramosPorRacion = number_format((float) $config['cantidad_alim_gramos'], 1, '.'
       <div class="feeder-schedule-fields">
         <div class="form-group">
           <label class="form-label" for="hora_alim_1">Horario 1</label>
-          <input class="form-control" id="hora_alim_1" name="hora_alim_1" type="time" value="<?= esc(substr((string) $config['hora_alim_1'], 0, 5)) ?>">
+          <input class="form-control" id="hora_alim_1" name="hora_alim_1" type="time" value="<?= esc($horarios[0] ?? '') ?>">
         </div>
         <div class="form-group">
           <label class="form-label" for="hora_alim_2">Horario 2</label>
-          <input class="form-control" id="hora_alim_2" name="hora_alim_2" type="time" value="<?= esc(substr((string) $config['hora_alim_2'], 0, 5)) ?>">
+          <input class="form-control" id="hora_alim_2" name="hora_alim_2" type="time" value="<?= esc($horarios[1] ?? '') ?>">
         </div>
         <div class="form-group">
-          <label class="form-label" for="cantidad_alim_gramos">Gramos por racion</label>
+          <label class="form-label" for="cantidad_alim_gramos">Gramos por ración</label>
           <input class="form-control" id="cantidad_alim_gramos" name="cantidad_alim_gramos" type="number" step="0.1" min="<?= $feeding->minGrams ?>" max="<?= $feeding->maxGrams ?>" value="<?= $gramosPorRacion ?>" required>
         </div>
       </div>
       <?php // Resumen de lo programado y aclaraciones. ?>
       <p class="toggle-copy" id="feederScheduleText"><?= esc($feeder['scheduleText']) ?></p>
-      <p class="toggle-copy">Deja un horario vacio para desactivarlo. A esa hora el alimentador se activa solo (con hasta <?= $feeding->scheduleWindowMinutes ?> min de margen si estuvo offline).</p>
+      <p class="toggle-copy">Deja un horario vacío para desactivarlo. A esa hora el alimentador se activa solo (con hasta <?= $feeding->scheduleWindowMinutes ?> min de margen si estuvo offline).</p>
       <?php // Boton de guardar y respuesta del servidor. ?>
       <div class="management-form-actions">
         <button class="btn btn-outline" type="submit">Guardar horarios</button>

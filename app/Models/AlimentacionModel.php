@@ -12,7 +12,7 @@ class AlimentacionModel extends Model
     // Nombre que se muestra de cada tipo de alimentacion.
     public const TIPOS = [
         'manual'     => 'Manual',
-        'automatica' => 'Automatica',
+        'automatica' => 'Automática',
         'vacaciones' => 'Vacaciones',
     ];
 

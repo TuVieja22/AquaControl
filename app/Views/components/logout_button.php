@@ -3,7 +3,7 @@
 <form action="<?= base_url('auth/logout') ?>" method="POST" class="logout-form">
   <?php // Sello de seguridad (obligatorio en todo formulario). ?>
   <?= csrf_field() ?>
-  <button type="submit" class="Btn" aria-label="Cerrar sesion">
+  <button type="submit" class="Btn" aria-label="Cerrar sesión">
     <?php // Dibujo de la flecha de salida. ?>
     <span class="sign" aria-hidden="true">
       <svg viewBox="0 0 512 512">

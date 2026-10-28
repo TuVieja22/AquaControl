@@ -16,7 +16,7 @@ use CodeIgniter\Filters\SecureHeaders;
 class Filters extends BaseFilters
 {
     /** Rutas sin token CSRF: las usan el ESP32 (con su API key) y Mercado Pago (desde sus servidores). */
-    private const SIN_CSRF = ['dashboard/api/data', 'dashboard/api/commands*', 'checkout/mercadopago/webhook'];
+    private const SIN_CSRF = ['dashboard/api/data', 'dashboard/api/commands*', 'dashboard/api/vincular', 'checkout/mercadopago/webhook'];
 
     /**
      * Configures aliases for Filter classes to

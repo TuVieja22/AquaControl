@@ -76,12 +76,12 @@
     const email = emailInput.value.trim();
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setFeedback('Ingresa un email valido para recibir la confirmacion del pedido.', 'error');
+      setFeedback('Ingresa un email válido para recibir la confirmación del pedido.', 'error');
       return false;
     }
 
     if (!termsInput.checked) {
-      setFeedback('Debes aceptar la continuacion al checkout seguro.', 'error');
+      setFeedback('Debes aceptar la continuación al checkout seguro.', 'error');
       return false;
     }
 
@@ -125,7 +125,7 @@
     // Si el servidor respondio con un error, se muestra su mensaje.
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || 'No se pudo completar la solicitud.');
-    if (!data.preferenceId) throw new Error('El servidor no devolvio la preferencia de Mercado Pago.');
+    if (!data.preferenceId) throw new Error('El servidor no devolvió la preferencia de Mercado Pago.');
 
     return data.preferenceId;
   }
@@ -134,7 +134,7 @@
   async function mountMercadoPago() {
     // Sin las claves de Mercado Pago no se puede seguir.
     if (!payment.mercadoPagoPublicKey || !payment.mercadoPagoPreferenceUrl) {
-      setFeedback('Configura la clave publica y el endpoint de preferencias de Mercado Pago para habilitar este checkout.', 'info');
+      setFeedback('Configura la clave pública y el endpoint de preferencias de Mercado Pago para habilitar este checkout.', 'info');
       return;
     }
 
@@ -156,11 +156,11 @@
       customization: { texts: { valueProp: 'practicality' } },
       callbacks: {
         onReady: () => mercadoPagoContainer.classList.remove('is-loading'),
-        onError: () => setFeedback('Mercado Pago no pudo cargar el checkout. Revisa la configuracion del SDK y la preferencia.', 'error')
+        onError: () => setFeedback('Mercado Pago no pudo cargar el checkout. Revisa la configuración del SDK y la preferencia.', 'error')
       }
     });
 
-    setFeedback('Mercado Pago listo. Puedes continuar desde el boton oficial del checkout.', 'success');
+    setFeedback('Mercado Pago listo. Puedes continuar desde el botón oficial del checkout.', 'success');
   }
 
   // Al tocar el boton de comprar: revisa y, si esta todo bien, prepara el pago.

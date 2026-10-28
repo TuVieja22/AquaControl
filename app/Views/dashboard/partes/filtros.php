@@ -1,5 +1,5 @@
 <?php usar_css('css/dashboard/partes/filtros.css') ?>
-<?php // Filtros del historial (solo en /dashboard/history): fechas y dispositivo. ?>
+<?php // Filtros del historial (en todas las paginas del panel, debajo del acuario): fechas y dispositivo. ?>
 <section class="glass-card history-filters" id="filtros-historial">
   <?php // Titulo del bloque. ?>
   <div class="panel-head">
@@ -44,6 +44,6 @@
   <p class="history-filters-meta">
     Mostrando <strong><?= esc($rangoGrafico) ?></strong>:
     <?= esc((string) $dashboardData['charts']['count']) ?> lecturas.
-    <?php if (! $historyFilters['custom']): ?>Sin rango elegido se muestran las ultimas 24 h.<?php endif; ?>
+    <?php if (! $historyFilters['custom']): ?>Sin rango elegido se muestran las últimas 24 h.<?php endif; ?>
   </p>
 </section>

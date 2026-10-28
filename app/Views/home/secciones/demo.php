@@ -16,7 +16,7 @@
           <span class="dashboard-chip"><span class="signal-dot"></span> En vivo</span>
           <h3>Acuario principal</h3>
         </div>
-        <p>Ultima sincronizacion <strong data-live-sync>hace 4 s</strong></p>
+        <p>Última sincronización <strong data-live-sync>hace 4 s</strong></p>
       </div>
 
       <?php // Cuatro tarjetas con numeros (los data-live-... son las marcas que usa el JavaScript). ?>
@@ -34,7 +34,7 @@
         <div class="live-stat">
           <span>Alertas</span>
           <strong data-live-alerts>0</strong>
-          <small>Sin eventos criticos</small>
+          <small>Sin eventos críticos</small>
         </div>
         <div class="ecosystem-state">
           <span>Estado del ecosistema</span>
@@ -74,7 +74,7 @@
           <article>
             <span class="status-info"></span>
             <div>
-              <strong>Proxima alimentacion</strong>
+              <strong>Próxima alimentación</strong>
               <small>Hoy 20:30</small>
             </div>
           </article>

@@ -19,20 +19,19 @@
 
 <?php // Contenido: una linea por cada parte del panel. ?>
 <?= $this->section('panel') ?>
-  <?php // Los filtros solo aparecen en Historial. ?>
-  <?php if ($activeSection === 'history'): ?>
-    <?= $this->include('dashboard/partes/filtros') ?>
-  <?php endif; ?>
   <?= $this->include('dashboard/partes/en_vivo') ?>
+  <?php // Historial (filtros del grafico): siempre a la vista, debajo del acuario principal. ?>
+  <?= $this->include('dashboard/partes/filtros') ?>
   <?= $this->include('dashboard/partes/alertas_y_alimentaciones') ?>
   <?= $this->include('dashboard/partes/control') ?>
   <?= $this->include('dashboard/partes/alimentador') ?>
   <?= $this->include('dashboard/partes/perfil') ?>
 <?= $this->endSection() ?>
 
-<?php // Datos del panel para el JavaScript, y los dos archivos que los usan. ?>
+<?php // Datos del panel para el JavaScript, los dos archivos que los usan y el de las notificaciones. ?>
 <?= $this->section('scripts') ?>
   <script id="dashboard-data" type="application/json"><?= json_encode($dashboardData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?></script>
   <script src="<?= base_url('js/animaciones/grafico.js') ?>"></script>
   <script src="<?= base_url('js/funciones/dashboard.js') ?>"></script>
+  <script src="<?= base_url('js/funciones/notificaciones.js') ?>"></script>
 <?= $this->endSection() ?>

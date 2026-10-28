@@ -71,18 +71,18 @@ class Dashboard extends BaseController
 
         // Tiene que haber un alimentador registrado con su API key.
         if ($this->panel()->alimentadores() === []) {
-            return $this->error(409, 'No hay un alimentador conectado. Registra el ESP32 en Dispositivos y generale una API key.');
+            return $this->error(409, 'No hay un alimentador conectado. Registrá el ESP32 en Dispositivos y generale una API key.');
         }
 
         // Tiene que ser inmediato: si el ESP32 no esta en linea no se deja la orden,
         // para que no dispense minutos despues cuando nadie lo espera.
         if ($this->panel()->alimentadorEnLinea() === null) {
-            return $this->error(409, 'El alimentador esta desconectado. Revisa que el ESP32 este enchufado y conectado (por WiFi o con el puente USB).');
+            return $this->error(409, 'El alimentador está desconectado. Revisa que el ESP32 esté enchufado y conectado (por WiFi o con el puente USB).');
         }
 
         // No se aceptan dos ordenes a la vez.
         if ($this->panel()->alimentacionPendiente() !== null) {
-            return $this->error(409, 'Ya hay una alimentacion en curso. Espera a que el dispositivo la confirme.');
+            return $this->error(409, 'Ya hay una alimentación en curso. Espera a que el dispositivo la confirme.');
         }
 
         // Deja la orden anotada: el ESP32 la toma en su proxima consulta.
@@ -90,7 +90,7 @@ class Dashboard extends BaseController
 
         return $this->respuesta([
             'success' => true,
-            'message' => 'Orden enviada. El alimentador la ejecutara en unos segundos.',
+            'message' => 'Orden enviada. El alimentador la ejecutará en unos segundos.',
         ]);
     }
 
@@ -110,10 +110,10 @@ class Dashboard extends BaseController
             'hora_alim_1'          => ['regex_match' => 'El horario 1 debe tener formato HH:MM.'],
             'hora_alim_2'          => ['regex_match' => 'El horario 2 debe tener formato HH:MM.'],
             'cantidad_alim_gramos' => [
-                'required'              => 'Indica la cantidad por racion.',
-                'decimal'               => 'La cantidad debe ser un numero.',
-                'greater_than_equal_to' => "La cantidad minima es {$feeding->minGrams} g.",
-                'less_than_equal_to'    => "La cantidad maxima es {$feeding->maxGrams} g.",
+                'required'              => 'Indica la cantidad por ración.',
+                'decimal'               => 'La cantidad debe ser un número.',
+                'greater_than_equal_to' => "La cantidad mínima es {$feeding->minGrams} g.",
+                'less_than_equal_to'    => "La cantidad máxima es {$feeding->maxGrams} g.",
             ],
         ]);
 
@@ -122,23 +122,24 @@ class Dashboard extends BaseController
             return $this->error(422, implode(' ', $this->validator->getErrors()));
         }
 
-        // Un horario vacio desactiva esa alimentacion programada.
-        $horaGuardada = function (string $campo): ?string {
+        // Los horarios escritos (uno vacio desactiva esa alimentacion), sin repetir.
+        $horarios = [];
+        foreach (['hora_alim_1', 'hora_alim_2'] as $campo) {
             $valor = trim((string) $this->request->getPost($campo));
+            if ($valor !== '') {
+                $horarios[] = $valor;
+            }
+        }
 
-            return $valor === '' ? null : $valor . ':00';
-        };
-
-        // Guarda la configuracion nueva.
+        // Guarda la configuracion nueva (los horarios van a la tabla horarios_alimentacion).
         $this->panel()->guardarConfig([
-            'hora_alim_1'          => $horaGuardada('hora_alim_1'),
-            'hora_alim_2'          => $horaGuardada('hora_alim_2'),
+            'horarios'             => array_values(array_unique($horarios)),
             'cantidad_alim_gramos' => round((float) $this->request->getPost('cantidad_alim_gramos'), 2),
         ]);
 
         return $this->respuesta([
             'success' => true,
-            'message' => 'Horarios de alimentacion guardados.',
+            'message' => 'Horarios de alimentación guardados.',
         ]);
     }
 
@@ -194,10 +195,12 @@ class Dashboard extends BaseController
             'feeding'        => config(Feeding::class),
             // Datos de "Mi cuenta".
             'profile'        => [
-                'nombre'     => (string) ($usuario['nombre'] ?? session()->get('user_nombre')),
-                'email'      => (string) ($usuario['email'] ?? session()->get('user_email')),
-                'created_at' => $usuario['created_at'] ?? null,
-                'updated_at' => $usuario['updated_at'] ?? null,
+                'nombre'         => (string) ($usuario['nombre'] ?? ''),
+                'apellido'       => (string) ($usuario['apellido'] ?? ''),
+                'nombreCompleto' => UserModel::nombreCompleto($usuario) ?: (string) session()->get('user_nombre'),
+                'email'          => (string) ($usuario['email'] ?? session()->get('user_email')),
+                'created_at'     => $usuario['created_at'] ?? null,
+                'updated_at'     => $usuario['updated_at'] ?? null,
             ],
             // Errores y valores del formulario de la cuenta, si volvio con problemas.
             'profileErrors'  => session()->getFlashdata('profile_errors') ?? [],

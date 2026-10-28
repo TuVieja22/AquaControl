@@ -63,6 +63,9 @@ class Servidor extends BaseCommand
             return EXIT_ERROR;
         }
 
+        // Aparte, cada 10 s: avisa de los AquaControl desconectados y manda las notificaciones.
+        $alertas = proc_open($this->comandoAlertas(), [0 => ['pipe', 'r'], 1 => STDOUT, 2 => STDERR], $pipesAlertas);
+
         CLI::write("AquaControl listo en http://localhost:{$puerto} (en la red: http://IP-DE-ESTA-PC:{$puerto})", 'green');
         CLI::write('Para apagarlo cerra esta ventana o apreta Ctrl+C.');
 
@@ -74,6 +77,11 @@ class Servidor extends BaseCommand
                 }
             }
             sleep(1);
+        }
+
+        // Sin pagina no tiene sentido seguir revisando alertas.
+        if (is_resource($alertas)) {
+            proc_terminate($alertas);
         }
 
         return EXIT_SUCCESS;
@@ -102,6 +110,12 @@ class Servidor extends BaseCommand
         ]);
     }
 
+    // Arma el comando que revisa las alertas sin parar (php spark alertas:revisar --siempre).
+    private function comandoAlertas(): string
+    {
+        return escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(ROOTPATH . 'spark') . ' alertas:revisar --siempre';
+    }
+
     /**
      * Cierra servidores de esta pagina que hayan quedado abiertos (p. ej. de una
      * ventana que no se cerro bien), para que el puerto quede libre.
@@ -115,9 +129,11 @@ class Servidor extends BaseCommand
 
         // Solo los servidores de ESTE proyecto: su linea de comandos incluye la ruta
         // completa de su rewrite.php (asi no se cierran servidores de otros proyectos).
+        // Lo mismo con la revision de alertas que haya quedado andando.
         $rewrite = SYSTEMPATH . 'rewrite.php';
+        $spark = ROOTPATH . 'spark';
         $script = "Get-CimInstance Win32_Process | Where-Object { \$_.Name -eq 'php.exe' -and "
-            . "\$_.CommandLine -like '*{$rewrite}*' } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }";
+            . "(\$_.CommandLine -like '*{$rewrite}*' -or \$_.CommandLine -like '*{$spark}*alertas:revisar*') } | ForEach-Object { Stop-Process -Id \$_.ProcessId -Force }";
 
         exec('powershell -NoProfile -Command ' . escapeshellarg($script) . ' 2>NUL');
     }

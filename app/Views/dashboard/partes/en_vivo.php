@@ -14,7 +14,7 @@ $puntos = ['ok' => 'status-ok', 'neutral' => 'status-info', 'warn' => 'status-wa
       <span class="dashboard-chip"><span class="signal-dot"></span> En vivo</span>
       <h2 class="dashboard-title">Acuario principal</h2>
     </div>
-    <p>Ultima sincronizacion <strong id="latestTimestamp"><?= esc($resumen['syncText']) ?></strong></p>
+    <p>Última sincronización <strong id="latestTimestamp"><?= esc($resumen['syncText']) ?></strong></p>
   </div>
 
   <?php // Cuatro tarjetas: temperatura, pH, alertas y estado del ecosistema. ?>

@@ -3,26 +3,22 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use Config\Cuentas;
 
 /**
- * Cuentas de usuario: datos, roles, bloqueo por intentos fallidos y recuperacion de contrasena.
+ * Cuentas de usuario: datos, bloqueo por intentos fallidos, recuperacion de contrasena y
+ * cuentas de prueba (las que todavia no tienen un AquaControl).
  */
 class UserModel extends Model
 {
-    // Roles posibles; las cuentas nuevas son de usuario comun.
-    public const ROLE_ADMIN = 'administrador';
-    public const ROLE_USER = 'usuario';
-    public const ROLE_TECHNICIAN = 'tecnico';
-    public const DEFAULT_ROLE = self::ROLE_USER;
-
     /** Regla de contrasena segura (se le antepone "required|" o "permit_empty|"). */
     public const PASSWORD_RULE = 'min_length[8]|regex_match[/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$/]';
 
     // Mensajes de error de la contrasena.
     public const PASSWORD_MESSAGES = [
-        'required'    => 'La contrasena es obligatoria.',
-        'min_length'  => 'La contrasena debe tener al menos 8 caracteres.',
-        'regex_match' => 'La contrasena debe incluir mayusculas, minusculas, numeros y caracteres especiales.',
+        'required'    => 'La contraseña es obligatoria.',
+        'min_length'  => 'La contraseña debe tener al menos 8 caracteres.',
+        'regex_match' => 'La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales.',
     ];
 
     // Tabla y clave.
@@ -35,14 +31,15 @@ class UserModel extends Model
     // Columnas que se pueden escribir.
     protected $allowedFields = [
         'nombre',
+        'apellido',
         'email',
         'password',
-        'rol',
         'token_recuperacion',
         'token_expira',
         'login_intentos',
         'bloqueado_hasta',
         'activo',
+        'prueba_hasta',
         'created_at',
         'updated_at',
     ];
@@ -57,9 +54,9 @@ class UserModel extends Model
         // contar al propio usuario como "correo repetido".
         'id'       => 'permit_empty|is_natural_no_zero',
         'nombre'   => 'required|min_length[2]|max_length[100]',
+        'apellido' => 'required|min_length[2]|max_length[100]',
         'email'    => 'required|valid_email|max_length[150]|is_unique[usuarios.email,id,{id}]',
         'password' => 'required|' . self::PASSWORD_RULE,
-        'rol'      => 'permit_empty|in_list[administrador,usuario,tecnico]',
     ];
 
     // Mensaje de cada error.
@@ -68,15 +65,16 @@ class UserModel extends Model
             'required'   => 'El nombre es obligatorio.',
             'min_length' => 'El nombre debe tener al menos 2 caracteres.',
         ],
+        'apellido' => [
+            'required'   => 'El apellido es obligatorio.',
+            'min_length' => 'El apellido debe tener al menos 2 caracteres.',
+        ],
         'email' => [
-            'required'    => 'El correo electronico es obligatorio.',
-            'valid_email' => 'Ingresa un correo electronico valido.',
-            'is_unique'   => 'Este correo ya esta registrado.',
+            'required'    => 'El correo electrónico es obligatorio.',
+            'valid_email' => 'Ingresa un correo electrónico válido.',
+            'is_unique'   => 'Este correo ya está registrado.',
         ],
         'password' => self::PASSWORD_MESSAGES,
-        'rol'      => [
-            'in_list' => 'Selecciona un rol valido.',
-        ],
     ];
 
     // Antes de guardar: el email en minusculas y la contrasena convertida en hash.
@@ -95,6 +93,12 @@ class UserModel extends Model
         }
 
         return $data;
+    }
+
+    /** Nombre y apellido juntos, para mostrar (por ejemplo "Juan Perez"). */
+    public static function nombreCompleto(array $user): string
+    {
+        return trim(($user['nombre'] ?? '') . ' ' . ($user['apellido'] ?? ''));
     }
 
     // Cuenta activa con ese correo.
@@ -146,13 +150,42 @@ class UserModel extends Model
         ]);
     }
 
-    /** Alta de una cuenta nueva: la primera que se registra queda como administrador. */
+    /**
+     * Alta de una cuenta nueva. Arranca como cuenta de prueba (ver Config\Cuentas): pasa a
+     * permanente al conectar un AquaControl.
+     */
     public function registrar(array $datos): int|false
     {
         $datos['activo'] = 1;
-        $datos['rol'] ??= $this->countAll() === 0 ? self::ROLE_ADMIN : self::DEFAULT_ROLE;
+        $datos['prueba_hasta'] = date('Y-m-d H:i:s', time() + config(Cuentas::class)->diasDePrueba * 86400);
 
         return $this->insert($datos);
+    }
+
+    // La cuenta deja de ser de prueba (conecto un AquaControl o le aprobaron una compra).
+    public function hacerPermanente(int $userId): void
+    {
+        $this->builder()->where('id', $userId)->update(['prueba_hasta' => null]);
+    }
+
+    /** Si es una cuenta de prueba que ya vencio. */
+    public static function pruebaVencida(array $user): bool
+    {
+        return ! empty($user['prueba_hasta']) && strtotime((string) $user['prueba_hasta']) <= time();
+    }
+
+    /**
+     * Borra las cuentas de prueba vencidas (con todos sus datos: configuracion, alertas...;
+     * los pedidos quedan, sin cuenta). Devuelve cuantas borro.
+     */
+    public function borrarPruebasVencidas(): int
+    {
+        $this->builder()
+            ->where('prueba_hasta IS NOT NULL')
+            ->where('prueba_hasta <=', date('Y-m-d H:i:s'))
+            ->delete();
+
+        return $this->db->affectedRows();
     }
 
     // Suma un intento fallido a la cuenta y la bloquea si llego al limite.

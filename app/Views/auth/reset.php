@@ -6,8 +6,8 @@
   <?php // Logo, titulo y aclaracion. ?>
   <div class="auth-logo">
     <div class="logo-mark">AC</div>
-    <h2>Nueva contrasena</h2>
-    <p>Elige una contrasena segura para tu cuenta</p>
+    <h2>Nueva contraseña</h2>
+    <p>Elige una contraseña segura para tu cuenta</p>
   </div>
 
   <?php // Mensajes de exito o error que deja el servidor. ?>
@@ -22,17 +22,17 @@
 
     <?php // Contrasena nueva, con la barra que mide su seguridad. ?>
     <div class="form-group">
-      <label class="form-label" for="password">Nueva contrasena</label>
-      <?= view('components/campo_password', ['nombre' => 'password', 'placeholder' => 'Minimo 8, Aa, 123 y simbolo', 'autocomplete' => 'new-password', 'medidor' => true]) ?>
+      <label class="form-label" for="password">Nueva contraseña</label>
+      <?= view('components/campo_password', ['nombre' => 'password', 'placeholder' => 'Mínimo 8, Aa, 123 y símbolo', 'autocomplete' => 'new-password', 'medidor' => true]) ?>
     </div>
 
     <?php // Repetir la contrasena. ?>
     <div class="form-group">
-      <label class="form-label" for="password_confirm">Confirmar nueva contrasena</label>
-      <?= view('components/campo_password', ['nombre' => 'password_confirm', 'placeholder' => 'Repite la contrasena', 'autocomplete' => 'new-password', 'medidor' => false]) ?>
+      <label class="form-label" for="password_confirm">Confirmar nueva contraseña</label>
+      <?= view('components/campo_password', ['nombre' => 'password_confirm', 'placeholder' => 'Repite la contraseña', 'autocomplete' => 'new-password', 'medidor' => false]) ?>
     </div>
 
     <?php // Boton de guardar. ?>
-    <button type="submit" class="btn btn-primary">Guardar nueva contrasena &rarr;</button>
+    <button type="submit" class="btn btn-primary">Guardar nueva contraseña &rarr;</button>
   </form>
 <?= $this->endSection() ?>

@@ -6,6 +6,8 @@ use CodeIgniter\Model;
 
 /**
  * Lecturas que manda el ESP32 (temperatura, pH, nivel de agua...).
+ * Cada lectura es de un dispositivo; el usuario se sabe por el dispositivo (3FN), asi
+ * que "las lecturas de un usuario" son las de sus dispositivos.
  */
 class SensorModel extends Model
 {
@@ -15,24 +17,25 @@ class SensorModel extends Model
     protected $returnType       = 'array';
     protected $useAutoIncrement = true;
     protected $allowedFields    = [
-        'usuario_id',
         'dispositivo_id',
         'temperatura',
         'ph',
-        'turbidez',
         'nivel_agua',
         'calefactor',
-        'modo_vacaciones',
         'created_at',
     ];
     protected $useTimestamps = false;
 
-    // Lectura mas reciente del usuario.
+    /** Condicion "la lectura es de un dispositivo del usuario" (para usar en un WHERE). */
+    private const DE_SUS_DISPOSITIVOS = 'dispositivo_id IN (SELECT id FROM dispositivos WHERE usuario_id = ?)';
+
+    // Lectura mas reciente del usuario (de cualquiera de sus dispositivos).
     public function ultimaLectura(int $userId): ?array
     {
-        return $this->where('usuario_id', $userId)
-            ->orderBy('created_at', 'DESC')
-            ->first();
+        return $this->db->query(
+            "SELECT * FROM {$this->table} WHERE " . self::DE_SUS_DISPOSITIVOS . ' ORDER BY created_at DESC LIMIT 1',
+            [$userId]
+        )->getRowArray();
     }
 
     /**
@@ -46,8 +49,8 @@ class SensorModel extends Model
      */
     public function serieParaGrafico(int $userId, string $desde, string $hasta, ?int $deviceId, int $maxPuntos): array
     {
-        // Condiciones de la consulta: usuario, rango de fechas y (opcional) dispositivo.
-        $filtro = 'usuario_id = ? AND created_at BETWEEN ? AND ?';
+        // Condiciones de la consulta: dispositivos del usuario, rango de fechas y (opcional) uno solo.
+        $filtro = self::DE_SUS_DISPOSITIVOS . ' AND created_at BETWEEN ? AND ?';
         $valores = [$userId, $desde, $hasta];
         if ($deviceId !== null) {
             $filtro .= ' AND dispositivo_id = ?';

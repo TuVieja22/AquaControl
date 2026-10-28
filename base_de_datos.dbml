@@ -1,0 +1,244 @@
+// Base de datos de AquaControl, normalizada hasta la tercera forma normal (3FN).
+// Para verla como diagrama: abrir https://dbdiagram.io/d y pegar este archivo.
+//
+// 1FN: cada campo guarda un solo dato y no hay grupos repetidos.
+//   - usuarios.nombre se separo en nombre y apellido.
+//   - los dos horarios de configuracion_pecera (hora_alim_1 y hora_alim_2) pasaron a
+//     la tabla horarios_alimentacion, una fila por horario.
+//   - comandos_dispositivo.parametros (texto JSON) paso a ser la columna cantidad_gramos.
+// 2FN: todas las tablas tienen una clave de una sola columna (id), asi que no hay
+//   dependencias parciales.
+// 3FN: ningun dato depende de otro que no sea la clave.
+//   - lecturas_sensores ya no guarda usuario_id: el usuario sale de su dispositivo.
+//   - lecturas_sensores ya no guarda modo_vacaciones: es dato de configuracion_pecera.
+//   - pedidos ya no guarda producto_sku ni producto_nombre (tabla productos) ni total
+//     (se calcula: cantidad x precio_unitario, en la vista vista_pedidos).
+
+Project aquacare {
+  database_type: 'MySQL'
+  Note: 'AquaControl - pecera inteligente con ESP32 (MariaDB 10.4, utf8mb4)'
+}
+
+Table usuarios {
+  id int [pk, increment]
+  nombre varchar(100) [not null]
+  apellido varchar(100) [not null]
+  email varchar(150) [not null, unique]
+  password varchar(255) [not null, note: 'hash bcrypt']
+  token_recuperacion varchar(64) [note: 'hash sha256 del enlace de recuperacion']
+  token_expira datetime
+  login_intentos tinyint [not null, default: 0]
+  bloqueado_hasta datetime
+  activo "tinyint(1)" [not null, default: 1]
+  prueba_hasta datetime [note: 'cuenta de prueba: se borra ese dia si no conecta un AquaControl (NULL = permanente)']
+  created_at datetime
+  updated_at datetime
+
+  indexes {
+    token_recuperacion [name: 'idx_token']
+  }
+}
+
+Table configuracion_pecera {
+  id int [pk, increment]
+  usuario_id int [not null, unique]
+  temp_min "decimal(4,1)" [not null, default: 24.0]
+  temp_max "decimal(4,1)" [not null, default: 27.0]
+  ph_min "decimal(4,2)" [not null, default: 6.80]
+  ph_max "decimal(4,2)" [not null, default: 7.60]
+  temp_objetivo "decimal(5,2)" [not null, default: 25.50]
+  cantidad_alim_gramos "decimal(4,2)" [not null, default: 1.00, note: 'gramos por racion programada']
+  modo_vacaciones "tinyint(1)" [not null, default: 0]
+  created_at datetime
+  updated_at datetime
+
+  Note: 'Una por usuario (1 a 1).'
+}
+
+Table horarios_alimentacion {
+  id int [pk, increment]
+  configuracion_id int [not null]
+  hora time [not null, note: 'hora Argentina']
+  created_at datetime
+
+  indexes {
+    (configuracion_id, hora) [unique, name: 'uq_configuracion_hora']
+  }
+
+  Note: 'Antes eran las columnas hora_alim_1 y hora_alim_2 (grupo repetido, 1FN).'
+}
+
+Table dispositivos {
+  id int [pk, increment]
+  usuario_id int [not null]
+  mac char(12) [unique, note: 'MAC del ESP32, sin dos puntos (la manda el ESP32 al vincularse); NULL = cargado a mano']
+  nombre varchar(100) [not null]
+  tipo varchar(80) [not null, note: 'sensor | actuador | controlador | kit_iot | otro']
+  ubicacion varchar(120) [not null]
+  api_key_hash char(64) [unique]
+  api_key_prefijo varchar(16)
+  api_key_generada_at datetime
+  ultima_conexion datetime
+  created_at datetime
+  updated_at datetime
+}
+
+Table dispositivos_nuevos {
+  id int [pk, increment]
+  mac char(12) [not null, unique, note: 'MAC del ESP32, sin dos puntos']
+  token_hash char(64) [not null, note: 'hash de la clave secreta que guarda el ESP32']
+  ip varchar(45) [not null, note: 'desde donde llamo (para mostrarlo a quien entra desde la misma red)']
+  dispositivo_id int [note: 'el que se creo al agregarlo (falta entregarle la API key)']
+  visto_at datetime [not null, note: 'ultima vez que pregunto']
+  created_at datetime
+
+  Note: 'AquaControl con internet que todavia no estan en ninguna cuenta. Se borran al entregarles la API key.'
+}
+
+Table lecturas_sensores {
+  id int [pk, increment]
+  dispositivo_id int [not null]
+  temperatura "decimal(5,2)" [note: 'Celsius (DS18B20)']
+  ph "decimal(4,2)" [note: '0.00 a 14.00']
+  nivel_agua "tinyint(1)" [not null, default: 1, note: '1 = OK, 0 = bajo']
+  calefactor "tinyint(1)" [not null, default: 0, note: '0 = apagado, 1 = encendido']
+  created_at datetime [not null]
+
+  indexes {
+    created_at [name: 'idx_fecha']
+    (dispositivo_id, created_at) [name: 'idx_dispositivo_fecha']
+  }
+
+  Note: 'Sin usuario_id (3FN: sale del dispositivo), sin modo_vacaciones ni turbidez.'
+}
+
+Table alertas {
+  id int [pk, increment]
+  usuario_id int [not null]
+  nivel "tinyint(1)" [not null, default: 1, note: '1 = aviso, 2 = alerta, 3 = critico']
+  tipo enum_alerta [not null]
+  mensaje varchar(255) [not null]
+  leida "tinyint(1)" [not null, default: 0]
+  notificada_at datetime [note: 'cuando se mando al celular (NULL = falta)']
+  created_at datetime [not null]
+
+  indexes {
+    (usuario_id, leida, created_at) [name: 'idx_usuario_leida_fecha']
+  }
+}
+
+Table suscripciones_push {
+  id int [pk, increment]
+  usuario_id int [not null]
+  endpoint varchar(500) [not null, unique, note: 'direccion del navegador en el servicio de push']
+  p256dh varchar(100) [not null, note: 'clave publica del navegador (base64url)']
+  auth varchar(50) [not null, note: 'secreto del navegador (base64url)']
+  created_at datetime
+
+  indexes {
+    usuario_id [name: 'idx_usuario']
+  }
+
+  Note: 'Celulares y computadoras que activaron las notificaciones de alertas (Mi cuenta).'
+}
+
+Table alimentaciones {
+  id int [pk, increment]
+  usuario_id int [not null]
+  cantidad_gramos "decimal(5,2)" [not null, default: 0.00]
+  tipo enum_alimentacion [not null, default: 'automatica']
+  created_at datetime [not null]
+
+  indexes {
+    (usuario_id, created_at) [name: 'idx_usuario_fecha']
+  }
+}
+
+Table comandos_dispositivo {
+  id int [pk, increment]
+  usuario_id int [not null]
+  dispositivo_id int [note: 'NULL = lo toma el primer actuador del usuario que consulte']
+  accion varchar(30) [not null]
+  cantidad_gramos "decimal(5,2)" [note: 'antes: parametros = {"gramos": ...} (texto JSON, 1FN)']
+  origen varchar(20) [not null, default: 'manual', note: 'manual | programado']
+  estado varchar(20) [not null, default: 'pendiente', note: 'pendiente | enviado | ejecutado | fallido | expirado']
+  programado_para datetime
+  expira_at datetime [not null]
+  enviado_at datetime
+  finalizado_at datetime
+  mensaje varchar(255)
+  created_at datetime
+  updated_at datetime
+
+  indexes {
+    (usuario_id, accion, programado_para) [unique, name: 'comandos_programado_unique']
+    (usuario_id, estado) [name: 'usuario_id_estado']
+  }
+
+  Note: 'usuario_id se mantiene: es el duenio de la orden incluso cuando todavia no la tomo ningun dispositivo.'
+}
+
+Table productos {
+  id int [pk, increment]
+  sku varchar(60) [not null, unique]
+  nombre varchar(120) [not null]
+  created_at datetime
+  updated_at datetime
+
+  Note: 'Nueva (3FN): el nombre depende del sku, no del pedido.'
+}
+
+Table pedidos {
+  id int [pk, increment]
+  referencia varchar(40) [not null, unique, note: 'external_reference enviada a Mercado Pago']
+  usuario_id int [note: 'NULL = compra sin cuenta']
+  email varchar(150) [not null, note: 'correo de contacto escrito en el formulario']
+  producto_id int [not null]
+  cantidad int [not null]
+  precio_unitario "decimal(12,2)" [not null, note: 'precio al momento de la compra']
+  moneda char(3) [not null]
+  proveedor varchar(20) [not null, default: 'mercadopago']
+  preferencia_id varchar(80)
+  pago_id varchar(40)
+  estado varchar(20) [not null, default: 'pendiente', note: 'pendiente | en_proceso | aprobado | rechazado | cancelado | reembolsado']
+  estado_detalle varchar(80)
+  monto_pagado "decimal(12,2)"
+  pagado_at datetime
+  created_at datetime
+  updated_at datetime
+
+  indexes {
+    estado
+    pago_id
+  }
+
+  Note: 'Sin total (se calcula en vista_pedidos), sin producto_sku ni producto_nombre (tabla productos).'
+}
+
+Enum enum_alerta {
+  temperatura
+  ph
+  nivel_agua
+  sistema
+}
+
+Enum enum_alimentacion {
+  manual
+  automatica
+  vacaciones
+}
+
+// Relaciones: "<" es uno a muchos, "-" es uno a uno. El "?" marca una relacion
+// opcional: la columna puede quedar en NULL (orden sin dispositivo, compra sin cuenta).
+Ref: usuarios.id - configuracion_pecera.usuario_id [delete: cascade, update: cascade]
+Ref: configuracion_pecera.id < horarios_alimentacion.configuracion_id [delete: cascade, update: cascade]
+Ref: usuarios.id < dispositivos.usuario_id [delete: cascade, update: cascade]
+Ref: dispositivos.id < lecturas_sensores.dispositivo_id [delete: cascade, update: cascade]
+Ref: dispositivos.id ?< dispositivos_nuevos.dispositivo_id [delete: set null, update: cascade]
+Ref: usuarios.id < alertas.usuario_id [delete: cascade, update: cascade]
+Ref: usuarios.id < suscripciones_push.usuario_id [delete: cascade, update: cascade]
+Ref: usuarios.id < alimentaciones.usuario_id [delete: cascade, update: cascade]
+Ref: usuarios.id < comandos_dispositivo.usuario_id [delete: cascade, update: cascade]
+Ref: dispositivos.id ?< comandos_dispositivo.dispositivo_id [delete: set null, update: cascade]
+Ref: usuarios.id ?< pedidos.usuario_id [delete: set null, update: cascade]
+Ref: productos.id < pedidos.producto_id [delete: restrict, update: cascade]
