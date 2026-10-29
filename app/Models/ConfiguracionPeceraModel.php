@@ -20,6 +20,8 @@ class ConfiguracionPeceraModel extends Model
         'temp_objetivo'        => 25.50,
         'modo_vacaciones'      => 0,
         'cantidad_alim_gramos' => 1.00,
+        'gramos_vacaciones'    => 0.60,
+        'gramos_por_giro'      => 0.120,
         'horarios'             => ['08:00', '18:00'],
     ];
 
@@ -36,6 +38,8 @@ class ConfiguracionPeceraModel extends Model
         'ph_max',
         'temp_objetivo',
         'cantidad_alim_gramos',
+        'gramos_vacaciones',
+        'gramos_por_giro',
         'modo_vacaciones',
         'created_at',
         'updated_at',

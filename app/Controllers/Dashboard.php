@@ -155,11 +155,114 @@ class Dashboard extends BaseController
     // Guarda la temperatura objetivo.
     public function updateTargetTemperature(): ResponseInterface
     {
+        $valido = $this->validate([
+            'temp_objetivo' => 'required|decimal|greater_than_equal_to[10]|less_than_equal_to[40]',
+        ], [
+            'temp_objetivo' => [
+                'required'              => 'Indica la temperatura objetivo.',
+                'decimal'               => 'La temperatura objetivo debe ser un número.',
+                'greater_than_equal_to' => 'La temperatura objetivo mínima es 10 °C.',
+                'less_than_equal_to'    => 'La temperatura objetivo máxima es 40 °C.',
+            ],
+        ]);
+
+        if (! $valido) {
+            return $this->error(422, implode(' ', $this->validator->getErrors()));
+        }
+
         $this->panel()->guardarConfig([
             'temp_objetivo' => round((float) $this->request->getPost('temp_objetivo'), 2),
         ]);
 
-        return $this->respuesta(['success' => true]);
+        return $this->respuesta(['success' => true, 'message' => 'Temperatura objetivo guardada.']);
+    }
+
+    /**
+     * Guarda los parametros de la pecera: los rangos ideales de temperatura y pH (con los
+     * que se arman las alertas) y la racion que usa el alimentador en modo vacaciones.
+     */
+    public function updateParameters(): ResponseInterface
+    {
+        $feeding = config(Feeding::class);
+
+        $valido = $this->validate([
+            'temp_min'          => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[40]',
+            'temp_max'          => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[40]',
+            'ph_min'            => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[14]',
+            'ph_max'            => 'required|decimal|greater_than_equal_to[0]|less_than_equal_to[14]',
+            'gramos_vacaciones' => "required|decimal|greater_than_equal_to[{$feeding->minGrams}]|less_than_equal_to[{$feeding->maxGrams}]",
+            'gramos_por_giro'   => 'required|decimal|greater_than_equal_to[0.005]|less_than_equal_to[5]',
+        ], [
+            'temp_min' => [
+                'required'              => 'Indica la temperatura mínima.',
+                'decimal'               => 'La temperatura mínima debe ser un número.',
+                'greater_than_equal_to' => 'La temperatura mínima no puede ser menor a 0 °C.',
+                'less_than_equal_to'    => 'La temperatura mínima no puede superar los 40 °C.',
+            ],
+            'temp_max' => [
+                'required'              => 'Indica la temperatura máxima.',
+                'decimal'               => 'La temperatura máxima debe ser un número.',
+                'greater_than_equal_to' => 'La temperatura máxima no puede ser menor a 0 °C.',
+                'less_than_equal_to'    => 'La temperatura máxima no puede superar los 40 °C.',
+            ],
+            'ph_min' => [
+                'required'              => 'Indica el pH mínimo.',
+                'decimal'               => 'El pH mínimo debe ser un número.',
+                'greater_than_equal_to' => 'El pH mínimo no puede ser menor a 0.',
+                'less_than_equal_to'    => 'El pH mínimo no puede superar 14.',
+            ],
+            'ph_max' => [
+                'required'              => 'Indica el pH máximo.',
+                'decimal'               => 'El pH máximo debe ser un número.',
+                'greater_than_equal_to' => 'El pH máximo no puede ser menor a 0.',
+                'less_than_equal_to'    => 'El pH máximo no puede superar 14.',
+            ],
+            'gramos_vacaciones' => [
+                'required'              => 'Indica la ración de vacaciones.',
+                'decimal'               => 'La ración de vacaciones debe ser un número.',
+                'greater_than_equal_to' => "La ración mínima es {$feeding->minGrams} g.",
+                'less_than_equal_to'    => "La ración máxima es {$feeding->maxGrams} g.",
+            ],
+            'gramos_por_giro' => [
+                'required'              => 'Indica cuántos gramos deja caer un giro.',
+                'decimal'               => 'Los gramos por giro deben ser un número.',
+                'greater_than_equal_to' => 'Los gramos por giro no pueden ser menos de 0,005 g.',
+                'less_than_equal_to'    => 'Los gramos por giro no pueden superar 5 g.',
+            ],
+        ]);
+
+        if (! $valido) {
+            return $this->error(422, implode(' ', $this->validator->getErrors()));
+        }
+
+        // Los rangos se guardan redondeados como los muestra el panel.
+        $tempMin = round((float) $this->request->getPost('temp_min'), 1);
+        $tempMax = round((float) $this->request->getPost('temp_max'), 1);
+        $phMin   = round((float) $this->request->getPost('ph_min'), 2);
+        $phMax   = round((float) $this->request->getPost('ph_max'), 2);
+
+        // Un rango al reves dejaria toda lectura fuera de rango: se avisa en vez de guardarlo.
+        if ($tempMin >= $tempMax) {
+            return $this->error(422, 'La temperatura mínima tiene que ser menor que la máxima.');
+        }
+
+        if ($phMin >= $phMax) {
+            return $this->error(422, 'El pH mínimo tiene que ser menor que el máximo.');
+        }
+
+        $this->panel()->guardarConfig([
+            'temp_min'          => $tempMin,
+            'temp_max'          => $tempMax,
+            'ph_min'            => $phMin,
+            'ph_max'            => $phMax,
+            'gramos_vacaciones' => round((float) $this->request->getPost('gramos_vacaciones'), 2),
+            'gramos_por_giro'   => round((float) $this->request->getPost('gramos_por_giro'), 3),
+        ]);
+
+        return $this->respuesta([
+            'success' => true,
+            'message' => 'Parámetros de la pecera guardados.',
+        ]);
     }
 
     // Devuelve el panel del usuario (lo crea una sola vez por pedido).
@@ -225,6 +328,7 @@ class Dashboard extends BaseController
             'vacationToggle'    => base_url('dashboard/control/vacation-toggle') . $query,
             'targetTemperature' => base_url('dashboard/control/target-temperature') . $query,
             'feedingSchedule'   => base_url('dashboard/control/feeding-schedule') . $query,
+            'parametros'        => base_url('dashboard/control/parametros') . $query,
             'markAlertTemplate' => base_url('dashboard/alerts/__id__/read') . $query,
         ];
     }

@@ -11,10 +11,12 @@ use DateTimeZone;
  * Cola de comandos para los dispositivos IoT.
  *
  * Ciclo de vida: pendiente -> enviado (el ESP32 lo tomo) -> ejecutado | fallido.
- * Un pendiente que nadie toma antes de `expira_at` pasa a expirado, y un enviado que
- * el ESP32 no confirma en SEGUNDOS_PARA_CONFIRMAR pasa a fallido. La entrega es
- * "a lo sumo una vez": un comando enviado no se reenvia (mejor saltear una racion
- * que alimentar dos veces).
+ * `expira_at` es el plazo del estado en el que esta: mientras esta pendiente, hasta
+ * cuando se puede entregar (si nadie la toma, pasa a expirado); al entregarla se
+ * reescribe con el plazo para confirmarla (si no llega, pasa a fallido). Ese segundo
+ * plazo depende de la racion, porque una racion grande son muchos giros y tarda mas.
+ * La entrega es "a lo sumo una vez": un comando enviado no se reenvia (mejor saltear
+ * una racion que alimentar dos veces).
  */
 class ComandoDispositivoModel extends Model
 {
@@ -26,8 +28,11 @@ class ComandoDispositivoModel extends Model
     /** Minutos que espera la orden de prender su red (el ESP32 pregunta cada 2 s). */
     private const MINUTOS_PEDIDO_CONFIGURAR = 2;
 
-    /** Segundos que tiene el ESP32 para confirmar una orden enviada (el giro tarda unos 3 s). */
-    private const SEGUNDOS_PARA_CONFIRMAR = 60;
+    /** Segundos de margen para confirmar una orden, aparte de lo que tardan sus giros. */
+    private const SEGUNDOS_PARA_CONFIRMAR = 30;
+
+    /** Giros como maximo en una orden, para que una racion mal cargada no vacie el tacho. */
+    public const MAX_GIROS = 200;
 
     // Tabla, clave y columnas que se pueden escribir.
     protected $table            = 'comandos_dispositivo';
@@ -120,7 +125,12 @@ class ComandoDispositivoModel extends Model
     public function programarAlimentaciones(int $userId, array $config): void
     {
         // Gramos por racion, margen permitido y hora actual.
-        $grams = (float) ($config['cantidad_alim_gramos'] ?? 1);
+        // Con el modo vacaciones prendido se usa la racion de vacaciones: sin nadie que
+        // limpie, la comida que sobra ensucia el agua.
+        $vacaciones = (int) ($config['modo_vacaciones'] ?? 0) === 1;
+        $grams = (float) ($vacaciones
+            ? ($config['gramos_vacaciones'] ?? $config['cantidad_alim_gramos'] ?? 1)
+            : ($config['cantidad_alim_gramos'] ?? 1));
         $window = $this->feeding->scheduleWindowMinutes * 60;
         $now = time();
 
@@ -196,7 +206,7 @@ class ComandoDispositivoModel extends Model
      * enviados. El UPDATE condicionado a estado='pendiente' evita que dos dispositivos
      * tomen el mismo comando.
      */
-    public function reclamarPendientes(array $device): array
+    public function reclamarPendientes(array $device, array $config = []): array
     {
         // Primero se dan de baja las ordenes vencidas.
         $userId = (int) $device['usuario_id'];
@@ -216,6 +226,13 @@ class ComandoDispositivoModel extends Model
         // Se marcan como enviadas una por una; solo cuentan las que este pedido logro marcar.
         $claimed = [];
         foreach ($candidates as $command) {
+            // El plazo para confirmarla depende de sus giros: una racion grande tarda mas.
+            $plazo = self::segundosParaConfirmar(
+                $command['accion'] === self::ACCION_ALIMENTAR
+                    ? self::giros((float) ($command['cantidad_gramos'] ?? 0), $config)
+                    : 1
+            );
+
             $this->db->table($this->table)
                 ->where('id', $command['id'])
                 ->where('estado', 'pendiente')
@@ -223,6 +240,7 @@ class ComandoDispositivoModel extends Model
                     'estado'         => 'enviado',
                     'dispositivo_id' => $deviceId,
                     'enviado_at'     => date('Y-m-d H:i:s'),
+                    'expira_at'      => date('Y-m-d H:i:s', time() + $plazo),
                     'updated_at'     => date('Y-m-d H:i:s'),
                 ]);
 
@@ -255,10 +273,42 @@ class ComandoDispositivoModel extends Model
         return $this->db->affectedRows() === 1 ? $this->find($commandId) : null;
     }
 
-    // Datos extra que se le mandan al dispositivo con la orden (hoy, los gramos).
-    public static function parametros(array $command): array
+    /**
+     * Datos extra que se le mandan al dispositivo con la orden: los gramos de la racion y,
+     * sobre todo, en cuantos giros los tiene que dejar caer. El servo hace siempre el mismo
+     * movimiento, asi que la cuenta la hace la pagina y el ESP32 solo repite.
+     */
+    public static function parametros(array $command, array $config = []): array
     {
-        return isset($command['cantidad_gramos']) ? ['gramos' => (float) $command['cantidad_gramos']] : [];
+        if (! isset($command['cantidad_gramos'])) {
+            return [];
+        }
+
+        return [
+            'gramos' => (float) $command['cantidad_gramos'],
+            'giros'  => self::giros((float) $command['cantidad_gramos'], $config),
+        ];
+    }
+
+    /**
+     * Giros de la compuerta que hacen falta para una racion, segun lo que deja caer cada
+     * giro en esta pecera (configuracion_pecera.gramos_por_giro, que se mide una vez).
+     * Siempre al menos uno: una racion pedida nunca se queda en cero.
+     */
+    public static function giros(float $gramos, array $config = []): int
+    {
+        $porGiro = (float) ($config['gramos_por_giro'] ?? ConfiguracionPeceraModel::VALORES_POR_DEFECTO['gramos_por_giro']);
+        if ($porGiro <= 0) {
+            return 1;
+        }
+
+        return max(1, min(self::MAX_GIROS, (int) round($gramos / $porGiro)));
+    }
+
+    /** Segundos que tarda una orden de tantos giros, con el margen para confirmarla. */
+    public static function segundosParaConfirmar(int $giros): int
+    {
+        return (int) ceil($giros * config(Feeding::class)->segundosPorGiro) + self::SEGUNDOS_PARA_CONFIRMAR;
     }
 
     // Horarios validos de la configuracion (su lista 'horarios'), como "HH:MM", sin repetir y ordenados.
@@ -295,7 +345,7 @@ class ComandoDispositivoModel extends Model
         $this->db->table($this->table)
             ->where('usuario_id', $userId)
             ->where('estado', 'enviado')
-            ->where('enviado_at <', date('Y-m-d H:i:s', time() - self::SEGUNDOS_PARA_CONFIRMAR))
+            ->where('expira_at <', date('Y-m-d H:i:s'))
             ->update([
                 'estado'        => 'fallido',
                 'mensaje'       => 'El AquaControl no confirmó la orden (se reinició o perdió la conexión).',

@@ -140,14 +140,16 @@ class DeviceApi extends BaseController
         // Si llego la hora de un horario programado, se crea su orden.
         $userId = (int) $device['usuario_id'];
         $comandoModel = new ComandoDispositivoModel();
-        $comandoModel->programarAlimentaciones($userId, (new ConfiguracionPeceraModel())->porUsuario($userId) ?? []);
+        $config = (new ConfiguracionPeceraModel())->porUsuario($userId) ?? [];
+        $comandoModel->programarAlimentaciones($userId, $config);
 
         // Toma las ordenes pendientes y las deja marcadas como enviadas a este dispositivo.
+        // Con la racion va la cantidad de giros: la cuenta la hace la pagina, no el ESP32.
         $comandos = array_map(static fn (array $comando): array => [
             'id'     => (int) $comando['id'],
             'accion' => $comando['accion'],
             'origen' => $comando['origen'],
-        ] + ComandoDispositivoModel::parametros($comando), $comandoModel->reclamarPendientes($device));
+        ] + ComandoDispositivoModel::parametros($comando, $config), $comandoModel->reclamarPendientes($device, $config));
 
         return $this->response->setJSON(['success' => true, 'comandos' => $comandos]);
     }

@@ -134,20 +134,74 @@
       : '<tr><td colspan="3" class="table-empty">Sin registros.</td></tr>';
   }
 
-  // Rangos configurados y campo de temperatura objetivo.
+  // Campos de configuracion: id, decimales con los que se guardan y formulario al que van.
+  const CAMPOS_CONFIG = [
+    ['temp_min', 1, 'parametrosForm'],
+    ['temp_max', 1, 'parametrosForm'],
+    ['ph_min', 2, 'parametrosForm'],
+    ['ph_max', 2, 'parametrosForm'],
+    ['gramos_vacaciones', 1, 'parametrosForm'],
+    ['gramos_por_giro', 3, 'parametrosForm'],
+    ['temp_objetivo', 1, 'targetTemperatureForm']
+  ];
+
+  /**
+   * Formularios que el usuario empezo a completar. El panel se refresca cada pocos
+   * segundos: sin esto, lo que esta escrito y todavia no se guardo se perderia.
+   */
+  const formulariosTocados = new Set();
+
+  // Giros como maximo en una orden (igual que ComandoDispositivoModel::MAX_GIROS).
+  const MAX_GIROS = 200;
+  // Segundos que tarda un giro (igual que Config\Feeding::$segundosPorGiro).
+  const SEGUNDOS_POR_GIRO = 2.5;
+
+  // "40 s" o "1 min 40 s", para que se entienda cuanto va a estar girando.
+  function duracion(segundos) {
+    const total = Math.round(segundos);
+    if (total < 60) return `${total} s`;
+    const minutos = Math.floor(total / 60);
+    const resto = total % 60;
+
+    return resto === 0 ? `${minutos} min` : `${minutos} min ${resto} s`;
+  }
+
+  /**
+   * Avisa en cuantos giros se va a repartir cada racion con los gramos por giro
+   * que estan escritos ahora. Se calcula igual que en el servidor.
+   */
+  function renderGiros() {
+    const aviso = $('configGirosAviso');
+    if (!aviso) return;
+
+    const porGiro = Number($('gramos_por_giro')?.value);
+    const racion = Number((state.config || {}).cantidad_alim_gramos);
+    if (!Number.isFinite(porGiro) || porGiro <= 0 || !Number.isFinite(racion)) {
+      aviso.textContent = '';
+      return;
+    }
+
+    const giros = Math.max(1, Math.min(MAX_GIROS, Math.round(racion / porGiro)));
+    aviso.textContent = giros >= MAX_GIROS
+      ? ` Ojo: la ración de ${racion.toFixed(1)} g necesita más de ${MAX_GIROS} giros, así que se corta ahí.`
+      : ` Así, la ración de ${racion.toFixed(1)} g son ${giros} giros (${duracion(giros * SEGUNDOS_POR_GIRO)}).`;
+  }
+
+  // Parametros de la pecera y racion habitual.
   function renderConfig() {
     const config = state.config || {};
-    setText('configTempMin', `${Number(config.temp_min).toFixed(1)} °C`);
-    setText('configTempMax', `${Number(config.temp_max).toFixed(1)} °C`);
-    setText('configPhMin', Number(config.ph_min).toFixed(2));
-    setText('configPhMax', Number(config.ph_max).toFixed(2));
-    setText('configTargetTemp', `${Number(config.temp_objetivo).toFixed(1)} °C`);
+    setText('configRacionHabitual', Number(config.cantidad_alim_gramos).toFixed(1));
 
-    const targetInput = $('temp_objetivo');
-    // No se pisa lo que el usuario esta escribiendo.
-    if (targetInput && document.activeElement !== targetInput && Number.isFinite(Number(config.temp_objetivo))) {
-      targetInput.value = Number(config.temp_objetivo).toFixed(1);
-    }
+    CAMPOS_CONFIG.forEach(([campo, decimales, formulario]) => {
+      const input = $(campo);
+      const valor = Number(config[campo]);
+      // No se pisa un formulario a medio completar.
+      if (input && ! formulariosTocados.has(formulario) && Number.isFinite(valor)) {
+        input.value = valor.toFixed(decimales);
+      }
+    });
+
+    renderGiros();
   }
 
   // Estado del alimentador; el boton se apaga si no se puede alimentar.
@@ -279,10 +333,42 @@
     showFeedback('feedingScheduleFeedback', payload || { success: false, message: 'No se pudieron guardar los horarios.' });
   });
 
+  // Al escribir en un formulario de configuracion, el refresco deja de pisarle los valores.
+  ['parametrosForm', 'targetTemperatureForm'].forEach(id => {
+    $(id)?.addEventListener('input', () => formulariosTocados.add(id));
+  });
+
   // Formulario de temperatura objetivo.
-  $('targetTemperatureForm')?.addEventListener('submit', event => {
+  $('targetTemperatureForm')?.addEventListener('submit', async event => {
     event.preventDefault();
-    applyRequest(postForm(state.endpoints.targetTemperature, { temp_objetivo: $('temp_objetivo')?.value || '' }));
+    const datos = { temp_objetivo: $('temp_objetivo')?.value || '' };
+
+    // Ya esta leido lo escrito: el formulario vuelve a seguir lo que diga el servidor.
+    formulariosTocados.delete('targetTemperatureForm');
+
+    const payload = await applyRequest(postForm(state.endpoints.targetTemperature, datos));
+    showFeedback('targetTemperatureFeedback', payload || { success: false, message: 'No se pudo guardar la temperatura objetivo.' });
+  });
+
+  // Mientras se escriben los gramos por giro, se recalcula el aviso de los giros.
+  $('gramos_por_giro')?.addEventListener('input', renderGiros);
+
+  // Formulario de parametros de la pecera (rangos ideales y racion de vacaciones).
+  $('parametrosForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const datos = {
+      temp_min:          $('temp_min')?.value || '',
+      temp_max:          $('temp_max')?.value || '',
+      ph_min:            $('ph_min')?.value || '',
+      ph_max:            $('ph_max')?.value || '',
+      gramos_vacaciones: $('gramos_vacaciones')?.value || '',
+      gramos_por_giro:   $('gramos_por_giro')?.value || ''
+    };
+
+    formulariosTocados.delete('parametrosForm');
+
+    const payload = await applyRequest(postForm(state.endpoints.parametros, datos));
+    showFeedback('parametrosFeedback', payload || { success: false, message: 'No se pudieron guardar los parámetros.' });
   });
 
   // Al cargar: dibuja todo y programa la primera consulta.

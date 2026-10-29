@@ -29,6 +29,13 @@ class Feeding extends BaseConfig
     public int $manualCommandTtlMinutes = 1;
 
     /**
+     * Segundos que tarda un giro de la compuerta (abrir, esperar y cerrar). Solo se usa
+     * para calcular cuanto esperar la confirmacion de una orden: tiene que coincidir con
+     * MS_ABIERTO + MS_CERRADO del firmware (firmware/aquacontrol_esp32).
+     */
+    public float $segundosPorGiro = 2.5;
+
+    /**
      * Segundos sin contacto a partir de los cuales el dispositivo se considera offline.
      * El puente USB consulta cada 2 s, asi que 30 s sin noticias ya es una desconexion.
      */

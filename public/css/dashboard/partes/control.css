@@ -1,7 +1,7 @@
 /* ===================================================
    AquaControl — dashboard/partes/control.css
-   Estilos de la vista app/Views/dashboard/partes/control.php: el modo vacaciones y los
-   rangos optimos vigentes.
+   Estilos de la vista app/Views/dashboard/partes/control.php: el modo vacaciones y el
+   formulario de los parametros de la pecera.
    =================================================== */
 
 /* Renglon del modo vacaciones: texto y boton. */
@@ -16,43 +16,49 @@
   background: rgba(255,255,255,0.04);
 }
 
-/* Grilla de los rangos configurados. */
-.config-metrics {
+/* Formulario de los parametros: campos, aclaraciones y boton. */
+.parametros-form {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+/* Grilla de los campos. */
+.parametros-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
+  width: 100%;
 }
 
-/* Cada rango. */
-.config-metric {
-  padding: 18px;
-  border: 1px solid rgba(93,202,165,0.08);
-  border-radius: 16px;
-  background: rgba(255,255,255,0.04);
+/* Sin margenes de mas. */
+.parametros-fields .form-group { margin: 0; }
+
+/* Aclaraciones de arriba y abajo de los campos. */
+.parametros-ayuda {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
-/* Nombre del rango. */
-.config-metric span { color: var(--text-muted); }
-
-/* Valor. */
-.config-metric strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  letter-spacing: -0.02em;
-}
+/* La racion habitual, dentro de la aclaracion. */
+.parametros-ayuda strong { color: var(--text-primary); }
 
 /* ── PANTALLAS MAS CHICAS ────────────────────────────── */
 /* Celulares y tablets: una columna y el boton a todo el ancho. */
 @media (max-width: 768px) {
-  .config-metrics { grid-template-columns: 1fr; }
-
   .toggle-row {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .toggle-row .btn { width: 100%; }
+
+  /* "Guardar parametros" a todo el ancho, como el resto de los botones del panel. */
+  .parametros-form .btn { width: 100%; }
+}
+
+/* Celulares: los campos uno debajo de otro. */
+@media (max-width: 560px) {
+  .parametros-fields { grid-template-columns: 1fr; }
 }

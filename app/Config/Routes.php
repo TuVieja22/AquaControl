@@ -65,11 +65,13 @@ $routes->group('dashboard', ['filter' => 'auth'], static function ($routes) {
     $routes->get('api/latest', 'Dashboard::latest');
     // Marcar una alerta como leida.
     $routes->post('alerts/(:num)/read', 'Dashboard::markAlertRead/$1');
-    // Acciones: alimentar ahora, modo vacaciones, temperatura objetivo y horarios.
+    // Acciones: alimentar ahora, modo vacaciones, temperatura objetivo, horarios y parametros.
     $routes->post('control/feed', 'Dashboard::feedNow');
     $routes->post('control/vacation-toggle', 'Dashboard::toggleVacation');
     $routes->post('control/target-temperature', 'Dashboard::updateTargetTemperature');
     $routes->post('control/feeding-schedule', 'Dashboard::updateFeedingSchedule');
+    // Rangos ideales de temperatura y pH, y racion del modo vacaciones.
+    $routes->post('control/parametros', 'Dashboard::updateParameters');
     // Notificaciones de alertas en este navegador: activar, desactivar y mandar una de prueba.
     $routes->post('notificaciones', 'Notificaciones::guardar');
     $routes->post('notificaciones/borrar', 'Notificaciones::borrar');

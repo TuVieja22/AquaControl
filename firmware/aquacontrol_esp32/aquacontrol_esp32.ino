@@ -5,7 +5,7 @@
     - cada 5 s envia temperatura y pH    POST /dashboard/api/data
     - cada 2 s pregunta si alimentar     GET  /dashboard/api/commands
       (boton "Alimentar ahora" y horarios programados)
-    - al terminar el giro confirma       POST /dashboard/api/commands/{id}/ack
+    - al terminar los giros confirma     POST /dashboard/api/commands/{id}/ack
 
   Conectarlo sin tocar el codigo:
     1. Su propia red: si no tiene WiFi guardado, el ESP32 prende la red RED_NOMBRE con la
@@ -130,10 +130,16 @@ const bool RELE_ACTIVO_EN_BAJO = true;   // la mayoria de los modulos de rele se
 const float HISTERESIS = 0.3;            // grados alrededor del objetivo (evita prender y apagar seguido)
 const float TEMP_OBJETIVO_FABRICA = 25.5; // hasta que la pagina mande la suya
 
-// ---------- Alimentador: un solo giro (ida y vuelta) por orden ----------
+// ---------- Alimentador: tantos giros (ida y vuelta) como diga la orden ----------
 const int SERVO_CERRADO = 0;    // grados con la compuerta cerrada
 const int SERVO_ABIERTO = 180;  // grados con la compuerta abierta (el SG90 llega hasta 180)
 const int MS_ABIERTO = 1000;    // tiempo abierto antes de volver
+// Cerrada un rato largo antes del giro siguiente: encadenando los giros muy seguidos la
+// compuerta se traba. Si se cambia, hay que mover tambien Config\Feeding::$segundosPorGiro.
+const int MS_CERRADO = 1500;    // tiempo cerrado antes del giro siguiente
+// Giros como maximo en una orden (igual que ComandoDispositivoModel::MAX_GIROS): una
+// racion mal cargada no tiene que poder vaciar el tacho dentro de la pecera.
+const int MAX_GIROS = 200;
 
 // ---------- Tiempos ----------
 const unsigned long INTERVALO_TEMP_MS = 5000;      // envio de temperatura y pH
@@ -477,14 +483,22 @@ void confirmarOrden(long id, bool ok, const char* mensaje) {
   http.end();
 }
 
-// Un solo giro por orden: abre, espera y cierra.
-void alimentar(long id, float gramos) {
-  Serial.printf("Orden #%ld: alimentar (racion de %.2f g) -> un giro de ida y vuelta\n", id, gramos);
-  // Abre la compuerta, espera, la cierra y confirma.
-  alimentador.write(SERVO_ABIERTO);
-  delay(MS_ABIERTO);
-  alimentador.write(SERVO_CERRADO);
-  delay(500);
+// Reparte la racion en varios giros: cada giro deja caer lo que entra en la muesca del
+// dispensador, asi que la cantidad de giros es la que decide cuanta comida sale. La cuenta
+// la hace la pagina (configuracion_pecera.gramos_por_giro) y aca solo se repite.
+void alimentar(long id, float gramos, int giros) {
+  if (giros < 1) giros = 1;
+  if (giros > MAX_GIROS) giros = MAX_GIROS;
+  Serial.printf("Orden #%ld: alimentar %.2f g -> %d giros\n", id, gramos, giros);
+
+  // Abre y cierra la compuerta tantas veces como haga falta.
+  for (int i = 0; i < giros; i++) {
+    alimentador.write(SERVO_ABIERTO);
+    delay(MS_ABIERTO);
+    alimentador.write(SERVO_CERRADO);
+    delay(MS_CERRADO);
+  }
+
   confirmarOrden(id, true, nullptr);
 }
 
@@ -518,7 +532,8 @@ void consultarOrdenes() {
     if (id <= 0) continue;
 
     if (strcmp(accion, "alimentar") == 0) {
-      alimentar(id, orden["gramos"] | 0.0f);
+      // Si la pagina es vieja y no manda los giros, se hace uno solo (como antes).
+      alimentar(id, orden["gramos"] | 0.0f, orden["giros"] | 1);
     } else if (strcmp(accion, "configurar") == 0) {
       confirmarOrden(id, true, nullptr);
       if (!redPrendida) pedirSuRed(PEDIDO);

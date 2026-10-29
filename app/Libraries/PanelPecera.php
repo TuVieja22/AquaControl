@@ -230,11 +230,14 @@ class PanelPecera
             ],
             // Ultima alimentacion.
             'lastFeeding'  => $ultimaAlimentacion,
-            // Modo vacaciones.
+            // Modo vacaciones: cambia la racion de las alimentaciones programadas.
             'vacationMode' => [
                 'value'  => $vacaciones ? 'Activo' : 'Inactivo',
                 'status' => $vacaciones ? 'ok' : 'neutral',
-                'meta'   => $vacaciones ? 'Rutinas automáticas habilitadas' : 'Modo manual activo',
+                'meta'   => sprintf(
+                    $vacaciones ? 'Raciones de %s g mientras no estés' : 'Raciones habituales de %s g',
+                    number_format((float) ($vacaciones ? $config['gramos_vacaciones'] : $config['cantidad_alim_gramos']), 1)
+                ),
             ],
         ];
     }
@@ -264,7 +267,7 @@ class PanelPecera
             'waterTitle'    => $tarjetas['waterLevel']['status'] === 'ok' ? 'Agua clara' : 'Revisar nivel',
             'feedingTitle'  => $sinAlimentar ? 'Alimentación pendiente' : 'Última alimentación',
             'feedingMeta'   => $sinAlimentar ? $alimentacion['meta'] : $alimentacion['value'] . ' - ' . $alimentacion['meta'],
-            'vacationTitle' => $tarjetas['vacationMode']['value'] === 'Activo' ? 'Modo Ausencia listo' : 'Modo manual activo',
+            'vacationTitle' => $tarjetas['vacationMode']['value'] === 'Activo' ? 'Modo vacaciones activo' : 'Modo vacaciones apagado',
         ];
     }
 
